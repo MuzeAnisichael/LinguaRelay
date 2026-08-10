@@ -1,36 +1,66 @@
 # Model choices and licenses
 
 Model weights are not bundled with LinguaRelay. The downloader must show the
-selected model, source, version or revision, download size, and license before
+selected model, source, exact revision, download size, and license before
 installation.
+
+## Language scope
+
+The initial manually selected languages are:
+
+| Code | Language | ASR code |
+|---|---|---|
+| `zh` | Simplified Chinese | `zh` |
+| `ja` | Japanese | `ja` |
+| `en` | English | `en` |
+| `ko` | Korean | `ko` |
+
+All 12 ordered source/target pairs must be supported. Automatic language
+detection stays disabled. The internal translation configuration uses a route
+registry rather than a single hard-coded English-to-Chinese model.
 
 ## Baseline candidates
 
-| Role | Candidate | Intended MVP use | License note |
+| Role | Candidate | Intended use | License note |
 |---|---|---|---|
-| ASR | faster-whisper + Whisper `small` | Multilingual ASR with fixed `en` language and CPU INT8 | Verify both runtime and weight licenses at the selected revision |
+| ASR | faster-whisper + multilingual Whisper | Fixed-language `zh/ja/en/ko` ASR | Verify runtime and weight licenses at the pinned revision |
 | ASR alternative | whisper.cpp | Native packaging and additional hardware backends | Verify runtime and weight licenses separately |
-| Fast MT | `Helsinki-NLP/opus-mt-en-zh` | English to Simplified Chinese baseline | Model card currently declares Apache-2.0 |
-| Broad MT experiment | NLLB-200 distilled 600M | Research comparison only | CC-BY-NC-4.0; do not make it the distributable default |
+| Pair-specific MT | OPUS-MT/Marian language-pair models | Low-latency routes that pass quality tests | License varies by checkpoint |
+| Broad MT experiment | NLLB-200 distilled 600M | Research comparison and route coverage only | CC-BY-NC-4.0; not a distributable default |
 | LLM revision | User-selected local model/API | Contextual correction after fast MT | Provider and model dependent |
 
 References:
 
 - faster-whisper: https://github.com/SYSTRAN/faster-whisper
 - whisper.cpp: https://github.com/ggml-org/whisper.cpp
-- OPUS-MT en-zh model card: https://huggingface.co/Helsinki-NLP/opus-mt-en-zh
-- NLLB-200 distilled 600M model card: https://huggingface.co/facebook/nllb-200-distilled-600M
+- OPUS model index: https://opus.nlpl.eu/opusapi/
+- NLLB-200 distilled 600M: https://huggingface.co/facebook/nllb-200-distilled-600M
 
-## Benchmark matrix
+## Translation route selection
 
-Do not pick the final default from model size or published benchmarks alone.
-Measure on target hardware:
+M3 must benchmark every ordered pair independently. A route is eligible only if
+it records:
 
-- CPU-only: `base`, `small` with INT8;
-- NVIDIA GPU: `small`, `turbo` with FP16/INT8 where supported;
+- model revision and license;
+- cold-start and warm P50/P95 latency;
+- peak memory on the target CPU/GPU profile;
+- language-appropriate automatic quality metrics;
+- terminology and human review scores;
+- whether the route is direct, pivoted, or remote.
+
+Direct local models are preferred. A pivot through another language must be
+visible in diagnostics because it can compound errors. If no redistributable
+local route meets the quality and latency gates, the provider registry may offer
+an opt-in translation API instead of silently lowering quality.
+
+## ASR benchmark matrix
+
+- Languages: `zh`, `ja`, `en`, `ko`, always supplied explicitly;
+- CPU-only: multilingual `base` and `small` with INT8;
+- NVIDIA GPU: multilingual `small` and `turbo` with supported compute types;
 - chunk sizes: 320, 640, and 960 ms;
 - quiet speech, music under speech, calls, video, and proper nouns;
 - cold start, warm latency, P50/P95, peak memory, and sustained thermals.
 
-The release manifest should pin exact model revisions and include license files.
+The release manifest must pin exact model revisions and include license files.
 

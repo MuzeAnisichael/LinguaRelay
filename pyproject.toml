@@ -24,10 +24,18 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+audio = [
+  "numpy>=1.26,<3",
+  "psutil>=6,<8",
+  "PyAudioWPatch>=0.2.12.8,<0.3; platform_system == 'Windows'",
+  "soxr>=1.1,<2",
+]
 runtime = [
   "faster-whisper>=1.1,<2",
   "numpy>=1.26,<3",
+  "psutil>=6,<8",
   "PyAudioWPatch>=0.2.12.8,<0.3; platform_system == 'Windows'",
+  "soxr>=1.1,<2",
   "sentencepiece>=0.2,<1",
   "torch>=2.5,<3",
   "transformers>=4.48,<5",

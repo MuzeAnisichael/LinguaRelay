@@ -1,6 +1,6 @@
 [app]
 source_language = "en"
-target_language = "zh-CN"
+target_language = "zh"
 history_enabled = true
 history_path = "data/history.jsonl"
 
@@ -15,6 +15,12 @@ backend = "wasapi"
 device = "default"
 sample_rate = 16000
 chunk_ms = 320
+raw_frame_ms = 20
+buffer_seconds = 4.0
+device_poll_seconds = 2.0
+reconnect_initial_seconds = 0.5
+reconnect_max_seconds = 5.0
+silence_dbfs = -55.0
 save_audio = false
 
 [asr]
@@ -26,8 +32,8 @@ beam_size = 1
 vad_enabled = true
 
 [translation]
-provider = "opus_mt"
-model = "Helsinki-NLP/opus-mt-en-zh"
+provider = "route_registry"
+model = "auto"
 
 [correction]
 mode = "off" # off | asynchronous | live
@@ -35,4 +41,3 @@ provider = "none"
 model = ""
 context_segments = 6
 timeout_seconds = 8.0
-

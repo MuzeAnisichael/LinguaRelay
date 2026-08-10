@@ -1,13 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from lingua_relay.events import CaptionEvent
 
+if TYPE_CHECKING:
+    from lingua_relay.audio.types import AudioChunk
+
 
 class AudioSource(Protocol):
-    def chunks(self) -> Iterable[bytes]: ...
+    def start(self) -> None: ...
+
+    def stop(self, timeout: float = 5.0) -> None: ...
+
+    def get_chunk(self, timeout: float | None = None) -> AudioChunk: ...
 
 
 class SpeechRecognizer(Protocol):

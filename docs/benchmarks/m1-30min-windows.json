@@ -1,0 +1,23 @@
+{
+  "started_at": "2026-08-10T17:06:40.704379+00:00",
+  "requested_seconds": 1800.0,
+  "elapsed_seconds": 1800.0160000000033,
+  "device_id": "wasapi:耳机 (Realtek(R) Audio)",
+  "device_name": "耳机 (Realtek(R) Audio) [Loopback]",
+  "output_sample_rate": 16000,
+  "chunk_ms": 320,
+  "chunks_consumed": 5623,
+  "silent_chunks": 5595,
+  "sequence_gaps": 0,
+  "malformed_chunks": 0,
+  "reconnects": 0,
+  "raw_packets_dropped": 0,
+  "output_chunks_dropped": 0,
+  "rss_start_bytes": 35577856,
+  "rss_end_bytes": 43933696,
+  "rss_peak_bytes": 44412928,
+  "rss_growth_bytes": 8355840,
+  "python_heap_growth_bytes": 134532,
+  "passed": true,
+  "failures": []
+}

@@ -41,14 +41,14 @@ def run_demo(settings: Settings) -> int:
             self.translation.setFont(QFont("Microsoft YaHei UI", 17, QFont.Weight.DemiBold))
             self.translation.setWordWrap(True)
 
-            status = QLabel("DEMO  ·  EN → 简体中文  ·  本地")
-            status.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
-            status.setStyleSheet("color: #77d6a5;")
+            self.status = QLabel("DEMO  ·  四语互译  ·  本地")
+            self.status.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
+            self.status.setStyleSheet("color: #77d6a5;")
 
             content = QVBoxLayout(frame)
             content.setContentsMargins(22, 14, 22, 15)
             content.setSpacing(5)
-            content.addWidget(status)
+            content.addWidget(self.status)
             content.addWidget(self.source)
             content.addWidget(self.translation)
 
@@ -66,12 +66,27 @@ def run_demo(settings: Settings) -> int:
             super().showEvent(event)
 
     examples = (
-        ("The fast path should never wait for an LLM.", "实时链路不应等待大模型。"),
+        ("EN → ZH", "The fast path should never wait for an LLM.", "实时链路不应等待大模型。"),
         (
-            "Completed captions can be revised with more context.",
-            "完成的字幕可以结合更多上下文进行修正。",
+            "JA → KO",
+            "完了した字幕は、より多くの文脈を使って修正できます。",
+            "완성된 자막은 더 많은 문맥으로 수정할 수 있습니다.",
         ),
-        ("Audio remains on this computer by default.", "默认情况下，音频只在本机处理。"),
+        (
+            "ZH → EN",
+            "默认情况下，音频只在本机内存中处理。",
+            "By default, audio is processed only in local memory.",
+        ),
+        (
+            "KO → JA",
+            "자동 언어 감지는 아직 사용하지 않습니다.",
+            "言語の自動検出はまだ使用しません。",
+        ),
+        (
+            "EN → KO",
+            "Completed captions can be revised with more context.",
+            "완성된 자막은 더 많은 문맥으로 수정할 수 있습니다.",
+        ),
     )
 
     app = QApplication.instance() or QApplication(sys.argv)
@@ -82,7 +97,8 @@ def run_demo(settings: Settings) -> int:
 
     def rotate_caption() -> None:
         nonlocal index
-        source, translation = examples[index % len(examples)]
+        route, source, translation = examples[index % len(examples)]
+        overlay.status.setText(f"DEMO  ·  {route}  ·  本地")
         overlay.source.setText(source)
         overlay.translation.setText(translation)
         overlay.adjustSize()

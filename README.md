@@ -3,8 +3,8 @@
 Low-latency desktop translation captions for Windows, with an optional LLM
 revision layer.
 
-> Status: architecture and runnable UI scaffold. Audio-to-translation wiring is
-> the next milestone; the repository is not production-ready yet.
+> Status: M1 audio capture is implemented. Real-time ASR and translation are the
+> next milestones; the repository is not production-ready yet.
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Roadmap](docs/ROADMAP.zh-CN.md)
@@ -16,16 +16,68 @@ speaker output, and displays translated speech in a small always-on-top overlay.
 The real-time path stays fast and deterministic. An optional local model or API
 can revise completed captions without delaying the first translation.
 
-The first supported route is deliberately narrow:
+The initial product scope is:
 
 - Platform: Windows 10/11
-- Audio source: default output device through WASAPI loopback
-- Source language: English (selected manually)
-- Target language: Simplified Chinese (selected manually)
-- Real-time ASR: `faster-whisper` (`small`, INT8 on CPU by default)
-- Fast translation: OPUS-MT English-to-Chinese
-- LLM correction: disabled by default; asynchronous provider interface planned
+- Audio: default or explicitly selected WASAPI loopback output
+- Languages: Simplified Chinese (`zh`), Japanese (`ja`), English (`en`), and
+  Korean (`ko`), selected manually
+- Routes: all 12 source/target combinations among those four languages
+- Automatic language detection: intentionally disabled
+- Real-time ASR: planned `faster-whisper` multilingual benchmark in M2
+- Fast translation: per-route model registry planned in M3
+- LLM correction: disabled by default; asynchronous revision planned in M4
 - Storage: local JSONL history; raw audio is not saved by default
+
+## M1 audio capture
+
+The current capture path provides:
+
+- WASAPI loopback device discovery, a stable name-based selector, and a command
+  that persists the selected device in `config.toml`;
+- automatic following of the default output device, or reconnection to an
+  explicitly selected device after interruption;
+- callback-based 16-bit PCM capture, streaming stereo-to-mono conversion, and
+  SoXR resampling to 16 kHz `float32`;
+- fixed 320 ms chunks, monotonic timestamps, a bounded fresh-first queue, silence
+  continuity, an RMS/peak meter, and drop/reconnect counters;
+- quiet-tone loopback self-test and a sustained memory/continuity stress command.
+
+## Quick start
+
+Python 3.11 is recommended.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e ".[dev,audio]"
+lingua-relay doctor
+lingua-relay languages
+lingua-relay audio-devices
+lingua-relay audio-monitor --seconds 10
+```
+
+To remember a non-default endpoint:
+
+```powershell
+lingua-relay audio-select "wasapi:Your device name"
+```
+
+The self-test plays a quiet one-second tone through the default output:
+
+```powershell
+lingua-relay audio-self-test
+```
+
+For the full M1 stability gate:
+
+```powershell
+lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
+```
+
+The UI-only scaffold remains available with `lingua-relay demo`. Copy
+`config.example.toml` to `config.toml` before changing languages or audio
+settings. Model downloads are not part of M1.
 
 ## Why two translation passes?
 
@@ -39,45 +91,15 @@ The fast path owns latency. The LLM path owns context, terminology, punctuation,
 and retrospective cleanup. If a local model or API is slow or unavailable, live
 captions keep working.
 
-## Quick start (UI demo)
-
-Python 3.11 is recommended.
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
-lingua-relay doctor
-lingua-relay demo
-```
-
-The demo only exercises the overlay; it does not capture audio or download
-models. Copy `config.example.toml` to `config.toml` before experimenting with the
-real pipeline.
-
-## Repository layout
-
-```text
-src/lingua_relay/       application and domain code
-tests/                  fast unit tests
-docs/                   architecture, decisions, and roadmap
-config.example.toml     safe local configuration template
-```
-
 ## Development
 
 ```powershell
-python -m pip install -e ".[dev]"
-pytest
+python -m pip install -e ".[dev,audio]"
 ruff check .
+pytest
 ```
 
-Runtime model and Windows audio dependencies will be installed through the
-`runtime` extra once the capture/inference milestone lands:
-
-```powershell
-python -m pip install -e ".[runtime]"
-```
+Install `.[runtime]` only when working on ASR/translation models.
 
 ## Privacy and security
 
@@ -92,5 +114,5 @@ python -m pip install -e ".[runtime]"
 ## License
 
 Application source is released under the [MIT License](LICENSE). Downloaded
-model weights keep their own licenses; see [model choices](docs/MODELS.md).
-
+model weights keep their own licenses; see [model choices](docs/MODELS.md) and
+[third-party components](THIRD_PARTY.md).
