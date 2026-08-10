@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lingua-relay"
+version = "0.1.0a0"
+description = "Low-latency Windows audio translation captions with optional LLM revision"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { file = "LICENSE" }
+authors = [{ name = "MuzeAnisichael" }]
+keywords = ["translation", "captions", "whisper", "wasapi", "llm"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Microsoft :: Windows :: Windows 10",
+  "Operating System :: Microsoft :: Windows :: Windows 11",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dependencies = [
+  "PySide6>=6.8,<7",
+]
+
+[project.optional-dependencies]
+runtime = [
+  "faster-whisper>=1.1,<2",
+  "numpy>=1.26,<3",
+  "PyAudioWPatch>=0.2.12.8,<0.3; platform_system == 'Windows'",
+  "sentencepiece>=0.2,<1",
+  "torch>=2.5,<3",
+  "transformers>=4.48,<5",
+]
+dev = [
+  "pytest>=8.3,<10",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+lingua-relay = "lingua_relay.cli:main"
+
+[project.urls]
+Repository = "https://github.com/MuzeAnisichael/LinguaRelay"
+Issues = "https://github.com/MuzeAnisichael/LinguaRelay/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lingua_relay"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
