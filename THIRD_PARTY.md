@@ -4,7 +4,7 @@ LinguaRelay source code is MIT licensed. Dependencies and downloaded model
 weights retain their own licenses. The project does not currently redistribute
 model weights.
 
-M1 audio dependencies:
+Implemented M1/M2 dependencies:
 
 | Component | Purpose | Declared license | Project |
 |---|---|---|---|
@@ -13,6 +13,17 @@ M1 audio dependencies:
 | NumPy | PCM arrays and signal calculations | BSD-3-Clause | https://numpy.org |
 | psutil | Stress-test process memory metrics | BSD-3-Clause | https://github.com/giampaolo/psutil |
 | PySide6 / Qt | Desktop overlay | LGPL-3.0 / GPL/commercial options | https://www.qt.io/qt-for-python |
+| faster-whisper | Multilingual Whisper inference integration | MIT | https://github.com/SYSTRAN/faster-whisper |
+| CTranslate2 | CPU/CUDA Transformer inference runtime | MIT | https://github.com/OpenNMT/CTranslate2 |
+| Silero VAD | Speech filtering used through faster-whisper | MIT | https://github.com/snakers4/silero-vad |
+| OpenCC Python reimplementation | Traditional-to-Simplified Chinese normalization | Apache-2.0 | https://github.com/yichen0831/opencc-python |
+| NVIDIA cuBLAS/cuDNN Python wheels | Optional Windows CUDA runtime libraries | NVIDIA SDK/component licenses | https://pypi.org/project/nvidia-cublas-cu12/ |
+
+M2 evaluation data uses Google FLEURS under CC-BY-4.0. Audio is downloaded on
+demand from `google/fleurs` at revision
+`70bb2e84b976b7e960aa89f1c648e09c59f894dd`; it is ignored by Git and is not
+redistributed in this repository. Benchmark reports may contain the public
+reference and ASR hypothesis text needed to audit WER/CER.
 
 Before distributing a packaged executable, generate a complete software bill of
 materials, ship all required notices and dynamic libraries, and re-check the

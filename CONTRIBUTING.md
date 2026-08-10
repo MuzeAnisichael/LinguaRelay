@@ -6,7 +6,7 @@ are preferred.
 1. Open an issue before large architecture or dependency changes.
 2. Create a focused branch and keep secrets, recordings, models, and generated
    history out of Git.
-3. Install `.[dev,audio]`, then run `ruff check .`, `ruff format --check .`,
+3. Install `.[dev,audio,asr]`, then run `ruff check .`, `ruff format --check .`,
    and `pytest` before opening a pull request.
 4. Include measured latency and hardware details for performance claims.
 

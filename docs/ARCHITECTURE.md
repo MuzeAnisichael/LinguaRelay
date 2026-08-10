@@ -45,8 +45,8 @@ AudioCapture --PCM--> Resampler/RingBuffer --> VAD/Segmenter
 | 系统音频 | PyAudioWPatch / WASAPI loopback | 已实现默认/指定设备、切换检测和自动重连 | 需要按进程捕获或更低抖动时使用原生 WASAPI/NAudio sidecar |
 | 重采样 | 流式 SoXR | 已实现双声道 PCM 到 16 kHz 单声道 float32，保留跨块滤波状态 | 原生音频进程落地时重新评估 |
 | 音频缓冲 | 固定 320 ms 块 + 有界新鲜优先队列 | 已实现背压、静音连续性、时间戳和丢弃计数 | ASR 基准后调整块大小 |
-| 语音识别 | 多语言 faster-whisper 候选 | `zh/ja/en/ko` 显式语言，CTranslate2 推理 | M2 根据各语言基准选择 `base/small/turbo` 与计算类型 |
-| 端点检测 | Silero VAD | 与 faster-whisper 集成，减少静音推理 | 字幕断句体验不足时加入标点/语义端点器 |
+| 语音识别 | 多语言 faster-whisper small | `zh/ja/en/ko` 显式语言；本机 CUDA float16 达到 M2 延迟门槛 | 无 CUDA 时回退 CPU INT8；后续按更多硬件档位重新基准 |
+| 端点检测 | 在线能量门控 + final Silero VAD | partial 避免重复 VAD 开销，final 用 Silero 清理静音 | 字幕断句体验不足时加入标点/语义端点器 |
 | 即时翻译 | 按 `(source, target)` 路由的 provider registry | 覆盖四语全部 12 个方向，不锁定单一模型 | 某方向本地模型不达标时提供显式 API 选项 |
 | 大模型修正 | Provider 接口，默认关闭 | 不绑定厂商；可接本地或兼容 API | 在延迟、费用、隐私基准完成后选择默认实现 |
 | 历史 | JSONL + 原子追加 | 简单、可检查、便于离线重译 | 需要全文检索和会话管理时迁移 SQLite |
@@ -67,11 +67,14 @@ M1 捕获线程只把回调 PCM 放入有界原始包队列；工作线程负责
 Whisper 不是严格的逐 token 流式模型。MVP 使用滑动窗口：
 
 - 320 ms 音频块进入环形缓冲区；
-- VAD 判定出现语音后，每 640–960 ms 生成一次重叠窗口；
+- 能量门控判定出现语音后，每 320 ms 尝试生成一次重叠窗口；
+- partial 跳过重复 Silero 计算，final 启用 faster-whisper 集成的 Silero VAD；
 - 对连续两次假设求稳定前缀，稳定部分立即提交；
 - 静音达到 400–700 ms 或达到最大语句长度后结束片段；
 - 最终文本进入快速翻译，未稳定文本仅作为浅色预览；
 - 队列过载时淘汰旧的 partial，不丢 final。
+
+默认分段与窗口上限均为 24 秒，因此同一片段的窗口只增长、不从左侧裁掉已稳定上下文。推理队列容量 4，但只保留一个最新 partial 槽；final 会先淘汰同片段 partial，队列满且只有 final 时施加有界阻塞。模型完成较旧 revision 后还会再次检查并丢弃过期结果。CUDA 模型在开始捕获前执行一次显式固定语言预热，避免首条音频承担运行库初始化开销。
 
 这样会用少量重复计算换取更自然的增量字幕，并避免把每次抖动都写入历史。
 

@@ -43,10 +43,19 @@ class AudioSettings:
 class AsrSettings:
     provider: str = "faster_whisper"
     model: str = "small"
-    device: str = "cpu"
-    compute_type: str = "int8"
+    revision: str = ""
+    device: str = "auto"
+    compute_type: str = "auto"
     beam_size: int = 1
     vad_enabled: bool = True
+    vad_threshold: float = 0.5
+    min_speech_ms: int = 320
+    min_silence_ms: int = 640
+    partial_interval_ms: int = 320
+    max_window_seconds: float = 24.0
+    max_segment_seconds: float = 24.0
+    inference_queue_capacity: int = 4
+    event_queue_capacity: int = 16
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +138,38 @@ class Settings:
             raise ValueError("audio reconnect interval is invalid")
         if not 0.2 <= self.overlay.opacity <= 1.0:
             raise ValueError("overlay.opacity must be between 0.2 and 1.0")
+        if self.asr.provider != "faster_whisper":
+            raise ValueError("asr.provider must be faster_whisper in M2")
+        if not self.asr.model or self.asr.model.endswith(".en"):
+            raise ValueError("asr.model must be a multilingual Whisper model")
+        if self.asr.device not in {"auto", "cpu", "cuda"}:
+            raise ValueError("asr.device must be auto, cpu, or cuda")
+        if self.asr.compute_type not in {
+            "auto",
+            "default",
+            "float16",
+            "float32",
+            "int8",
+            "int8_float16",
+            "int8_float32",
+        }:
+            raise ValueError("unsupported asr.compute_type")
+        if self.asr.beam_size < 1:
+            raise ValueError("asr.beam_size must be positive")
+        if not 0 < self.asr.vad_threshold < 1:
+            raise ValueError("asr.vad_threshold must be between 0 and 1")
+        if self.asr.min_speech_ms <= 0 or self.asr.min_silence_ms <= 0:
+            raise ValueError("ASR speech and silence durations must be positive")
+        if self.asr.partial_interval_ms < self.audio.chunk_ms:
+            raise ValueError("asr.partial_interval_ms must be at least audio.chunk_ms")
+        if self.asr.partial_interval_ms % self.audio.chunk_ms:
+            raise ValueError("asr.partial_interval_ms must be a multiple of audio.chunk_ms")
+        if self.asr.max_window_seconds < self.asr.partial_interval_ms / 1000:
+            raise ValueError("asr.max_window_seconds is too short")
+        if self.asr.max_segment_seconds < self.asr.max_window_seconds:
+            raise ValueError("asr.max_segment_seconds must cover max_window_seconds")
+        if self.asr.inference_queue_capacity < 2 or self.asr.event_queue_capacity < 2:
+            raise ValueError("ASR queues must have capacity of at least two")
 
 
 def _dataclass_from_section(

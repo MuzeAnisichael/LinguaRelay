@@ -32,16 +32,16 @@ lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 
 本机验收记录见 `docs/benchmarks/`。任何音频都只在内存中处理，报告只保存设备和性能指标。
 
-## M2：四语实时识别
+## M2：四语实时识别（已完成）
 
-- 集成 faster-whisper 候选模型并完成 CPU/NVIDIA 基准；
-- 将 `zh / ja / en / ko` 作为显式 `language` 参数传入，禁止自动检测；
-- 针对中文、日语、英语、韩语实现 VAD、重叠窗口和稳定前缀；
-- 建立 partial/final 状态和丢弃过期 partial 的背压策略；
-- 为四种语言分别准备合法的语音测试集；
-- 记录 WER/CER、首条 partial P50/P95、内存和持续运行表现。
+- [x] 集成 faster-whisper `base/small` 并完成 CPU INT8 / NVIDIA float16 基准；
+- [x] 将 `zh / ja / en / ko` 作为显式 `language` 参数传入，禁止自动检测；
+- [x] 针对中文、日语、英语、韩语实现在线端点检测、Silero VAD、重叠窗口和稳定前缀；
+- [x] 建立 partial/final 状态和丢弃过期 partial 的有界背压策略；
+- [x] 使用固定修订的 CC-BY-4.0 FLEURS 四语测试集；
+- [x] 记录 WER/CER、首条非空 partial P50/P95、内存和持续运行表现。
 
-验收：每种语言连续运行 30 分钟，字幕不中断，P50 首条 partial 不高于 1.2 秒，不出现无限增长队列。
+本机最终验收采用 `small/CUDA float16`。四语首条非空 partial P50 分别为约 0.71 / 0.72 / 0.91 / 1.03 秒；每种语言处理超过 30 分钟音频，674 次持续推理错误数为 0，持续阶段 RSS 增长 5.84 MiB。推理队列容量为 4，事件队列容量为 16，旧 partial 可替换而 final 不丢弃。详细报告见 `docs/benchmarks/m2-small-cuda-final.json`。
 
 ## M3：12 方向即时翻译与完整悬浮窗
 
@@ -85,4 +85,3 @@ lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 - 多人说话人分离；
 - OCR/屏幕文字翻译；
 - 账号、云同步和团队协作。
-

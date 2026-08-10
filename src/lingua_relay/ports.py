@@ -5,6 +5,9 @@ from typing import TYPE_CHECKING, Protocol
 from lingua_relay.events import CaptionEvent
 
 if TYPE_CHECKING:
+    import numpy as np
+
+    from lingua_relay.asr.types import AsrResult
     from lingua_relay.audio.types import AudioChunk
 
 
@@ -17,7 +20,9 @@ class AudioSource(Protocol):
 
 
 class SpeechRecognizer(Protocol):
-    def transcribe(self, pcm: bytes, *, language: str) -> str: ...
+    def transcribe(
+        self, samples: np.ndarray, *, language: str, vad_filter: bool | None = None
+    ) -> AsrResult: ...
 
 
 class Translator(Protocol):

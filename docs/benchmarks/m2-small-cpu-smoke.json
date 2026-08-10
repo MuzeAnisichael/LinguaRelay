@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-10T18:27:24Z",
+  "model": "small",
+  "model_revision": "536b0662742c02347bc0e980a01041f333bce120",
+  "runtime": {
+    "requested_device": "cpu",
+    "device": "cpu",
+    "compute_type": "int8",
+    "cuda_devices": 1,
+    "cuda_runtime_ready": true
+  },
+  "load_ms": 1574.1723999963142,
+  "manifest": "data\\fleurs-m2\\manifest.json",
+  "sample_count": 4,
+  "settings": {
+    "provider": "faster_whisper",
+    "model": "small",
+    "revision": "",
+    "device": "cpu",
+    "compute_type": "int8",
+    "beam_size": 1,
+    "vad_enabled": true,
+    "vad_threshold": 0.5,
+    "min_speech_ms": 320,
+    "min_silence_ms": 640,
+    "partial_interval_ms": 320,
+    "max_window_seconds": 24.0,
+    "max_segment_seconds": 24.0,
+    "inference_queue_capacity": 4,
+    "event_queue_capacity": 16
+  },
+  "aggregate": {
+    "audio_minutes": 0.731,
+    "wall_seconds": 5.94074990000081,
+    "rtf": 0.13544801413590538,
+    "first_partial_p50_ms": 3625.247349995625,
+    "first_partial_p95_ms": 8564.154559980961,
+    "rss_before_mib": 662.6875,
+    "rss_after_mib": 718.1015625,
+    "rss_growth_mib": 55.4140625
+  },
+  "languages": {
+    "zh": {
+      "metric": "cer",
+      "error_rate": 0.17391304347826086,
+      "errors": 4,
+      "units": 23,
+      "sample_count": 1,
+      "rtf": 0.12907001926749967,
+      "first_partial_p50_ms": 2496.097599993227,
+      "first_partial_p95_ms": 2496.097599993227
+    },
+    "ja": {
+      "metric": "cer",
+      "error_rate": 0.1111111111111111,
+      "errors": 5,
+      "units": 45,
+      "sample_count": 1,
+      "rtf": 0.1325490038318261,
+      "first_partial_p50_ms": 9236.46469997795,
+      "first_partial_p95_ms": 9236.46469997795
+    },
+    "en": {
+      "metric": "wer",
+      "error_rate": 0.05263157894736842,
+      "errors": 1,
+      "units": 19,
+      "sample_count": 1,
+      "rtf": 0.14375645833324874,
+      "first_partial_p50_ms": 1645.1209000009112,
+      "first_partial_p95_ms": 1645.1209000009112
+    },
+    "ko": {
+      "metric": "wer",
+      "error_rate": 0.35714285714285715,
+      "errors": 5,
+      "units": 14,
+      "sample_count": 1,
+      "rtf": 0.1361477003205763,
+      "first_partial_p50_ms": 4754.397099998023,
+      "first_partial_p95_ms": 4754.397099998023
+    }
+  },
+  "sustain": null,
+  "samples": [
+    {
+      "id": "1906",
+      "language": "zh",
+      "reference": "“这并不是告别。这是一个篇章的结束，也是新篇章的开始。”",
+      "hypothesis": "这并不是告别这是一个偏张的结束也是新偏张的开始",
+      "duration_ms": 10380.0,
+      "wall_ms": 1339.7467999966466,
+      "rtf": 0.12907001926749967,
+      "metric": "cer",
+      "errors": 4,
+      "units": 23,
+      "error_rate": 0.17391304347826086,
+      "first_partial_ms": 2496.097599993227,
+      "first_partial_text": "这并不是"
+    },
+    {
+      "id": "1828",
+      "language": "ja",
+      "reference": "インターネットで「敵対的環境コース」について検索すると、おそらく現地企業の住所が出てくるでしょう。",
+      "hypothesis": "インターネットで適対的環境構成について検索すると、おそらく現地企業の重所が出てくるでしょう。",
+      "duration_ms": 10440.0,
+      "wall_ms": 1383.8116000042646,
+      "rtf": 0.1325490038318261,
+      "metric": "cer",
+      "errors": 5,
+      "units": 45,
+      "error_rate": 0.1111111111111111,
+      "first_partial_ms": 9236.46469997795,
+      "first_partial_text": "ん"
+    },
+    {
+      "id": "1904",
+      "language": "en",
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "hypothesis": "However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.",
+      "duration_ms": 10560.0,
+      "wall_ms": 1518.0681999991066,
+      "rtf": 0.14375645833324874,
+      "metric": "wer",
+      "errors": 1,
+      "units": 19,
+      "error_rate": 0.05263157894736842,
+      "first_partial_ms": 1645.1209000009112,
+      "first_partial_text": "How well."
+    },
+    {
+      "id": "1883",
+      "language": "ko",
+      "reference": "다리 밑 수직 간격은 15미터이며, 공사는 2011년 8월에 마무리되었으며, 해당 다리의 통행금지는 2017년 3월까지이다.",
+      "hypothesis": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행 금지는 2017년 3월까지이다.",
+      "duration_ms": 12480.0,
+      "wall_ms": 1699.1233000007924,
+      "rtf": 0.1361477003205763,
+      "metric": "wer",
+      "errors": 5,
+      "units": 14,
+      "error_rate": 0.35714285714285715,
+      "first_partial_ms": 4754.397099998023,
+      "first_partial_text": "다리미"
+    }
+  ]
+}

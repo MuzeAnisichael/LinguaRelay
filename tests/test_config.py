@@ -12,6 +12,7 @@ def test_defaults_match_first_language_route() -> None:
     assert settings.app.target_language == "zh"
     assert settings.correction.mode == "off"
     assert settings.audio.save_audio is False
+    assert settings.asr.device == "auto"
 
 
 def test_loads_toml_and_converts_history_path(tmp_path: Path) -> None:
@@ -44,4 +45,18 @@ def test_rejects_invalid_silence_threshold() -> None:
     settings = Settings.from_mapping({"audio": {"silence_dbfs": 1}})
 
     with pytest.raises(ValueError, match="silence_dbfs"):
+        settings.validate()
+
+
+def test_rejects_english_only_asr_model() -> None:
+    settings = Settings.from_mapping({"asr": {"model": "small.en"}})
+
+    with pytest.raises(ValueError, match="multilingual"):
+        settings.validate()
+
+
+def test_rejects_partial_interval_that_does_not_align_to_audio_chunks() -> None:
+    settings = Settings.from_mapping({"asr": {"partial_interval_ms": 500}})
+
+    with pytest.raises(ValueError, match="multiple"):
         settings.validate()

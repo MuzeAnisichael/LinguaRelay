@@ -3,8 +3,8 @@
 Low-latency desktop translation captions for Windows, with an optional LLM
 revision layer.
 
-> Status: M1 audio capture is implemented. Real-time ASR and translation are the
-> next milestones; the repository is not production-ready yet.
+> Status: M2 real-time four-language ASR is implemented. Instant translation is
+> the next milestone; the repository is not production-ready yet.
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Roadmap](docs/ROADMAP.zh-CN.md)
@@ -24,7 +24,7 @@ The initial product scope is:
   Korean (`ko`), selected manually
 - Routes: all 12 source/target combinations among those four languages
 - Automatic language detection: intentionally disabled
-- Real-time ASR: planned `faster-whisper` multilingual benchmark in M2
+- Real-time ASR: multilingual `faster-whisper` with explicit language selection
 - Fast translation: per-route model registry planned in M3
 - LLM correction: disabled by default; asynchronous revision planned in M4
 - Storage: local JSONL history; raw audio is not saved by default
@@ -43,6 +43,18 @@ The current capture path provides:
   continuity, an RMS/peak meter, and drop/reconnect counters;
 - quiet-tone loopback self-test and a sustained memory/continuity stress command.
 
+## M2 real-time ASR
+
+- one warmed, reusable multilingual `faster-whisper-small` model;
+- explicit `zh`, `ja`, `en`, or `ko` on every request, with no automatic
+  language-detection fallback;
+- 320 ms overlapping updates, online energy endpointing, Silero VAD on final
+  segments, and stable/unstable partial text;
+- bounded inference and event queues that replace stale partials while
+  preserving final results;
+- CPU/CUDA diagnostics, file transcription, live WASAPI transcription, and a
+  reproducible CC-BY-4.0 FLEURS benchmark.
+
 ## Quick start
 
 Python 3.11 is recommended.
@@ -50,8 +62,11 @@ Python 3.11 is recommended.
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev,audio]"
+python -m pip install -e ".[dev,audio,asr]"
+# NVIDIA Windows machines additionally need the CUDA 12 runtime DLL wheels:
+python -m pip install -e ".[gpu]"
 lingua-relay doctor
+lingua-relay asr-doctor --load
 lingua-relay languages
 lingua-relay audio-devices
 lingua-relay audio-monitor --seconds 10
@@ -77,7 +92,24 @@ lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 
 The UI-only scaffold remains available with `lingua-relay demo`. Copy
 `config.example.toml` to `config.toml` before changing languages or audio
-settings. Model downloads are not part of M1.
+settings. `asr-doctor --load` downloads and warms the configured model.
+
+Live recognition always requires a manual source language:
+
+```powershell
+lingua-relay asr-stream --language ja
+lingua-relay asr-transcribe sample.wav --language ko
+```
+
+To reproduce the M2 host benchmark, install `.[benchmark]`, fetch the pinned
+public fixtures, and run:
+
+```powershell
+python scripts/fetch_fleurs_samples.py --samples-per-language 5
+lingua-relay asr-benchmark data/fleurs-m2/manifest.json `
+  --device cuda --compute-type float16 `
+  --sustain-audio-minutes 30 --report data/m2.json
+```
 
 ## Why two translation passes?
 
@@ -94,7 +126,7 @@ captions keep working.
 ## Development
 
 ```powershell
-python -m pip install -e ".[dev,audio]"
+python -m pip install -e ".[dev,audio,asr]"
 ruff check .
 pytest
 ```
