@@ -1,0 +1,27 @@
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(0, 3, 0, 0),
+    prodvers=(0, 3, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        u'080404b0',
+        [StringStruct(u'CompanyName', u'LinguaRelay contributors'),
+         StringStruct(u'FileDescription', u'LinguaRelay real-time translation captions'),
+         StringStruct(u'FileVersion', u'0.3.0-alpha'),
+         StringStruct(u'InternalName', u'LinguaRelay'),
+         StringStruct(u'LegalCopyright', u'Copyright (c) LinguaRelay contributors'),
+         StringStruct(u'OriginalFilename', u'LinguaRelay.exe'),
+         StringStruct(u'ProductName', u'LinguaRelay'),
+         StringStruct(u'ProductVersion', u'0.3.0-alpha')])
+    ]),
+    VarFileInfo([VarStruct(u'Translation', [2052, 1200])])
+  ]
+)

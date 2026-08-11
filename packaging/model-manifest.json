@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "release_policy": "Model weights are distributed separately from the application bundle.",
+  "models": [
+    {
+      "component": "asr",
+      "name": "Systran/faster-whisper-small",
+      "revision": "536b0662742c02347bc0e980a01041f333bce120",
+      "license": "MIT",
+      "destination": "models--Systran--faster-whisper-small"
+    },
+    {
+      "component": "translation",
+      "name": "facebook/m2m100_418M",
+      "revision": "55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636",
+      "license": "MIT",
+      "conversion": "CTranslate2 float16",
+      "destination": "m2m100_418m_ct2"
+    }
+  ]
+}

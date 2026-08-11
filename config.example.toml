@@ -9,6 +9,11 @@ width = 920
 bottom_margin = 96
 opacity = 0.92
 click_through = false
+display_mode = "bilingual" # bilingual | translated
+position = "bottom" # bottom | top
+source_font_size = 12
+translation_font_size = 18
+toggle_shortcut = "Ctrl+Alt+L"
 
 [audio]
 backend = "wasapi"
@@ -41,8 +46,19 @@ inference_queue_capacity = 4
 event_queue_capacity = 16
 
 [translation]
-provider = "route_registry"
-model = "auto"
+provider = "m2m100_ct2"
+model = "facebook/m2m100_418M"
+revision = "55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636"
+model_path = "models/m2m100_418m_ct2"
+device = "auto"
+compute_type = "auto"
+beam_size = 1
+max_input_tokens = 256
+max_decoding_length = 256
+cache_size = 512
+queue_capacity = 4
+event_queue_capacity = 16
+translate_partials = true
 
 [correction]
 mode = "off" # off | asynchronous | live

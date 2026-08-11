@@ -13,6 +13,8 @@ def test_defaults_match_first_language_route() -> None:
     assert settings.correction.mode == "off"
     assert settings.audio.save_audio is False
     assert settings.asr.device == "auto"
+    assert settings.overlay.display_mode == "bilingual"
+    assert settings.translation.provider == "m2m100_ct2"
 
 
 def test_loads_toml_and_converts_history_path(tmp_path: Path) -> None:

@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: python -m pip install -e ".[dev,audio,asr]"
+      - run: python -m pip install -e ".[dev,audio,asr,translation]"
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest

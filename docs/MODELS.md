@@ -41,6 +41,20 @@ was 1.35 seconds and therefore missed the M2 1.2-second target on this host.
 Automatic runtime selection uses CUDA only when both a device and the required
 cuBLAS 12/cuDNN 9 libraries are available; otherwise it selects CPU INT8.
 
+## M3 translation selection
+
+M3 selects `facebook/m2m100_418M` at revision
+`55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636` (MIT). The checkpoint is converted
+once to CTranslate2 float16 and one warmed model instance serves every direct
+route. The frozen application uses SentencePiece directly, so PyTorch and
+Transformers are conversion-time tools rather than release runtime dependencies.
+
+The eight-sentence project-authored CC0 smoke corpus measured all 12 routes on
+the CUDA host. Per-route warm P50 ranged from 59 to 89 ms; aggregate P50/P95
+were 79/104 ms. All routes passed the 1.8 s gate. chrF++/BLEU in this tiny corpus
+are regression signals only, not evidence of production translation quality.
+See `docs/benchmarks/m3-m2m100-cuda-final.json`.
+
 ## Baseline candidates
 
 | Role | Candidate | Intended use | License note |
@@ -60,7 +74,7 @@ References:
 
 ## Translation route selection
 
-M3 must benchmark every ordered pair independently. A route is eligible only if
+M3 benchmarks every ordered pair independently. A route is eligible only if
 it records:
 
 - model revision and license;

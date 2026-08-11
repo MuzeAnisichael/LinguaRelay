@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lingua-relay"
-version = "0.2.0a0"
+version = "0.3.0a0"
 description = "Low-latency Windows audio translation captions with optional LLM revision"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -42,8 +42,18 @@ gpu = [
 ]
 benchmark = [
   "datasets>=4,<5",
+  "sacrebleu>=2.5,<3",
+]
+translation = [
+  "ctranslate2>=4.8,<5",
+  "sentencepiece>=0.2,<1",
+  "transformers>=4.48,<6",
+]
+packaging = [
+  "pyinstaller>=6.18,<7",
 ]
 runtime = [
+  "ctranslate2>=4.8,<5",
   "faster-whisper>=1.2.1,<2",
   "numpy>=1.26,<3",
   "opencc-python-reimplemented>=0.1.7,<1",
@@ -51,8 +61,6 @@ runtime = [
   "PyAudioWPatch>=0.2.12.8,<0.3; platform_system == 'Windows'",
   "soxr>=1.1,<2",
   "sentencepiece>=0.2,<1",
-  "torch>=2.5,<3",
-  "transformers>=4.48,<5",
 ]
 dev = [
   "pytest>=8.3,<10",

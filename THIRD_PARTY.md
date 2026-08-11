@@ -4,7 +4,7 @@ LinguaRelay source code is MIT licensed. Dependencies and downloaded model
 weights retain their own licenses. The project does not currently redistribute
 model weights.
 
-Implemented M1/M2 dependencies:
+Implemented M1/M2/M3 dependencies:
 
 | Component | Purpose | Declared license | Project |
 |---|---|---|---|
@@ -18,6 +18,10 @@ Implemented M1/M2 dependencies:
 | Silero VAD | Speech filtering used through faster-whisper | MIT | https://github.com/snakers4/silero-vad |
 | OpenCC Python reimplementation | Traditional-to-Simplified Chinese normalization | Apache-2.0 | https://github.com/yichen0831/opencc-python |
 | NVIDIA cuBLAS/cuDNN Python wheels | Optional Windows CUDA runtime libraries | NVIDIA SDK/component licenses | https://pypi.org/project/nvidia-cublas-cu12/ |
+| M2M100 418M | Direct four-language machine translation weights | MIT | https://huggingface.co/facebook/m2m100_418M |
+| SentencePiece | M2M100 runtime tokenization | Apache-2.0 | https://github.com/google/sentencepiece |
+| PyInstaller | Windows application bundling | GPL-2.0-or-later with bootloader exception | https://pyinstaller.org/ |
+| Inno Setup | Optional Windows installer compiler | Custom permissive license | https://jrsoftware.org/isinfo.php |
 
 M2 evaluation data uses Google FLEURS under CC-BY-4.0. Audio is downloaded on
 demand from `google/fleurs` at revision

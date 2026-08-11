@@ -1,0 +1,28 @@
+name: Windows package
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -e ".[dev,runtime,packaging]"
+      - run: python -m pytest
+      - run: python -m ruff check .
+      - run: python -m PyInstaller --noconfirm --clean packaging/LinguaRelay.spec
+      - uses: actions/upload-artifact@v6
+        with:
+          name: LinguaRelay-windows-x64
+          path: dist/LinguaRelay
+          if-no-files-found: error

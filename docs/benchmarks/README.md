@@ -91,3 +91,17 @@ seconds. A 15-second live WASAPI smoke processed 46 revisions, replaced 17 stale
 partials, dropped four completed stale results, emitted a final event, and
 reported no inference error; its metrics-only record is
 `m2-wasapi-stream-smoke.json`.
+
+## M3 twelve-route translation validation
+
+Date: 2026-08-11 (Asia/Shanghai)
+
+`m3-parallel-corpus.json` is an eight-sentence, project-authored CC0 smoke corpus
+with aligned Chinese, Japanese, English, and Korean text. It exists to verify
+route coverage, latency, deterministic report generation, and gross quality
+regressions; it is not a release-quality translation evaluation set.
+
+`m3-m2m100-cuda-final.json` records all 12 direct routes using M2M100 418M at
+revision `55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636` with CTranslate2 CUDA
+float16. Every route passed the 1.8-second P50 gate. Per-route P50 was 59–89 ms;
+aggregate P50 was 79 ms and aggregate P95 was 104 ms after warm-up.

@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
     from lingua_relay.asr.types import AsrResult
     from lingua_relay.audio.types import AudioChunk
+    from lingua_relay.mt.types import TranslationResult
 
 
 class AudioSource(Protocol):
@@ -26,7 +27,7 @@ class SpeechRecognizer(Protocol):
 
 
 class Translator(Protocol):
-    def translate(self, text: str, *, source: str, target: str) -> str: ...
+    def translate(self, text: str, *, source: str, target: str) -> TranslationResult: ...
 
 
 class CaptionReviser(Protocol):

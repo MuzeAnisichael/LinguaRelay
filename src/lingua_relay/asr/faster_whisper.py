@@ -27,7 +27,10 @@ def prepare_cuda_dlls() -> tuple[str, ...]:
 
     if sys.platform != "win32" or not hasattr(os, "add_dll_directory"):
         return ()
-    site_packages = Path(sys.prefix) / "Lib" / "site-packages" / "nvidia"
+    if getattr(sys, "frozen", False):
+        site_packages = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent)) / "nvidia"
+    else:
+        site_packages = Path(sys.prefix) / "Lib" / "site-packages" / "nvidia"
     added: list[str] = []
     existing = {str(path) for path in _DLL_HANDLES if isinstance(path, Path)}
     directories: dict[str, Path] = {}

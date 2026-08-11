@@ -2,7 +2,7 @@
 
 面向 Windows 的低延迟桌面实时翻译字幕工具，并预留本地大模型或 API 修正层。
 
-> 当前状态：M2 中、日、英、韩实时语音识别已经完成；即时翻译属于下一个里程碑，项目暂不适合生产使用。
+> 当前状态：M3 已完成中、日、英、韩实时识别、全部 12 个互译方向和托盘悬浮窗；下一里程碑为大模型修正，项目暂不适合生产使用。
 
 [English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md)
 
@@ -40,6 +40,15 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 - 推理和事件队列均有固定上限，过载时替换旧 partial，保留 final；
 - 提供 CPU/CUDA 诊断、音频文件识别、WASAPI 实时识别和可复现的 FLEURS 四语基准。
 
+## 已完成的 M3 即时翻译与桌面能力
+
+- 固定版本的 M2M100 418M/CTranslate2 通过一个预热实例直接覆盖四语全部 12 个方向；
+- 翻译队列有界，旧 partial 可替换而 final 不丢失，翻译失败时继续显示原文；
+- 悬浮窗支持“仅显示译文”和“双语同时显示”、partial 淡化、位置、透明度、字号与点击穿透；
+- 托盘支持暂停/继续、手动源/目标语言、音频设备、显示模式、历史、导出和退出；
+- JSONL 历史可导出为 JSONL、CSV 或 SRT；
+- 已准备 PyInstaller 应用目录、独立模型包、Inno Setup 安装器定义和 GitHub 打包工作流。
+
 ## 快速开始
 
 建议使用 Python 3.11：
@@ -47,7 +56,7 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev,audio,asr]"
+python -m pip install -e ".[dev,audio,asr,translation]"
 # NVIDIA Windows 机器还需要 CUDA 12 用户态运行库：
 python -m pip install -e ".[gpu]"
 lingua-relay doctor
@@ -55,6 +64,9 @@ lingua-relay asr-doctor --load
 lingua-relay languages
 lingua-relay audio-devices
 lingua-relay audio-monitor --seconds 10
+lingua-relay mt-prepare
+lingua-relay mt-doctor --load
+lingua-relay app
 ```
 
 保存一个非默认音频端点：

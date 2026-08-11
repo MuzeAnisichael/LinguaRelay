@@ -43,16 +43,17 @@ lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 
 本机最终验收采用 `small/CUDA float16`。四语首条非空 partial P50 分别为约 0.71 / 0.72 / 0.91 / 1.03 秒；每种语言处理超过 30 分钟音频，674 次持续推理错误数为 0，持续阶段 RSS 增长 5.84 MiB。推理队列容量为 4，事件队列容量为 16，旧 partial 可替换而 final 不丢弃。详细报告见 `docs/benchmarks/m2-small-cuda-final.json`。
 
-## M3：12 方向即时翻译与完整悬浮窗
+## M3：12 方向即时翻译与完整悬浮窗（已完成）
 
-- 建立 `(source_language, target_language) -> translator provider` 路由表；
-- 支持 `zh / ja / en / ko` 之间全部 12 个互译方向；
-- 优先为质量和延迟达标的方向选择直接模型，必要时使用经过标记的枢轴路线；
-- 若某方向没有达到质量门槛的本地模型，允许用户选择低延迟翻译 API；
-- 原文/译文双行、partial 淡化、final 固定；
-- 调整字号、位置、透明度、点击穿透和快捷键；
-- 托盘菜单：开始/暂停、源语言、目标语言、设备、历史、退出；
-- JSONL 历史与导出。
+- [x] 建立 `(source_language, target_language) -> translator provider` 路由表；
+- [x] 通过固定版本 M2M100/CTranslate2 支持 `zh / ja / en / ko` 全部 12 个直接互译方向；
+- [x] 使用单实例预热、LRU 缓存和有界队列，过载时替换旧 partial 并保留 final；
+- [x] 本地模型覆盖全部方向，因此 M3 不启用远程 API 回退；provider 路由保留后续扩展点；
+- [x] 支持“仅显示译文”和“双语同时显示”，partial 淡化、final 固定，翻译失败回退原文；
+- [x] 支持字号、位置、透明度、点击穿透和全局显示/隐藏快捷键；
+- [x] 托盘菜单支持开始/暂停、手动源/目标语言、设备、显示模式、历史和退出；
+- [x] 支持 JSONL 历史及 JSONL/CSV/SRT 导出；
+- [x] 准备 PyInstaller、独立模型包、Inno Setup 安装器和 GitHub 打包工作流。
 
 验收：12 个方向都能运行并有独立基准；快速译文 P50 不高于 1.8 秒；翻译失败时仍显示原文。
 

@@ -1,0 +1,63 @@
+{
+  "name": "LinguaRelay M3 smoke parallel corpus",
+  "license": "CC0-1.0",
+  "notes": "Small project-authored functional and latency corpus; not a production quality evaluation set.",
+  "samples": [
+    {
+      "id": "meeting",
+      "zh": "会议将在十分钟后开始。",
+      "ja": "会議は10分後に始まります。",
+      "en": "The meeting will begin in ten minutes.",
+      "ko": "회의는 10분 후에 시작합니다."
+    },
+    {
+      "id": "bilingual",
+      "zh": "请启用双语字幕模式。",
+      "ja": "二言語字幕モードを有効にしてください。",
+      "en": "Please enable bilingual subtitle mode.",
+      "ko": "이중 언어 자막 모드를 켜 주세요."
+    },
+    {
+      "id": "local-audio",
+      "zh": "音频只在本机内存中处理。",
+      "ja": "音声はローカルメモリ内でのみ処理されます。",
+      "en": "Audio is processed only in local memory.",
+      "ko": "오디오는 로컬 메모리에서만 처리됩니다."
+    },
+    {
+      "id": "fallback",
+      "zh": "即使翻译失败，原文也会保留。",
+      "ja": "翻訳に失敗しても原文は残ります。",
+      "en": "The source text remains even if translation fails.",
+      "ko": "번역에 실패해도 원문은 남아 있습니다."
+    },
+    {
+      "id": "languages",
+      "zh": "请选择源语言和目标语言。",
+      "ja": "原文の言語と翻訳先の言語を選択してください。",
+      "en": "Select the source and target languages.",
+      "ko": "원본 언어와 대상 언어를 선택하세요."
+    },
+    {
+      "id": "history",
+      "zh": "完成的字幕会保存到本地历史记录。",
+      "ja": "完成した字幕はローカル履歴に保存されます。",
+      "en": "Completed captions are saved to local history.",
+      "ko": "완료된 자막은 로컬 기록에 저장됩니다."
+    },
+    {
+      "id": "music",
+      "zh": "今天的背景音乐有点大声。",
+      "ja": "今日のBGMは少し大きいです。",
+      "en": "The background music is a little loud today.",
+      "ko": "오늘은 배경 음악이 조금 큽니다."
+    },
+    {
+      "id": "tray",
+      "zh": "关闭悬浮窗不会退出应用程序。",
+      "ja": "字幕ウィンドウを閉じてもアプリは終了しません。",
+      "en": "Closing the overlay does not exit the application.",
+      "ko": "자막 창을 닫아도 애플리케이션은 종료되지 않습니다."
+    }
+  ]
+}

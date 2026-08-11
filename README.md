@@ -3,8 +3,9 @@
 Low-latency desktop translation captions for Windows, with an optional LLM
 revision layer.
 
-> Status: M2 real-time four-language ASR is implemented. Instant translation is
-> the next milestone; the repository is not production-ready yet.
+> Status: M3 real-time four-language ASR, all 12 translation routes, and the
+> tray/overlay application are implemented. LLM revision is the next milestone;
+> the repository is not production-ready yet.
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Roadmap](docs/ROADMAP.zh-CN.md)
@@ -25,7 +26,7 @@ The initial product scope is:
 - Routes: all 12 source/target combinations among those four languages
 - Automatic language detection: intentionally disabled
 - Real-time ASR: multilingual `faster-whisper` with explicit language selection
-- Fast translation: per-route model registry planned in M3
+- Fast translation: pinned M2M100/CTranslate2 direct routes for all 12 pairs
 - LLM correction: disabled by default; asynchronous revision planned in M4
 - Storage: local JSONL history; raw audio is not saved by default
 
@@ -55,6 +56,19 @@ The current capture path provides:
 - CPU/CUDA diagnostics, file transcription, live WASAPI transcription, and a
   reproducible CC-BY-4.0 FLEURS benchmark.
 
+## M3 instant translation and desktop UI
+
+- one warmed M2M100 418M CTranslate2 model, pinned to an MIT-licensed revision;
+- direct translation for every ordered pair among `zh`, `ja`, `en`, and `ko`;
+- bounded MT queues, stale-partial replacement, final preservation, and a
+  source-text fallback when translation fails;
+- translated-only and bilingual overlay modes, partial fading, configurable
+  position/opacity/fonts/click-through, and a global show/hide shortcut;
+- tray controls for pause/resume, manual languages, audio device, display mode,
+  local history, CSV/JSONL/SRT export, and exit;
+- a PyInstaller onedir build, separate model pack, Inno Setup definition, and
+  tag/manual GitHub packaging workflow for the first release.
+
 ## Quick start
 
 Python 3.11 is recommended.
@@ -62,7 +76,7 @@ Python 3.11 is recommended.
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev,audio,asr]"
+python -m pip install -e ".[dev,audio,asr,translation]"
 # NVIDIA Windows machines additionally need the CUDA 12 runtime DLL wheels:
 python -m pip install -e ".[gpu]"
 lingua-relay doctor
@@ -70,6 +84,9 @@ lingua-relay asr-doctor --load
 lingua-relay languages
 lingua-relay audio-devices
 lingua-relay audio-monitor --seconds 10
+lingua-relay mt-prepare
+lingua-relay mt-doctor --load
+lingua-relay app
 ```
 
 To remember a non-default endpoint:
@@ -93,6 +110,11 @@ lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 The UI-only scaffold remains available with `lingua-relay demo`. Copy
 `config.example.toml` to `config.toml` before changing languages or audio
 settings. `asr-doctor --load` downloads and warms the configured model.
+
+The tray app provides both **translated-only** and **bilingual** display modes.
+Source and target languages remain manual; automatic detection is intentionally
+disabled. `mt-prepare` downloads a pinned source checkpoint and creates the
+local CTranslate2 model used by all 12 routes.
 
 Live recognition always requires a manual source language:
 
@@ -126,12 +148,14 @@ captions keep working.
 ## Development
 
 ```powershell
-python -m pip install -e ".[dev,audio,asr]"
+python -m pip install -e ".[dev,audio,asr,translation]"
 ruff check .
 pytest
 ```
 
-Install `.[runtime]` only when working on ASR/translation models.
+Build the CPU application directory with `scripts/build_windows.ps1`; add
+`-Runtime cuda` for bundled NVIDIA runtime DLLs and `-Installer` when Inno Setup
+6 is installed. See [release packaging](docs/RELEASE.md).
 
 ## Privacy and security
 

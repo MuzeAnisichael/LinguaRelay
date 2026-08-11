@@ -1,0 +1,907 @@
+{
+  "schema_version": 1,
+  "milestone": "M3",
+  "created_at": "2026-08-11T03:14:50.123618+00:00",
+  "corpus": {
+    "path": "docs\\benchmarks\\m3-parallel-corpus.json",
+    "name": "LinguaRelay M3 smoke parallel corpus",
+    "license": "CC0-1.0",
+    "sample_count": 8
+  },
+  "model": {
+    "provider": "m2m100_ct2",
+    "name": "facebook/m2m100_418M",
+    "revision": "55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636",
+    "path": "models\\m2m100_418m_ct2",
+    "load_ms": 2930.667,
+    "runtime": {
+      "requested_device": "cuda",
+      "device": "cuda",
+      "compute_type": "float16",
+      "cuda_devices": 1,
+      "cuda_runtime_ready": true
+    }
+  },
+  "host": {
+    "platform": "Windows-10-10.0.26200-SP0",
+    "python": "3.11.7"
+  },
+  "acceptance": {
+    "required_routes": 12,
+    "measured_routes": 12,
+    "p50_threshold_ms": 1800.0,
+    "all_routes_present": true,
+    "all_routes_passed_latency": true
+  },
+  "aggregate_latency_ms": {
+    "mean": 79.044,
+    "p50": 79.848,
+    "p95": 104.249
+  },
+  "routes": {
+    "zh->ja": {
+      "source": "zh",
+      "target": "ja",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 88.913,
+        "p95": 104.925
+      },
+      "quality": {
+        "chrf_pp": 39.52,
+        "bleu": 0.0
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "会议将在十分钟后开始。",
+          "reference": "会議は10分後に始まります。",
+          "hypothesis": "会議は10分後に始まります。",
+          "latency_ms": 73.174
+        },
+        {
+          "id": "bilingual",
+          "source": "请启用双语字幕模式。",
+          "reference": "二言語字幕モードを有効にしてください。",
+          "hypothesis": "二言語のタイトルモードを有効にしてください。",
+          "latency_ms": 103.827
+        },
+        {
+          "id": "local-audio",
+          "source": "音频只在本机内存中处理。",
+          "reference": "音声はローカルメモリ内でのみ処理されます。",
+          "hypothesis": "音声は本機内でのみ処理されます。",
+          "latency_ms": 78.485
+        },
+        {
+          "id": "fallback",
+          "source": "即使翻译失败，原文也会保留。",
+          "reference": "翻訳に失敗しても原文は残ります。",
+          "hypothesis": "翻訳が失敗したとしても、原文は保存されます。",
+          "latency_ms": 87.523
+        },
+        {
+          "id": "languages",
+          "source": "请选择源语言和目标语言。",
+          "reference": "原文の言語と翻訳先の言語を選択してください。",
+          "hypothesis": "ソース言語とターゲット言語を選択してください。",
+          "latency_ms": 91.95
+        },
+        {
+          "id": "history",
+          "source": "完成的字幕会保存到本地历史记录。",
+          "reference": "完成した字幕はローカル履歴に保存されます。",
+          "hypothesis": "完成したタイトルは地元の歴史記録に保存されます。",
+          "latency_ms": 105.517
+        },
+        {
+          "id": "music",
+          "source": "今天的背景音乐有点大声。",
+          "reference": "今日のBGMは少し大きいです。",
+          "hypothesis": "今日の背景音楽はちょっと大声。",
+          "latency_ms": 62.94
+        },
+        {
+          "id": "tray",
+          "source": "关闭悬浮窗不会退出应用程序。",
+          "reference": "字幕ウィンドウを閉じてもアプリは終了しません。",
+          "hypothesis": "吊り窓を閉じることはアプリから離れない。",
+          "latency_ms": 90.303
+        }
+      ]
+    },
+    "zh->en": {
+      "source": "zh",
+      "target": "en",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 76.73,
+        "p95": 108.653
+      },
+      "quality": {
+        "chrf_pp": 58.886,
+        "bleu": 17.466
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "会议将在十分钟后开始。",
+          "reference": "The meeting will begin in ten minutes.",
+          "hypothesis": "The meeting will begin in 10 minutes.",
+          "latency_ms": 56.339
+        },
+        {
+          "id": "bilingual",
+          "source": "请启用双语字幕模式。",
+          "reference": "Please enable bilingual subtitle mode.",
+          "hypothesis": "Please enable the bilingual subtitles mode.",
+          "latency_ms": 75.46
+        },
+        {
+          "id": "local-audio",
+          "source": "音频只在本机内存中处理。",
+          "reference": "Audio is processed only in local memory.",
+          "hypothesis": "Audio is only processed in the local memory.",
+          "latency_ms": 66.557
+        },
+        {
+          "id": "fallback",
+          "source": "即使翻译失败，原文也会保留。",
+          "reference": "The source text remains even if translation fails.",
+          "hypothesis": "Even if the translation fails, the original text will be retained.",
+          "latency_ms": 100.561
+        },
+        {
+          "id": "languages",
+          "source": "请选择源语言和目标语言。",
+          "reference": "Select the source and target languages.",
+          "hypothesis": "Please select the source language and the target language.",
+          "latency_ms": 72.7
+        },
+        {
+          "id": "history",
+          "source": "完成的字幕会保存到本地历史记录。",
+          "reference": "Completed captions are saved to local history.",
+          "hypothesis": "The completed subtitles will be saved in local history records.",
+          "latency_ms": 113.009
+        },
+        {
+          "id": "music",
+          "source": "今天的背景音乐有点大声。",
+          "reference": "The background music is a little loud today.",
+          "hypothesis": "Today’s background music is a bit loud.",
+          "latency_ms": 77.999
+        },
+        {
+          "id": "tray",
+          "source": "关闭悬浮窗不会退出应用程序。",
+          "reference": "Closing the overlay does not exit the application.",
+          "hypothesis": "The closing of the hanging window will not leave the application.",
+          "latency_ms": 87.203
+        }
+      ]
+    },
+    "zh->ko": {
+      "source": "zh",
+      "target": "ko",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 88.367,
+        "p95": 103.294
+      },
+      "quality": {
+        "chrf_pp": 41.134,
+        "bleu": 17.805
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "会议将在十分钟后开始。",
+          "reference": "회의는 10분 후에 시작합니다.",
+          "hypothesis": "회의는 10분 후에 시작된다.",
+          "latency_ms": 66.028
+        },
+        {
+          "id": "bilingual",
+          "source": "请启用双语字幕模式。",
+          "reference": "이중 언어 자막 모드를 켜 주세요.",
+          "hypothesis": "이중 언어 모드를 활성화하십시오.",
+          "latency_ms": 78.031
+        },
+        {
+          "id": "local-audio",
+          "source": "音频只在本机内存中处理。",
+          "reference": "오디오는 로컬 메모리에서만 처리됩니다.",
+          "hypothesis": "오디오는 현지 메모리에서만 처리됩니다.",
+          "latency_ms": 86.84
+        },
+        {
+          "id": "fallback",
+          "source": "即使翻译失败，原文也会保留。",
+          "reference": "번역에 실패해도 원문은 남아 있습니다.",
+          "hypothesis": "번역이 실패하더라도 원본은 유지됩니다.",
+          "latency_ms": 89.799
+        },
+        {
+          "id": "languages",
+          "source": "请选择源语言和目标语言。",
+          "reference": "원본 언어와 대상 언어를 선택하세요.",
+          "hypothesis": "원본 언어와 대상 언어를 선택하십시오.",
+          "latency_ms": 86.934
+        },
+        {
+          "id": "history",
+          "source": "完成的字幕会保存到本地历史记录。",
+          "reference": "완료된 자막은 로컬 기록에 저장됩니다.",
+          "hypothesis": "완료된 서명은 지역 역사 기록에 저장됩니다.",
+          "latency_ms": 90.103
+        },
+        {
+          "id": "music",
+          "source": "今天的背景音乐有点大声。",
+          "reference": "오늘은 배경 음악이 조금 큽니다.",
+          "hypothesis": "오늘의 음악은 조금 큰 소리로 흘러나왔다.",
+          "latency_ms": 94.853
+        },
+        {
+          "id": "tray",
+          "source": "关闭悬浮窗不会退出应用程序。",
+          "reference": "자막 창을 닫아도 애플리케이션은 종료되지 않습니다.",
+          "hypothesis": "닫힌 윈도우는 응용 프로그램에서 벗어나지 않습니다.",
+          "latency_ms": 107.839
+        }
+      ]
+    },
+    "ja->zh": {
+      "source": "ja",
+      "target": "zh",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 77.378,
+        "p95": 94.374
+      },
+      "quality": {
+        "chrf_pp": 33.793,
+        "bleu": 0.0
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "会議は10分後に始まります。",
+          "reference": "会议将在十分钟后开始。",
+          "hypothesis": "会议将在10分钟后开始。",
+          "latency_ms": 54.633
+        },
+        {
+          "id": "bilingual",
+          "source": "二言語字幕モードを有効にしてください。",
+          "reference": "请启用双语字幕模式。",
+          "hypothesis": "请启用双语字幕模式。",
+          "latency_ms": 69.389
+        },
+        {
+          "id": "local-audio",
+          "source": "音声はローカルメモリ内でのみ処理されます。",
+          "reference": "音频只在本机内存中处理。",
+          "hypothesis": "音频仅在本地内存中处理。",
+          "latency_ms": 92.265
+        },
+        {
+          "id": "fallback",
+          "source": "翻訳に失敗しても原文は残ります。",
+          "reference": "即使翻译失败，原文也会保留。",
+          "hypothesis": "翻译失败后,原文仍然存在。",
+          "latency_ms": 79.158
+        },
+        {
+          "id": "languages",
+          "source": "原文の言語と翻訳先の言語を選択してください。",
+          "reference": "请选择源语言和目标语言。",
+          "hypothesis": "请选择原文和翻译的语言。",
+          "latency_ms": 75.599
+        },
+        {
+          "id": "history",
+          "source": "完成した字幕はローカル履歴に保存されます。",
+          "reference": "完成的字幕会保存到本地历史记录。",
+          "hypothesis": "完成的字幕将存储在本地历史记录中。",
+          "latency_ms": 95.51
+        },
+        {
+          "id": "music",
+          "source": "今日のBGMは少し大きいです。",
+          "reference": "今天的背景音乐有点大声。",
+          "hypothesis": "今天的BGM有点大。",
+          "latency_ms": 49.989
+        },
+        {
+          "id": "tray",
+          "source": "字幕ウィンドウを閉じてもアプリは終了しません。",
+          "reference": "关闭悬浮窗不会退出应用程序。",
+          "hypothesis": "关闭字幕窗口后,应用程序不会结束。",
+          "latency_ms": 91.718
+        }
+      ]
+    },
+    "ja->en": {
+      "source": "ja",
+      "target": "en",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 77.47,
+        "p95": 94.824
+      },
+      "quality": {
+        "chrf_pp": 44.304,
+        "bleu": 7.545
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "会議は10分後に始まります。",
+          "reference": "The meeting will begin in ten minutes.",
+          "hypothesis": "The meeting begins in 10 minutes.",
+          "latency_ms": 55.128
+        },
+        {
+          "id": "bilingual",
+          "source": "二言語字幕モードを有効にしてください。",
+          "reference": "Please enable bilingual subtitle mode.",
+          "hypothesis": "Please enable the two-language subtitle mode.",
+          "latency_ms": 79.764
+        },
+        {
+          "id": "local-audio",
+          "source": "音声はローカルメモリ内でのみ処理されます。",
+          "reference": "Audio is processed only in local memory.",
+          "hypothesis": "The sound is only processed within local memory.",
+          "latency_ms": 71.785
+        },
+        {
+          "id": "fallback",
+          "source": "翻訳に失敗しても原文は残ります。",
+          "reference": "The source text remains even if translation fails.",
+          "hypothesis": "If the translation fails, the original text will remain.",
+          "latency_ms": 90.665
+        },
+        {
+          "id": "languages",
+          "source": "原文の言語と翻訳先の言語を選択してください。",
+          "reference": "Select the source and target languages.",
+          "hypothesis": "Please select the language of the original text and the language of translation.",
+          "latency_ms": 97.063
+        },
+        {
+          "id": "history",
+          "source": "完成した字幕はローカル履歴に保存されます。",
+          "reference": "Completed captions are saved to local history.",
+          "hypothesis": "The completed subtitles will be saved in the local history.",
+          "latency_ms": 90.199
+        },
+        {
+          "id": "music",
+          "source": "今日のBGMは少し大きいです。",
+          "reference": "The background music is a little loud today.",
+          "hypothesis": "Today’s BGM is a bit big.",
+          "latency_ms": 70.022
+        },
+        {
+          "id": "tray",
+          "source": "字幕ウィンドウを閉じてもアプリは終了しません。",
+          "reference": "Closing the overlay does not exit the application.",
+          "hypothesis": "If you close the subscription window, the application will not end.",
+          "latency_ms": 75.175
+        }
+      ]
+    },
+    "ja->ko": {
+      "source": "ja",
+      "target": "ko",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 76.781,
+        "p95": 94.145
+      },
+      "quality": {
+        "chrf_pp": 31.477,
+        "bleu": 8.157
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "会議は10分後に始まります。",
+          "reference": "회의는 10분 후에 시작합니다.",
+          "hypothesis": "회의는 10분 후에 시작된다.",
+          "latency_ms": 65.407
+        },
+        {
+          "id": "bilingual",
+          "source": "二言語字幕モードを有効にしてください。",
+          "reference": "이중 언어 자막 모드를 켜 주세요.",
+          "hypothesis": "두 언어 서명 모드를 활성화하십시오.",
+          "latency_ms": 79.931
+        },
+        {
+          "id": "local-audio",
+          "source": "音声はローカルメモリ内でのみ処理されます。",
+          "reference": "오디오는 로컬 메모리에서만 처리됩니다.",
+          "hypothesis": "음성은 현지 메모리 내에서만 처리됩니다.",
+          "latency_ms": 87.171
+        },
+        {
+          "id": "fallback",
+          "source": "翻訳に失敗しても原文は残ります。",
+          "reference": "번역에 실패해도 원문은 남아 있습니다.",
+          "hypothesis": "번역이 실패하면 원본이 남아있을 것입니다.",
+          "latency_ms": 91.444
+        },
+        {
+          "id": "languages",
+          "source": "原文の言語と翻訳先の言語を選択してください。",
+          "reference": "원본 언어와 대상 언어를 선택하세요.",
+          "hypothesis": "원본 언어와 번역 언어를 선택하십시오.",
+          "latency_ms": 72.797
+        },
+        {
+          "id": "history",
+          "source": "完成した字幕はローカル履歴に保存されます。",
+          "reference": "완료된 자막은 로컬 기록에 저장됩니다.",
+          "hypothesis": "완성된 서명은 로컬 역사에 저장됩니다.",
+          "latency_ms": 73.63
+        },
+        {
+          "id": "music",
+          "source": "今日のBGMは少し大きいです。",
+          "reference": "오늘은 배경 음악이 조금 큽니다.",
+          "hypothesis": "오늘의 BGM은 약간 크다.",
+          "latency_ms": 56.116
+        },
+        {
+          "id": "tray",
+          "source": "字幕ウィンドウを閉じてもアプリは終了しません。",
+          "reference": "자막 창을 닫아도 애플리케이션은 종료되지 않습니다.",
+          "hypothesis": "서명 창을 닫으면 앱이 끝나지 않습니다.",
+          "latency_ms": 95.6
+        }
+      ]
+    },
+    "en->zh": {
+      "source": "en",
+      "target": "zh",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 66.421,
+        "p95": 80.54
+      },
+      "quality": {
+        "chrf_pp": 35.161,
+        "bleu": 0.0
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "The meeting will begin in ten minutes.",
+          "reference": "会议将在十分钟后开始。",
+          "hypothesis": "会议将在10分钟内开始。",
+          "latency_ms": 55.497
+        },
+        {
+          "id": "bilingual",
+          "source": "Please enable bilingual subtitle mode.",
+          "reference": "请启用双语字幕模式。",
+          "hypothesis": "请启用双语字幕模式。",
+          "latency_ms": 62.995
+        },
+        {
+          "id": "local-audio",
+          "source": "Audio is processed only in local memory.",
+          "reference": "音频只在本机内存中处理。",
+          "hypothesis": "音频仅在本地内存中处理。",
+          "latency_ms": 71.617
+        },
+        {
+          "id": "fallback",
+          "source": "The source text remains even if translation fails.",
+          "reference": "即使翻译失败，原文也会保留。",
+          "hypothesis": "源文本仍然存在,即使翻译失败。",
+          "latency_ms": 84.325
+        },
+        {
+          "id": "languages",
+          "source": "Select the source and target languages.",
+          "reference": "请选择源语言和目标语言。",
+          "hypothesis": "选择源和目标语言。",
+          "latency_ms": 49.615
+        },
+        {
+          "id": "history",
+          "source": "Completed captions are saved to local history.",
+          "reference": "完成的字幕会保存到本地历史记录。",
+          "hypothesis": "完成的捕获被保存到当地历史。",
+          "latency_ms": 69.847
+        },
+        {
+          "id": "music",
+          "source": "The background music is a little loud today.",
+          "reference": "今天的背景音乐有点大声。",
+          "hypothesis": "背景音乐今天有点大声。",
+          "latency_ms": 49.019
+        },
+        {
+          "id": "tray",
+          "source": "Closing the overlay does not exit the application.",
+          "reference": "关闭悬浮窗不会退出应用程序。",
+          "hypothesis": "关闭过渡不会使应用程序脱离。",
+          "latency_ms": 73.512
+        }
+      ]
+    },
+    "en->ja": {
+      "source": "en",
+      "target": "ja",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 85.524,
+        "p95": 97.975
+      },
+      "quality": {
+        "chrf_pp": 27.536,
+        "bleu": 0.0
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "The meeting will begin in ten minutes.",
+          "reference": "会議は10分後に始まります。",
+          "hypothesis": "会議は10分以内に始まる。",
+          "latency_ms": 74.677
+        },
+        {
+          "id": "bilingual",
+          "source": "Please enable bilingual subtitle mode.",
+          "reference": "二言語字幕モードを有効にしてください。",
+          "hypothesis": "二言語サブタイトルモードを有効にしてください。",
+          "latency_ms": 87.66
+        },
+        {
+          "id": "local-audio",
+          "source": "Audio is processed only in local memory.",
+          "reference": "音声はローカルメモリ内でのみ処理されます。",
+          "hypothesis": "音声は地元のメモリでのみ処理されます。",
+          "latency_ms": 90.321
+        },
+        {
+          "id": "fallback",
+          "source": "The source text remains even if translation fails.",
+          "reference": "翻訳に失敗しても原文は残ります。",
+          "hypothesis": "翻訳が失敗した場合でも、ソーステキストが残ります。",
+          "latency_ms": 91.821
+        },
+        {
+          "id": "languages",
+          "source": "Select the source and target languages.",
+          "reference": "原文の言語と翻訳先の言語を選択してください。",
+          "hypothesis": "ソースとターゲット言語を選択します。",
+          "latency_ms": 83.388
+        },
+        {
+          "id": "history",
+          "source": "Completed captions are saved to local history.",
+          "reference": "完成した字幕はローカル履歴に保存されます。",
+          "hypothesis": "完成したキャプテンは地元の歴史に保存されています。",
+          "latency_ms": 101.288
+        },
+        {
+          "id": "music",
+          "source": "The background music is a little loud today.",
+          "reference": "今日のBGMは少し大きいです。",
+          "hypothesis": "今日の音楽はちょっと音が強い。",
+          "latency_ms": 63.44
+        },
+        {
+          "id": "tray",
+          "source": "Closing the overlay does not exit the application.",
+          "reference": "字幕ウィンドウを閉じてもアプリは終了しません。",
+          "hypothesis": "封鎖はアプリケーションを外すことはありません。",
+          "latency_ms": 80.321
+        }
+      ]
+    },
+    "en->ko": {
+      "source": "en",
+      "target": "ko",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 81.785,
+        "p95": 97.233
+      },
+      "quality": {
+        "chrf_pp": 33.787,
+        "bleu": 9.347
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "The meeting will begin in ten minutes.",
+          "reference": "회의는 10분 후에 시작합니다.",
+          "hypothesis": "회의는 10분 안에 시작된다.",
+          "latency_ms": 67.621
+        },
+        {
+          "id": "bilingual",
+          "source": "Please enable bilingual subtitle mode.",
+          "reference": "이중 언어 자막 모드를 켜 주세요.",
+          "hypothesis": "이중 언어로 하위 모드를 사용해 주시기 바랍니다.",
+          "latency_ms": 93.128
+        },
+        {
+          "id": "local-audio",
+          "source": "Audio is processed only in local memory.",
+          "reference": "오디오는 로컬 메모리에서만 처리됩니다.",
+          "hypothesis": "오디오는 현지 메모리에서만 처리됩니다.",
+          "latency_ms": 78.594
+        },
+        {
+          "id": "fallback",
+          "source": "The source text remains even if translation fails.",
+          "reference": "번역에 실패해도 원문은 남아 있습니다.",
+          "hypothesis": "번역이 실패한 경우에도 출처 텍스트가 남아 있습니다.",
+          "latency_ms": 99.444
+        },
+        {
+          "id": "languages",
+          "source": "Select the source and target languages.",
+          "reference": "원본 언어와 대상 언어를 선택하세요.",
+          "hypothesis": "출처와 대상 언어를 선택합니다.",
+          "latency_ms": 59.966
+        },
+        {
+          "id": "history",
+          "source": "Completed captions are saved to local history.",
+          "reference": "완료된 자막은 로컬 기록에 저장됩니다.",
+          "hypothesis": "완성된 캡처는 지역 역사에 저장됩니다.",
+          "latency_ms": 80.868
+        },
+        {
+          "id": "music",
+          "source": "The background music is a little loud today.",
+          "reference": "오늘은 배경 음악이 조금 큽니다.",
+          "hypothesis": "오늘날 음악은 조금 더 큰 소리로 나온다.",
+          "latency_ms": 82.702
+        },
+        {
+          "id": "tray",
+          "source": "Closing the overlay does not exit the application.",
+          "reference": "자막 창을 닫아도 애플리케이션은 종료되지 않습니다.",
+          "hypothesis": "닫기 위하여는 응용 프로그램을 꺼내지 않습니다.",
+          "latency_ms": 88.369
+        }
+      ]
+    },
+    "ko->zh": {
+      "source": "ko",
+      "target": "zh",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 82.217,
+        "p95": 95.77
+      },
+      "quality": {
+        "chrf_pp": 29.877,
+        "bleu": 0.0
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "회의는 10분 후에 시작합니다.",
+          "reference": "会议将在十分钟后开始。",
+          "hypothesis": "会议在10分钟后开始。",
+          "latency_ms": 52.566
+        },
+        {
+          "id": "bilingual",
+          "source": "이중 언어 자막 모드를 켜 주세요.",
+          "reference": "请启用双语字幕模式。",
+          "hypothesis": "请点击双语字幕模式。",
+          "latency_ms": 85.288
+        },
+        {
+          "id": "local-audio",
+          "source": "오디오는 로컬 메모리에서만 처리됩니다.",
+          "reference": "音频只在本机内存中处理。",
+          "hypothesis": "音频仅在本地内存中处理。",
+          "latency_ms": 81.785
+        },
+        {
+          "id": "fallback",
+          "source": "번역에 실패해도 원문은 남아 있습니다.",
+          "reference": "即使翻译失败，原文也会保留。",
+          "hypothesis": "翻译失败后,原文仍然存在。",
+          "latency_ms": 94.315
+        },
+        {
+          "id": "languages",
+          "source": "원본 언어와 대상 언어를 선택하세요.",
+          "reference": "请选择源语言和目标语言。",
+          "hypothesis": "选择原始语言和目标语言。",
+          "latency_ms": 63.153
+        },
+        {
+          "id": "history",
+          "source": "완료된 자막은 로컬 기록에 저장됩니다.",
+          "reference": "完成的字幕会保存到本地历史记录。",
+          "hypothesis": "完成的字幕将存储在本地记录中。",
+          "latency_ms": 82.649
+        },
+        {
+          "id": "music",
+          "source": "오늘은 배경 음악이 조금 큽니다.",
+          "reference": "今天的背景音乐有点大声。",
+          "hypothesis": "今天,音乐的背景有点。",
+          "latency_ms": 61.061
+        },
+        {
+          "id": "tray",
+          "source": "자막 창을 닫아도 애플리케이션은 종료되지 않습니다.",
+          "reference": "关闭悬浮窗不会退出应用程序。",
+          "hypothesis": "即使封闭字幕窗口,应用程序也不会关闭。",
+          "latency_ms": 96.554
+        }
+      ]
+    },
+    "ko->ja": {
+      "source": "ko",
+      "target": "ja",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 87.097,
+        "p95": 118.0
+      },
+      "quality": {
+        "chrf_pp": 40.442,
+        "bleu": 0.0
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "회의는 10분 후에 시작합니다.",
+          "reference": "会議は10分後に始まります。",
+          "hypothesis": "会議は10分後に始まります。",
+          "latency_ms": 95.241
+        },
+        {
+          "id": "bilingual",
+          "source": "이중 언어 자막 모드를 켜 주세요.",
+          "reference": "二言語字幕モードを有効にしてください。",
+          "hypothesis": "二言語のサインモードを起動してください。",
+          "latency_ms": 97.909
+        },
+        {
+          "id": "local-audio",
+          "source": "오디오는 로컬 메모리에서만 처리됩니다.",
+          "reference": "音声はローカルメモリ内でのみ処理されます。",
+          "hypothesis": "音声は地元メモリでのみ処理されます。",
+          "latency_ms": 78.961
+        },
+        {
+          "id": "fallback",
+          "source": "번역에 실패해도 원문은 남아 있습니다.",
+          "reference": "翻訳に失敗しても原文は残ります。",
+          "hypothesis": "翻訳が失敗した場合、原文は残ります。",
+          "latency_ms": 76.307
+        },
+        {
+          "id": "languages",
+          "source": "원본 언어와 대상 언어를 선택하세요.",
+          "reference": "原文の言語と翻訳先の言語を選択してください。",
+          "hypothesis": "オリジナル言語と対象言語を選択します。",
+          "latency_ms": 80.841
+        },
+        {
+          "id": "history",
+          "source": "완료된 자막은 로컬 기록에 저장됩니다.",
+          "reference": "完成した字幕はローカル履歴に保存されます。",
+          "hypothesis": "完成したサインはローカル記録に保存されます。",
+          "latency_ms": 93.353
+        },
+        {
+          "id": "music",
+          "source": "오늘은 배경 음악이 조금 큽니다.",
+          "reference": "今日のBGMは少し大きいです。",
+          "hypothesis": "今日は、ちょっと音楽の背景。",
+          "latency_ms": 48.387
+        },
+        {
+          "id": "tray",
+          "source": "자막 창을 닫아도 애플리케이션은 종료되지 않습니다.",
+          "reference": "字幕ウィンドウを閉じてもアプリは終了しません。",
+          "hypothesis": "サブタイトルウィンドウを閉じてもアプリケーションは閉じない。",
+          "latency_ms": 128.818
+        }
+      ]
+    },
+    "ko->en": {
+      "source": "ko",
+      "target": "en",
+      "sample_count": 8,
+      "latency_ms": {
+        "p50": 58.816,
+        "p95": 101.624
+      },
+      "quality": {
+        "chrf_pp": 46.955,
+        "bleu": 15.321
+      },
+      "passed_latency": true,
+      "samples": [
+        {
+          "id": "meeting",
+          "source": "회의는 10분 후에 시작합니다.",
+          "reference": "The meeting will begin in ten minutes.",
+          "hypothesis": "Meeting starts after 10 minutes.",
+          "latency_ms": 44.92
+        },
+        {
+          "id": "bilingual",
+          "source": "이중 언어 자막 모드를 켜 주세요.",
+          "reference": "Please enable bilingual subtitle mode.",
+          "hypothesis": "Please turn the double language.",
+          "latency_ms": 47.398
+        },
+        {
+          "id": "local-audio",
+          "source": "오디오는 로컬 메모리에서만 처리됩니다.",
+          "reference": "Audio is processed only in local memory.",
+          "hypothesis": "Audio is only processed in local memory.",
+          "latency_ms": 55.071
+        },
+        {
+          "id": "fallback",
+          "source": "번역에 실패해도 원문은 남아 있습니다.",
+          "reference": "The source text remains even if translation fails.",
+          "hypothesis": "If the translation fails, the original remains.",
+          "latency_ms": 72.175
+        },
+        {
+          "id": "languages",
+          "source": "원본 언어와 대상 언어를 선택하세요.",
+          "reference": "Select the source and target languages.",
+          "hypothesis": "Select the original language and target language.",
+          "latency_ms": 49.759
+        },
+        {
+          "id": "history",
+          "source": "완료된 자막은 로컬 기록에 저장됩니다.",
+          "reference": "Completed captions are saved to local history.",
+          "hypothesis": "The completed subtitles are stored in the local record.",
+          "latency_ms": 83.822
+        },
+        {
+          "id": "music",
+          "source": "오늘은 배경 음악이 조금 큽니다.",
+          "reference": "The background music is a little loud today.",
+          "hypothesis": "Today, the background music is a little bit.",
+          "latency_ms": 62.561
+        },
+        {
+          "id": "tray",
+          "source": "자막 창을 닫아도 애플리케이션은 종료되지 않습니다.",
+          "reference": "Closing the overlay does not exit the application.",
+          "hypothesis": "Even when the subtitle window is closed, the application will not be closed.",
+          "latency_ms": 111.209
+        }
+      ]
+    }
+  }
+}

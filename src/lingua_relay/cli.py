@@ -28,6 +28,9 @@ def build_parser() -> argparse.ArgumentParser:
     demo = subparsers.add_parser("demo", help="show the overlay with synthetic captions")
     demo.add_argument("--config", type=Path, help="optional TOML configuration")
 
+    app = subparsers.add_parser("app", help="run the tray application and live overlay")
+    app.add_argument("--config", type=Path, help="optional TOML configuration")
+
     subparsers.add_parser("languages", help="list supported manual language routes")
 
     devices = subparsers.add_parser("audio-devices", help="list WASAPI loopback devices")
@@ -89,6 +92,37 @@ def build_parser() -> argparse.ArgumentParser:
     asr_stream.add_argument("--device", choices=("auto", "cpu", "cuda"))
     asr_stream.add_argument("--compute-type")
     asr_stream.add_argument("--seconds", type=float, default=0)
+
+    mt_prepare = subparsers.add_parser("mt-prepare", help="download and convert the M3 model")
+    mt_prepare.add_argument("--config", type=Path, help="optional TOML configuration")
+    mt_prepare.add_argument("--output", type=Path)
+    mt_prepare.add_argument("--quantization", default="float16")
+    mt_prepare.add_argument("--force", action="store_true")
+
+    mt_doctor = subparsers.add_parser("mt-doctor", help="inspect the M3 translation runtime")
+    mt_doctor.add_argument("--config", type=Path, help="optional TOML configuration")
+    mt_doctor.add_argument("--device", choices=("auto", "cpu", "cuda"))
+    mt_doctor.add_argument("--compute-type")
+    mt_doctor.add_argument("--load", action="store_true")
+
+    mt_translate = subparsers.add_parser("mt-translate", help="translate one text directly")
+    mt_translate.add_argument("text")
+    mt_translate.add_argument("--source", required=True, choices=tuple(SUPPORTED_LANGUAGES))
+    mt_translate.add_argument("--target", required=True, choices=tuple(SUPPORTED_LANGUAGES))
+    mt_translate.add_argument("--config", type=Path, help="optional TOML configuration")
+    mt_translate.add_argument("--device", choices=("auto", "cpu", "cuda"))
+    mt_translate.add_argument("--compute-type")
+
+    mt_benchmark = subparsers.add_parser(
+        "mt-benchmark", help="benchmark all 12 M3 translation routes"
+    )
+    mt_benchmark.add_argument(
+        "corpus", type=Path, default=Path("docs/benchmarks/m3-parallel-corpus.json"), nargs="?"
+    )
+    mt_benchmark.add_argument("--report", type=Path, required=True)
+    mt_benchmark.add_argument("--config", type=Path, help="optional TOML configuration")
+    mt_benchmark.add_argument("--device", choices=("auto", "cpu", "cuda"))
+    mt_benchmark.add_argument("--compute-type")
     return parser
 
 
@@ -102,6 +136,10 @@ def main(argv: list[str] | None = None) -> int:
         from lingua_relay.ui.overlay import run_demo
 
         return run_demo(settings)
+    if args.command == "app":
+        from lingua_relay.ui.app import run_app
+
+        return run_app(args.config)
     if args.command == "languages":
         for code, language in SUPPORTED_LANGUAGES.items():
             print(f"{code}: {language.native_name} / {language.english_name}")
@@ -164,6 +202,14 @@ def main(argv: list[str] | None = None) -> int:
         return run_asr_benchmark(args)
     if args.command == "asr-stream":
         return run_asr_stream(args)
+    if args.command == "mt-prepare":
+        return run_mt_prepare(args)
+    if args.command == "mt-doctor":
+        return run_mt_doctor(args)
+    if args.command == "mt-translate":
+        return run_mt_translate(args)
+    if args.command == "mt-benchmark":
+        return run_mt_benchmark(args)
     return 2
 
 
@@ -185,8 +231,8 @@ def run_doctor(config_path: Path | None) -> int:
         "pyaudiowpatch": "WASAPI loopback capture",
         "soxr": "streaming sample-rate conversion",
         "faster_whisper": "speech recognition",
-        "transformers": "candidate translation runtime",
-        "sentencepiece": "candidate translation tokenizer",
+        "ctranslate2": "ASR and translation inference",
+        "sentencepiece": "M2M100 translation tokenizer",
     }
     for module, purpose in modules.items():
         installed = importlib.util.find_spec(module) is not None
@@ -315,6 +361,73 @@ def _override_asr(settings: Settings, args: argparse.Namespace):
         if hasattr(args, name) and getattr(args, name) is not None
     }
     return replace(settings.asr, **overrides)
+
+
+def _override_translation(settings: Settings, args: argparse.Namespace):
+    overrides = {
+        name: getattr(args, name)
+        for name in ("device", "compute_type")
+        if hasattr(args, name) and getattr(args, name) is not None
+    }
+    return replace(settings.translation, **overrides)
+
+
+def run_mt_prepare(args: argparse.Namespace) -> int:
+    from lingua_relay.mt import prepare_m2m100_model
+
+    settings = Settings.load(args.config).translation
+    output = args.output or settings.model_path
+    path = prepare_m2m100_model(
+        output,
+        model=settings.model,
+        revision=settings.revision,
+        quantization=args.quantization,
+        force=args.force,
+    )
+    print(path)
+    return 0
+
+
+def run_mt_doctor(args: argparse.Namespace) -> int:
+    from lingua_relay.asr import resolve_runtime
+    from lingua_relay.mt import M2M100Translator
+
+    settings = _override_translation(Settings.load(args.config), args)
+    result: dict[str, object] = {
+        "model": settings.model,
+        "revision": settings.revision,
+        "model_path": str(settings.model_path),
+        "model_present": (settings.model_path / "model.bin").is_file(),
+        "runtime": asdict(resolve_runtime(settings.device, settings.compute_type)),
+        "loaded": False,
+    }
+    if args.load:
+        translator = M2M100Translator(settings)
+        translator.load()
+        result["loaded"] = True
+        result["load_ms"] = translator.load_ms
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result["model_present"] else 1
+
+
+def run_mt_translate(args: argparse.Namespace) -> int:
+    from lingua_relay.mt import M2M100Translator
+
+    settings = _override_translation(Settings.load(args.config), args)
+    translator = M2M100Translator(settings)
+    result = translator.translate(args.text, source=args.source, target=args.target)
+    print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
+    return 0
+
+
+def run_mt_benchmark(args: argparse.Namespace) -> int:
+    from lingua_relay.mt.benchmark import run_benchmark, write_report
+
+    settings = _override_translation(Settings.load(args.config), args)
+    report = run_benchmark(settings, args.corpus)
+    write_report(report, args.report)
+    print(json.dumps(report["acceptance"], ensure_ascii=False, indent=2))
+    return 0 if report["acceptance"]["all_routes_passed_latency"] else 1
 
 
 if __name__ == "__main__":

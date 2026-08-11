@@ -22,6 +22,11 @@ class OverlaySettings:
     bottom_margin: int = 96
     opacity: float = 0.92
     click_through: bool = False
+    display_mode: str = "bilingual"
+    position: str = "bottom"
+    source_font_size: int = 12
+    translation_font_size: int = 18
+    toggle_shortcut: str = "Ctrl+Alt+L"
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,8 +65,19 @@ class AsrSettings:
 
 @dataclass(frozen=True, slots=True)
 class TranslationSettings:
-    provider: str = "route_registry"
-    model: str = "auto"
+    provider: str = "m2m100_ct2"
+    model: str = "facebook/m2m100_418M"
+    revision: str = "55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636"
+    model_path: Path = Path("models/m2m100_418m_ct2")
+    device: str = "auto"
+    compute_type: str = "auto"
+    beam_size: int = 1
+    max_input_tokens: int = 256
+    max_decoding_length: int = 256
+    cache_size: int = 512
+    queue_capacity: int = 4
+    event_queue_capacity: int = 16
+    translate_partials: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,7 +128,11 @@ class Settings:
             overlay=_dataclass_from_section(OverlaySettings, raw.get("overlay", {})),
             audio=_dataclass_from_section(AudioSettings, raw.get("audio", {})),
             asr=_dataclass_from_section(AsrSettings, raw.get("asr", {})),
-            translation=_dataclass_from_section(TranslationSettings, raw.get("translation", {})),
+            translation=_dataclass_from_section(
+                TranslationSettings,
+                raw.get("translation", {}),
+                {"model_path": Path},
+            ),
             correction=_dataclass_from_section(CorrectionSettings, raw.get("correction", {})),
         )
 
@@ -138,6 +158,12 @@ class Settings:
             raise ValueError("audio reconnect interval is invalid")
         if not 0.2 <= self.overlay.opacity <= 1.0:
             raise ValueError("overlay.opacity must be between 0.2 and 1.0")
+        if self.overlay.display_mode not in {"translated", "bilingual"}:
+            raise ValueError("overlay.display_mode must be translated or bilingual")
+        if self.overlay.position not in {"top", "bottom"}:
+            raise ValueError("overlay.position must be top or bottom")
+        if self.overlay.source_font_size < 8 or self.overlay.translation_font_size < 8:
+            raise ValueError("overlay font sizes must be at least 8")
         if self.asr.provider != "faster_whisper":
             raise ValueError("asr.provider must be faster_whisper in M2")
         if not self.asr.model or self.asr.model.endswith(".en"):
@@ -170,6 +196,30 @@ class Settings:
             raise ValueError("asr.max_segment_seconds must cover max_window_seconds")
         if self.asr.inference_queue_capacity < 2 or self.asr.event_queue_capacity < 2:
             raise ValueError("ASR queues must have capacity of at least two")
+        if self.translation.provider != "m2m100_ct2":
+            raise ValueError("translation.provider must be m2m100_ct2 in M3")
+        if not self.translation.model or not self.translation.revision:
+            raise ValueError("translation model and revision must not be empty")
+        if self.translation.device not in {"auto", "cpu", "cuda"}:
+            raise ValueError("translation.device must be auto, cpu, or cuda")
+        if self.translation.compute_type not in {
+            "auto",
+            "default",
+            "float16",
+            "float32",
+            "int8",
+            "int8_float16",
+            "int8_float32",
+        }:
+            raise ValueError("unsupported translation.compute_type")
+        if self.translation.beam_size < 1:
+            raise ValueError("translation.beam_size must be positive")
+        if self.translation.max_input_tokens < 8 or self.translation.max_decoding_length < 8:
+            raise ValueError("translation token limits must be at least eight")
+        if self.translation.cache_size < 0:
+            raise ValueError("translation.cache_size must not be negative")
+        if self.translation.queue_capacity < 2 or self.translation.event_queue_capacity < 2:
+            raise ValueError("translation queues must have capacity of at least two")
 
 
 def _dataclass_from_section(

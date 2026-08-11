@@ -16,6 +16,8 @@ class TranslationRoute:
     target: str
     provider_name: str
     translator: Translator
+    route_kind: str = "direct"
+    model_name: str = ""
 
 
 class TranslationRouteRegistry:
@@ -30,6 +32,9 @@ class TranslationRouteRegistry:
         target: str,
         provider_name: str,
         translator: Translator,
+        *,
+        route_kind: str = "direct",
+        model_name: str = "",
     ) -> None:
         source_code = normalize_language(source)
         target_code = normalize_language(target)
@@ -41,6 +46,8 @@ class TranslationRouteRegistry:
             target=target_code,
             provider_name=provider_name,
             translator=translator,
+            route_kind=route_kind,
+            model_name=model_name,
         )
 
     def resolve(self, source: str, target: str) -> TranslationRoute:
@@ -65,3 +72,17 @@ class TranslationRouteRegistry:
             raise ValueError(f"unsupported translation route: {source}->{target}")
         if source == target:
             raise ValueError("translation source and target must be different")
+
+
+def build_m2m100_registry(translator: Translator) -> TranslationRouteRegistry:
+    registry = TranslationRouteRegistry()
+    for source, target in translation_routes():
+        registry.register(
+            source,
+            target,
+            "m2m100_ct2",
+            translator,
+            route_kind="direct",
+            model_name="facebook/m2m100_418M",
+        )
+    return registry
