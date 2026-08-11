@@ -9,6 +9,7 @@ import urllib.request
 import uuid
 import zipfile
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -110,9 +111,27 @@ def model_pack_status(
             return ModelPackStatus(False, 0, len(manifest.files), 0, "verification marker missing")
         if marker.get("manifest_digest") != manifest.digest:
             return ModelPackStatus(False, 0, len(manifest.files), 0, "model version changed")
+    return model_files_status(root, manifest, full_hash=full_hash)
+
+
+def model_files_status(
+    model_root: str | Path,
+    manifest: ModelPackManifest,
+    *,
+    full_hash: bool = False,
+    progress: ProgressCallback | None = None,
+) -> ModelPackStatus:
+    """Validate a model directory without requiring LinguaRelay's marker file."""
+    root = Path(model_root)
     installed = 0
     for index, item in enumerate(manifest.files):
         candidate = root / Path(item.path)
+        if progress:
+            progress(
+                installed,
+                manifest.total_installed_bytes,
+                f"Verifying existing model file {index + 1}/{len(manifest.files)}",
+            )
         try:
             size = candidate.stat().st_size
         except OSError:
@@ -128,6 +147,8 @@ def model_pack_status(
                 False, index, len(manifest.files), installed, f"hash mismatch for {item.path}"
             )
         installed += size
+    if progress:
+        progress(installed, manifest.total_installed_bytes, "Existing model verification complete")
     return ModelPackStatus(True, len(manifest.files), len(manifest.files), installed)
 
 
@@ -153,7 +174,8 @@ def adopt_existing_models(
                 False, index - 1, len(manifest.files), completed, f"hash mismatch: {item.path}"
             )
         completed += item.size
-    _write_marker(root, manifest)
+    with suppress(OSError):
+        _write_marker(root, manifest)
     if progress:
         progress(completed, completed, "Model verification complete")
     return ModelPackStatus(True, len(manifest.files), len(manifest.files), completed)

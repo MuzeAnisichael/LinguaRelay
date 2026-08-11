@@ -13,7 +13,9 @@ revision layer.
 
 ## Install v0.1.0
 
-Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.0), verify `SHA256SUMS.txt`, and run it. On first launch, accept the displayed upstream model licenses; LinguaRelay downloads the separate pinned model pack and validates every file before use.
+Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.0), verify `SHA256SUMS.txt`, and run it. v0.1.0 shows the upstream model licenses on first launch and SHA-256 verifies every file in the separately downloaded model pack.
+
+The unreleased `main` branch also checks LocalAppData during installation. First launch discovers models beside the executable, in the working directory, at `LINGUA_RELAY_MODEL_DIR`, or at the last manually selected directory. Existing files are SHA-256 verified against the pinned manifest, so a download is needed only when no valid local copy is selected.
 
 The first binaries are not Authenticode-signed, so Windows may show an unknown-publisher warning. See the release notes and threat model before proceeding.
 
@@ -58,7 +60,8 @@ The current capture path provides:
 - explicit `zh`, `ja`, `en`, or `ko` on every request, with no automatic
   language-detection fallback;
 - 320 ms overlapping updates, online energy endpointing, Silero VAD on final
-  segments, and stable/unstable partial text;
+  segments, and stable/unstable partial text; after six seconds a short pause
+  ends the caption, while ten seconds is the hard caption limit;
 - bounded inference and event queues that replace stale partials while
   preserving final results;
 - CPU/CUDA diagnostics, file transcription, live WASAPI transcription, and a
@@ -70,8 +73,9 @@ The current capture path provides:
 - direct translation for every ordered pair among `zh`, `ja`, `en`, and `ko`;
 - bounded MT queues, stale-partial replacement, final preservation, and a
   source-text fallback when translation fails;
-- translated-only and bilingual overlay modes, partial fading, configurable
-  position/opacity/fonts/click-through, and a global show/hide shortcut;
+- translated-only and bilingual overlay modes, partial fading, whole-window
+  dragging, edge/corner resizing with persisted geometry, configurable
+  opacity/fonts/click-through, and a global show/hide shortcut;
 - tray controls for pause/resume, manual languages, audio device, display mode,
   local history, CSV/JSONL/SRT export, and exit;
 - a PyInstaller onedir build, separate model pack, Inno Setup definition, and

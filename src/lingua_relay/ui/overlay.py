@@ -3,8 +3,8 @@ from __future__ import annotations
 import sys
 from dataclasses import replace
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QShowEvent
+from PySide6.QtCore import QEvent, QPoint, QRect, Qt, QTimer, Signal
+from PySide6.QtGui import QFont, QMouseEvent, QShowEvent
 from PySide6.QtWidgets import QApplication, QFrame, QLabel, QVBoxLayout, QWidget
 
 from lingua_relay.config import OverlaySettings, Settings
@@ -14,10 +14,22 @@ from lingua_relay.events import CaptionEvent
 class CaptionOverlay(QWidget):
     """Small always-on-top caption surface; model work never runs here."""
 
+    geometry_changed = Signal(int, int, int, int)
+
+    _LEFT = 1
+    _TOP = 2
+    _RIGHT = 4
+    _BOTTOM = 8
+    _RESIZE_MARGIN = 9
+
     def __init__(self, settings: OverlaySettings) -> None:
         super().__init__()
         self.settings = settings
         self._last_event: CaptionEvent | None = None
+        self._press_global: QPoint | None = None
+        self._press_geometry: QRect | None = None
+        self._resize_edges = 0
+        self._positioned = False
         self._build_window()
         self._build_content()
         self.apply_settings(settings)
@@ -28,9 +40,11 @@ class CaptionOverlay(QWidget):
         self.setWindowTitle("LinguaRelay")
 
     def _build_content(self) -> None:
-        frame = QFrame(self)
-        frame.setObjectName("captionFrame")
-        frame.setStyleSheet(
+        self.frame = QFrame(self)
+        self.frame.setObjectName("captionFrame")
+        self.frame.setMouseTracking(True)
+        self.frame.installEventFilter(self)
+        self.frame.setStyleSheet(
             "#captionFrame {"
             "background-color: rgba(16, 18, 24, 224);"
             "border: 1px solid rgba(255, 255, 255, 36);"
@@ -38,14 +52,17 @@ class CaptionOverlay(QWidget):
             "} QLabel { color: white; background: transparent; }"
         )
         self.status = QLabel("LINGUARELAY · 正在准备")
+        self.status.setToolTip("拖动窗口移动；拖动边缘或四角缩放")
         self.status.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
         self.status.setStyleSheet("color: #77d6a5;")
         self.source = QLabel("")
         self.source.setWordWrap(True)
         self.translation = QLabel("正在加载模型…")
         self.translation.setWordWrap(True)
+        for label in (self.status, self.source, self.translation):
+            label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
-        content = QVBoxLayout(frame)
+        content = QVBoxLayout(self.frame)
         content.setContentsMargins(22, 14, 22, 15)
         content.setSpacing(5)
         content.addWidget(self.status)
@@ -53,9 +70,10 @@ class CaptionOverlay(QWidget):
         content.addWidget(self.translation)
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
-        root.addWidget(frame)
+        root.addWidget(self.frame)
 
     def apply_settings(self, settings: OverlaySettings) -> None:
+        previous_geometry = self.geometry() if self._positioned else None
         self.settings = settings
         flags = (
             Qt.WindowType.FramelessWindowHint
@@ -67,14 +85,22 @@ class CaptionOverlay(QWidget):
         visible = self.isVisible()
         self.setWindowFlags(flags)
         self.setWindowOpacity(settings.opacity)
-        self.setFixedWidth(settings.width)
+        self.setMinimumSize(360, 96)
+        self.resize(settings.width, settings.height)
         self.source.setFont(QFont("Segoe UI", settings.source_font_size))
         self.translation.setFont(
             QFont("Microsoft YaHei UI", settings.translation_font_size, QFont.Weight.DemiBold)
         )
         self.source.setVisible(settings.display_mode == "bilingual")
-        self.adjustSize()
-        self.reposition()
+        if settings.x is not None and settings.y is not None:
+            self.move(settings.x, settings.y)
+            self._keep_on_screen()
+            self._positioned = True
+        elif previous_geometry is not None:
+            self.setGeometry(previous_geometry)
+            self._keep_on_screen()
+        else:
+            self.reposition()
         if visible:
             self.show()
 
@@ -131,8 +157,6 @@ class CaptionOverlay(QWidget):
             suffix = " · 翻译失败，显示原文" if fallback else " · 本地快译"
         self.set_status("error" if fallback else "running", route + suffix)
         self.source.setVisible(self.settings.display_mode == "bilingual")
-        self.adjustSize()
-        self.reposition()
 
     def reposition(self) -> None:
         screen = self.screen() or QApplication.primaryScreen()
@@ -145,10 +169,157 @@ class CaptionOverlay(QWidget):
         else:
             y = geometry.y() + geometry.height() - self.height() - self.settings.bottom_margin
         self.move(x, y)
+        self._keep_on_screen()
+        self._positioned = True
+
+    def reset_geometry(self) -> None:
+        defaults = OverlaySettings()
+        self.resize(defaults.width, defaults.height)
+        self.settings = replace(
+            self.settings,
+            width=defaults.width,
+            height=defaults.height,
+            x=None,
+            y=None,
+        )
+        self.reposition()
+        self._commit_geometry()
+
+    def resize_edges_at(self, point: QPoint) -> int:
+        """Return the active resize edge mask for a local window position."""
+        edges = 0
+        if point.x() <= self._RESIZE_MARGIN:
+            edges |= self._LEFT
+        elif point.x() >= self.width() - self._RESIZE_MARGIN:
+            edges |= self._RIGHT
+        if point.y() <= self._RESIZE_MARGIN:
+            edges |= self._TOP
+        elif point.y() >= self.height() - self._RESIZE_MARGIN:
+            edges |= self._BOTTOM
+        return edges
+
+    def eventFilter(self, watched: object, event: QEvent) -> bool:  # noqa: N802
+        if watched is self.frame and isinstance(event, QMouseEvent):
+            local = self.mapFromGlobal(event.globalPosition().toPoint())
+            if event.type() == QEvent.Type.MouseButtonPress:
+                return self._pointer_press(event, local)
+            if event.type() == QEvent.Type.MouseMove:
+                return self._pointer_move(event, local)
+            if event.type() == QEvent.Type.MouseButtonRelease:
+                return self._pointer_release(event)
+        return super().eventFilter(watched, event)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if not self._pointer_press(event, event.position().toPoint()):
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if not self._pointer_move(event, event.position().toPoint()):
+            super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if not self._pointer_release(event):
+            super().mouseReleaseEvent(event)
+
+    def _pointer_press(self, event: QMouseEvent, local: QPoint) -> bool:
+        if self.settings.click_through or event.button() != Qt.MouseButton.LeftButton:
+            return False
+        self._press_global = event.globalPosition().toPoint()
+        self._press_geometry = self.geometry()
+        self._resize_edges = self.resize_edges_at(local)
+        if not self._resize_edges:
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+        event.accept()
+        return True
+
+    def _pointer_move(self, event: QMouseEvent, local: QPoint) -> bool:
+        if self.settings.click_through:
+            return False
+        if self._press_global is None or self._press_geometry is None:
+            self._set_resize_cursor(self.resize_edges_at(local))
+            return False
+        delta = event.globalPosition().toPoint() - self._press_global
+        if self._resize_edges:
+            self.setGeometry(self._resized_geometry(self._press_geometry, delta))
+        else:
+            self.move(self._press_geometry.topLeft() + delta)
+        event.accept()
+        return True
+
+    def _pointer_release(self, event: QMouseEvent) -> bool:
+        if event.button() != Qt.MouseButton.LeftButton or self._press_global is None:
+            return False
+        self._press_global = None
+        self._press_geometry = None
+        self._resize_edges = 0
+        self.unsetCursor()
+        self._keep_on_screen()
+        self._commit_geometry()
+        event.accept()
+        return True
+
+    def _resized_geometry(self, original: QRect, delta: QPoint) -> QRect:
+        geometry = QRect(original)
+        minimum_width = self.minimumWidth()
+        minimum_height = self.minimumHeight()
+        if self._resize_edges & self._LEFT:
+            geometry.setLeft(min(original.left() + delta.x(), original.right() - minimum_width + 1))
+        if self._resize_edges & self._RIGHT:
+            geometry.setRight(
+                max(original.right() + delta.x(), original.left() + minimum_width - 1)
+            )
+        if self._resize_edges & self._TOP:
+            geometry.setTop(min(original.top() + delta.y(), original.bottom() - minimum_height + 1))
+        if self._resize_edges & self._BOTTOM:
+            geometry.setBottom(
+                max(original.bottom() + delta.y(), original.top() + minimum_height - 1)
+            )
+        return geometry
+
+    def _set_resize_cursor(self, edges: int) -> None:
+        cursors = {
+            self._LEFT: Qt.CursorShape.SizeHorCursor,
+            self._RIGHT: Qt.CursorShape.SizeHorCursor,
+            self._TOP: Qt.CursorShape.SizeVerCursor,
+            self._BOTTOM: Qt.CursorShape.SizeVerCursor,
+            self._LEFT | self._TOP: Qt.CursorShape.SizeFDiagCursor,
+            self._RIGHT | self._BOTTOM: Qt.CursorShape.SizeFDiagCursor,
+            self._RIGHT | self._TOP: Qt.CursorShape.SizeBDiagCursor,
+            self._LEFT | self._BOTTOM: Qt.CursorShape.SizeBDiagCursor,
+        }
+        cursor = cursors.get(edges)
+        if cursor is None:
+            self.unsetCursor()
+        else:
+            self.setCursor(cursor)
+
+    def _keep_on_screen(self) -> None:
+        screen = QApplication.screenAt(self.geometry().center()) or self.screen()
+        if screen is None:
+            screen = QApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        width = min(self.width(), available.width())
+        height = min(self.height(), available.height())
+        x = min(max(self.x(), available.left()), available.right() - width + 1)
+        y = min(max(self.y(), available.top()), available.bottom() - height + 1)
+        self.setGeometry(x, y, width, height)
+
+    def _commit_geometry(self) -> None:
+        geometry = self.geometry()
+        self.settings = replace(
+            self.settings,
+            x=geometry.x(),
+            y=geometry.y(),
+            width=geometry.width(),
+            height=geometry.height(),
+        )
+        self.geometry_changed.emit(geometry.x(), geometry.y(), geometry.width(), geometry.height())
 
     def showEvent(self, event: QShowEvent) -> None:  # noqa: N802
-        self.adjustSize()
-        self.reposition()
+        if not self._positioned:
+            self.reposition()
         super().showEvent(event)
 
 

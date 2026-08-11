@@ -11,8 +11,10 @@ from lingua_relay.model_pack import (
     adopt_existing_models,
     install_model_pack,
     load_model_pack_manifest,
+    model_files_status,
     model_pack_status,
 )
+from lingua_relay.ui.model_setup import ensure_model_pack
 
 
 def _manifest(tmp_path: Path, content: bytes = b"trusted model") -> tuple[Path, dict]:
@@ -86,3 +88,36 @@ def test_adopts_preexisting_verified_models(tmp_path: Path) -> None:
     manifest = load_model_pack_manifest(manifest_path)
     assert adopt_existing_models(root, manifest).ready
     assert model_pack_status(root, manifest).ready
+
+
+def test_detects_complete_model_directory_without_marker(tmp_path: Path) -> None:
+    content = b"trusted model"
+    manifest_path, _ = _manifest(tmp_path, content)
+    root = tmp_path / "portable-models"
+    (root / "model").mkdir(parents=True)
+    (root / "model/model.bin").write_bytes(content)
+    manifest = load_model_pack_manifest(manifest_path)
+
+    assert model_files_status(root, manifest).ready
+    assert model_files_status(root, manifest, full_hash=True).ready
+    (root / "model/model.bin").write_bytes(b"tampered mode")
+    assert not model_files_status(root, manifest, full_hash=True).ready
+
+
+def test_first_launch_reuses_a_verified_candidate_directory(tmp_path: Path) -> None:
+    content = b"trusted model"
+    manifest_path, _ = _manifest(tmp_path, content)
+    candidate = tmp_path / "portable-models"
+    (candidate / "model").mkdir(parents=True)
+    (candidate / "model/model.bin").write_bytes(content)
+    manifest = load_model_pack_manifest(manifest_path)
+    assert adopt_existing_models(candidate, manifest).ready
+
+    selected = ensure_model_pack(
+        tmp_path / "local-app-data-models",
+        manifest_path,
+        tmp_path / "data" / "downloads",
+        (candidate,),
+    )
+
+    assert selected == candidate.resolve()

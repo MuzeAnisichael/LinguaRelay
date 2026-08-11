@@ -61,6 +61,49 @@ def test_segmenter_never_uses_automatic_language_detection() -> None:
         raise AssertionError("auto language must not be accepted")
 
 
+def test_segmenter_uses_short_pause_after_preferred_duration() -> None:
+    settings = AsrSettings(
+        min_speech_ms=320,
+        min_silence_ms=960,
+        preferred_silence_ms=320,
+        partial_interval_ms=640,
+        preferred_segment_seconds=0.64,
+        max_window_seconds=1.0,
+        max_segment_seconds=2.0,
+    )
+    segmenter = StreamingSegmenter(settings)
+
+    segmenter.push(chunk(0), language="ja")
+    segmenter.push(chunk(1), language="ja")
+    final = segmenter.push(chunk(2, silent=True), language="ja")
+
+    assert len(final) == 1
+    assert final[0].state == "final"
+    assert len(final[0].samples) == 15_360
+
+
+def test_segmenter_hard_caps_continuous_speech() -> None:
+    settings = AsrSettings(
+        min_speech_ms=320,
+        min_silence_ms=640,
+        preferred_silence_ms=320,
+        partial_interval_ms=640,
+        preferred_segment_seconds=0.64,
+        max_caption_seconds=1.28,
+        max_window_seconds=24.0,
+        max_segment_seconds=24.0,
+    )
+    segmenter = StreamingSegmenter(settings)
+
+    requests = ()
+    for sequence in range(4):
+        requests = segmenter.push(chunk(sequence), language="ko")
+
+    assert len(requests) == 1
+    assert requests[0].state == "final"
+    assert len(requests[0].samples) == 20_480
+
+
 class FakeRecognizer:
     def __init__(self) -> None:
         self.calls = 0

@@ -8,7 +8,9 @@
 
 ## 安装 v0.1.0
 
-从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.0) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。首次启动会展示两个上游模型的许可证；确认后，应用下载独立模型包并逐文件校验 SHA-256，再启动本地识别与翻译。
+从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.0) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。v0.1.0 首次启动会展示两个上游模型的许可证，并对下载的独立模型包逐文件校验 SHA-256。
+
+当前未发布的 `main` 分支还会在安装时预检 LocalAppData；首次启动会扫描程序旁、当前目录、`LINGUA_RELAY_MODEL_DIR` 指定目录和上次选择的目录，也可手动选择模型目录。任何现有模型在使用前都会按固定清单校验 SHA-256，没有可用模型时才需下载。
 
 首版尚未进行 Authenticode 代码签名，Windows 可能显示“未知发布者”或 SmartScreen 提示。继续前请阅读发布说明、隐私说明和威胁模型。
 
@@ -41,7 +43,7 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 
 - 复用并预热一个多语言 `faster-whisper-small` 模型；
 - 每次识别显式传入 `zh / ja / en / ko`，不允许自动语言检测回退；
-- 每 320 ms 生成重叠窗口，在线能量端点检测，final 使用 Silero VAD；
+- 每 320 ms 生成重叠窗口，在线能量端点检测，final 使用 Silero VAD；连续语音优先在 6 秒后的短停顿切段，并以 10 秒为单条字幕硬上限；
 - partial 区分稳定与未稳定文本，连续假设提交稳定前缀；
 - 推理和事件队列均有固定上限，过载时替换旧 partial，保留 final；
 - 提供 CPU/CUDA 诊断、音频文件识别、WASAPI 实时识别和可复现的 FLEURS 四语基准。
@@ -50,7 +52,7 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 
 - 固定版本的 M2M100 418M/CTranslate2 通过一个预热实例直接覆盖四语全部 12 个方向；
 - 翻译队列有界，旧 partial 可替换而 final 不丢失，翻译失败时继续显示原文；
-- 悬浮窗支持“仅显示译文”和“双语同时显示”、partial 淡化、位置、透明度、字号与点击穿透；
+- 悬浮窗支持整面拖动、四边/四角缩放并持久化布局，也支持“仅显示译文”和“双语同时显示”、partial 淡化、透明度、字号与点击穿透；
 - 托盘支持暂停/继续、手动源/目标语言、音频设备、显示模式、历史、导出和退出；
 - JSONL 历史可导出为 JSONL、CSV 或 SRT；
 - 已准备 PyInstaller 应用目录、独立模型包、Inno Setup 安装器定义和 GitHub 打包工作流。

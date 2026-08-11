@@ -21,6 +21,9 @@ class AppSettings:
 @dataclass(frozen=True, slots=True)
 class OverlaySettings:
     width: int = 920
+    height: int = 180
+    x: int | None = None
+    y: int | None = None
     bottom_margin: int = 96
     opacity: float = 0.92
     click_through: bool = False
@@ -58,9 +61,12 @@ class AsrSettings:
     vad_threshold: float = 0.5
     min_speech_ms: int = 320
     min_silence_ms: int = 640
+    preferred_silence_ms: int = 320
     partial_interval_ms: int = 320
-    max_window_seconds: float = 24.0
-    max_segment_seconds: float = 24.0
+    preferred_segment_seconds: float = 6.0
+    max_caption_seconds: float = 10.0
+    max_window_seconds: float = 10.0
+    max_segment_seconds: float = 10.0
     inference_queue_capacity: int = 4
     event_queue_capacity: int = 16
 
@@ -199,6 +205,10 @@ class Settings:
             raise ValueError("audio reconnect interval is invalid")
         if not 0.2 <= self.overlay.opacity <= 1.0:
             raise ValueError("overlay.opacity must be between 0.2 and 1.0")
+        if self.overlay.width < 360 or self.overlay.height < 96:
+            raise ValueError("overlay dimensions must be at least 360 x 96")
+        if (self.overlay.x is None) != (self.overlay.y is None):
+            raise ValueError("overlay.x and overlay.y must be configured together")
         if self.overlay.display_mode not in {"translated", "bilingual"}:
             raise ValueError("overlay.display_mode must be translated or bilingual")
         if self.overlay.position not in {"top", "bottom"}:
@@ -225,8 +235,14 @@ class Settings:
             raise ValueError("asr.beam_size must be positive")
         if not 0 < self.asr.vad_threshold < 1:
             raise ValueError("asr.vad_threshold must be between 0 and 1")
-        if self.asr.min_speech_ms <= 0 or self.asr.min_silence_ms <= 0:
+        if (
+            self.asr.min_speech_ms <= 0
+            or self.asr.min_silence_ms <= 0
+            or self.asr.preferred_silence_ms <= 0
+        ):
             raise ValueError("ASR speech and silence durations must be positive")
+        if self.asr.preferred_silence_ms > self.asr.min_silence_ms:
+            raise ValueError("asr.preferred_silence_ms must not exceed min_silence_ms")
         if self.asr.partial_interval_ms < self.audio.chunk_ms:
             raise ValueError("asr.partial_interval_ms must be at least audio.chunk_ms")
         if self.asr.partial_interval_ms % self.audio.chunk_ms:
@@ -235,6 +251,10 @@ class Settings:
             raise ValueError("asr.max_window_seconds is too short")
         if self.asr.max_segment_seconds < self.asr.max_window_seconds:
             raise ValueError("asr.max_segment_seconds must cover max_window_seconds")
+        if not 0 < self.asr.preferred_segment_seconds <= self.asr.max_segment_seconds:
+            raise ValueError("asr.preferred_segment_seconds must fit inside max_segment_seconds")
+        if self.asr.max_caption_seconds < self.asr.partial_interval_ms / 1000:
+            raise ValueError("asr.max_caption_seconds is too short")
         if self.asr.inference_queue_capacity < 2 or self.asr.event_queue_capacity < 2:
             raise ValueError("ASR queues must have capacity of at least two")
         if self.translation.provider != "m2m100_ct2":

@@ -43,9 +43,15 @@ class StreamingSegmenter:
         self._active: _ActiveSegment | None = None
         self._min_speech_samples = round(settings.min_speech_ms * sample_rate / 1000)
         self._min_silence_samples = round(settings.min_silence_ms * sample_rate / 1000)
+        self._preferred_silence_samples = round(settings.preferred_silence_ms * sample_rate / 1000)
         self._partial_step_samples = round(settings.partial_interval_ms * sample_rate / 1000)
         self._max_window_samples = round(settings.max_window_seconds * sample_rate)
-        self._max_segment_samples = round(settings.max_segment_seconds * sample_rate)
+        self._max_segment_samples = round(
+            min(settings.max_segment_seconds, settings.max_caption_seconds) * sample_rate
+        )
+        self._preferred_segment_samples = min(
+            round(settings.preferred_segment_seconds * sample_rate), self._max_segment_samples
+        )
 
     def push(self, chunk: AudioChunk, *, language: str) -> tuple[InferenceRequest, ...]:
         normalized = _validate_language(language)
@@ -85,6 +91,16 @@ class StreamingSegmenter:
 
         if active.sample_count >= self._max_segment_samples:
             requests.append(self._finish())
+            return tuple(requests)
+        if (
+            active.sample_count >= self._preferred_segment_samples
+            and active.silence_samples >= self._preferred_silence_samples
+        ):
+            speech_samples = active.sample_count - active.silence_samples
+            if speech_samples >= self._min_speech_samples:
+                requests.append(self._finish())
+            else:
+                self._active = None
             return tuple(requests)
         if active.silence_samples >= self._min_silence_samples:
             speech_samples = active.sample_count - active.silence_samples

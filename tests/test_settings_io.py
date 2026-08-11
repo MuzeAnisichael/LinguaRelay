@@ -1,7 +1,12 @@
 from pathlib import Path
 
 from lingua_relay.config import Settings
-from lingua_relay.settings_io import persist_audio_device, persist_display_mode, persist_route
+from lingua_relay.settings_io import (
+    persist_audio_device,
+    persist_display_mode,
+    persist_overlay_geometry,
+    persist_route,
+)
 
 
 def test_persists_device_in_existing_audio_section(tmp_path: Path) -> None:
@@ -35,3 +40,12 @@ def test_persists_route_and_display_mode(tmp_path: Path) -> None:
     settings = Settings.load(config)
     assert (settings.app.source_language, settings.app.target_language) == ("ja", "ko")
     assert settings.overlay.display_mode == "translated"
+
+
+def test_persists_overlay_geometry(tmp_path: Path) -> None:
+    config = tmp_path / "config.toml"
+
+    persist_overlay_geometry(120, 80, 720, 210, config, tmp_path / "missing.toml")
+
+    overlay = Settings.load(config).overlay
+    assert (overlay.x, overlay.y, overlay.width, overlay.height) == (120, 80, 720, 210)

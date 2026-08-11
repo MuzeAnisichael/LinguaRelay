@@ -33,6 +33,20 @@ def persist_display_mode(
     return persist_setting("overlay", "display_mode", display_mode, config_path, template_path)
 
 
+def persist_overlay_geometry(
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    config_path: str | Path = "config.toml",
+    template_path: str | Path = "config.example.toml",
+) -> Path:
+    path = Path(config_path)
+    for key, value in (("x", x), ("y", y), ("width", width), ("height", height)):
+        persist_setting("overlay", key, value, path, template_path)
+    return path
+
+
 def persist_setting(
     section_name: str,
     key: str,

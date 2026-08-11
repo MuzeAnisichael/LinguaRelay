@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added drag, edge/corner resize, geometry persistence, and tray reset for the overlay.
+- Added installer-time model detection plus first-launch discovery and SHA-256 verification of existing local model directories.
+- Split long speech at a short pause after six seconds and enforce a ten-second caption cap, including for existing v0.1.0 configuration files.
+
 ## 0.1.0 - 2026-08-11
 
 - First public Windows x64 release with background WASAPI output capture and a compact overlay.

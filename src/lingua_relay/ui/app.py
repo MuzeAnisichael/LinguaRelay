@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import os
 import sys
 import threading
 from contextlib import suppress
@@ -37,6 +38,7 @@ from lingua_relay.service import RealtimeCaptionService
 from lingua_relay.settings_io import (
     persist_audio_device,
     persist_display_mode,
+    persist_overlay_geometry,
     persist_route,
     persist_setting,
 )
@@ -116,6 +118,7 @@ class DesktopController:
         self.settings = self._load_settings()
         self.bridge = _Bridge()
         self.overlay = CaptionOverlay(self.settings.overlay)
+        self.overlay.geometry_changed.connect(self._persist_overlay_geometry)
         self.bridge.caption.connect(self.overlay.publish)
         self.bridge.status.connect(self.overlay.set_status)
         self.bridge.correction_status.connect(self.overlay.set_status)
@@ -153,13 +156,11 @@ class DesktopController:
         else:
             settings = Settings.load(None)
         translation_path = settings.translation.model_path
-        cwd_model = Path.cwd() / translation_path
         packaged_model = self.model_root / translation_path.name
-        model_path = cwd_model if (cwd_model / "model.bin").is_file() else packaged_model
         return replace(
             settings,
             app=replace(settings.app, history_path=self.paths.history_path),
-            translation=replace(settings.translation, model_path=model_path),
+            translation=replace(settings.translation, model_path=packaged_model),
             correction=replace(
                 settings.correction,
                 glossary_path=(
@@ -198,6 +199,7 @@ class DesktopController:
         self.click_action.setCheckable(True)
         self.click_action.setChecked(self.settings.overlay.click_through)
         self.click_action.triggered.connect(self.set_click_through)
+        display_menu.addAction("重置悬浮窗位置和大小", self.overlay.reset_geometry)
 
         correction_menu = self.menu.addMenu("大模型修正")
         correction_group = QActionGroup(correction_menu)
@@ -291,6 +293,26 @@ class DesktopController:
         )
         self.overlay.set_click_through(enabled)
         persist_setting("overlay", "click_through", enabled, self.config_path, self.template_path)
+
+    def _persist_overlay_geometry(self, x: int, y: int, width: int, height: int) -> None:
+        self.settings = replace(
+            self.settings,
+            overlay=replace(
+                self.settings.overlay,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+            ),
+        )
+        persist_overlay_geometry(
+            x,
+            y,
+            width,
+            height,
+            self.config_path,
+            self.template_path,
+        )
 
     def set_correction_mode(self, mode: str) -> None:
         try:
@@ -461,10 +483,22 @@ def run_app(config_path: Path | None = None) -> int:
     recovery = journal.begin()
     journal.install_exception_hooks()
     development_models = Path.cwd() / "models"
-    model_root = development_models if development_models.is_dir() else paths.model_dir
+    target_model_root = (
+        paths.model_dir
+        if getattr(sys, "frozen", False)
+        else development_models
+        if development_models.is_dir()
+        else paths.model_dir
+    )
     manifest_path = paths.resource_dir / "packaging" / "model-manifest.json"
     try:
-        if not ensure_model_pack(model_root, manifest_path, paths.data_dir / "downloads"):
+        model_root = ensure_model_pack(
+            target_model_root,
+            manifest_path,
+            paths.data_dir / "downloads",
+            _local_model_candidates(paths),
+        )
+        if model_root is None:
             return 0
         controller = DesktopController(
             app,
@@ -498,3 +532,19 @@ def _make_icon() -> QIcon:
 
 def _other_language(code: str) -> str:
     return next(candidate for candidate in SUPPORTED_LANGUAGES if candidate != code)
+
+
+def _local_model_candidates(paths: AppPaths) -> tuple[Path, ...]:
+    candidates: list[Path] = []
+    configured = os.environ.get("LINGUA_RELAY_MODEL_DIR", "").strip()
+    if configured:
+        candidates.append(Path(configured))
+    candidates.extend(
+        (
+            paths.model_dir,
+            Path.cwd() / "models",
+            Path(sys.executable).resolve().parent / "models",
+            Path.home() / "LinguaRelay" / "models",
+        )
+    )
+    return tuple(candidates)

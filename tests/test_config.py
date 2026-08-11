@@ -13,7 +13,11 @@ def test_defaults_match_first_language_route() -> None:
     assert settings.correction.mode == "off"
     assert settings.audio.save_audio is False
     assert settings.asr.device == "auto"
+    assert settings.asr.preferred_segment_seconds == 6.0
+    assert settings.asr.max_caption_seconds == 10.0
+    assert settings.asr.max_segment_seconds == 10.0
     assert settings.overlay.display_mode == "bilingual"
+    assert settings.overlay.height == 180
     assert settings.translation.provider == "m2m100_ct2"
 
 

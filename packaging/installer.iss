@@ -67,6 +67,34 @@ Filename: "{app}\{#AppExeName}"; Description: "启动 {#AppName}"; Flags: nowait
 Type: filesandordirs; Name: "{app}"
 
 [Code]
+var
+  ModelCheckReported: Boolean;
+
+function ExistingModelsDetected(): Boolean;
+var
+  ModelRoot: String;
+begin
+  ModelRoot := ExpandConstant('{localappdata}\LinguaRelay\models');
+  Result :=
+    FileExists(ModelRoot + '\models--Systran--faster-whisper-small\snapshots\536b0662742c02347bc0e980a01041f333bce120\model.bin') and
+    FileExists(ModelRoot + '\m2m100_418m_ct2\model.bin');
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  if (CurPageID = wpReady) and not ModelCheckReported then
+  begin
+    WizardForm.ReadyMemo.Lines.Add('');
+    if ExistingModelsDetected() then
+      WizardForm.ReadyMemo.Lines.Add(
+        'Local models detected. First launch will verify and reuse them; no duplicate download is needed.')
+    else
+      WizardForm.ReadyMemo.Lines.Add(
+        'No complete local model pack was detected. First launch can scan another folder or download it.');
+    ModelCheckReported := True;
+  end;
+end;
+
 function InitializeUninstall(): Boolean;
 begin
   Result := True;
