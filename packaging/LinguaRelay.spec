@@ -13,6 +13,7 @@ project_root = Path(SPECPATH).parent
 
 datas = [
     (str(project_root / "config.example.toml"), "."),
+    (str(project_root / "glossary.example.json"), "."),
     (str(project_root / "LICENSE"), "."),
     (str(project_root / "THIRD_PARTY.md"), "."),
     (str(project_root / "packaging/model-manifest.json"), "packaging"),

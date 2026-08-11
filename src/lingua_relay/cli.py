@@ -123,6 +123,35 @@ def build_parser() -> argparse.ArgumentParser:
     mt_benchmark.add_argument("--config", type=Path, help="optional TOML configuration")
     mt_benchmark.add_argument("--device", choices=("auto", "cpu", "cuda"))
     mt_benchmark.add_argument("--compute-type")
+
+    correction_doctor = subparsers.add_parser(
+        "correction-doctor", help="inspect or probe the M4 correction provider"
+    )
+    correction_doctor.add_argument("--config", type=Path, help="TOML provider configuration")
+    correction_doctor.add_argument("--probe", action="store_true")
+
+    correction_revise = subparsers.add_parser(
+        "correction-revise", help="revise one fast translation"
+    )
+    correction_revise.add_argument("source_text")
+    correction_revise.add_argument("fast_translation")
+    correction_revise.add_argument("--source", required=True, choices=tuple(SUPPORTED_LANGUAGES))
+    correction_revise.add_argument("--target", required=True, choices=tuple(SUPPORTED_LANGUAGES))
+    correction_revise.add_argument("--config", type=Path, help="TOML provider configuration")
+
+    history_revise = subparsers.add_parser(
+        "history-revise", help="append traceable M4 revisions to a copy of a JSONL history"
+    )
+    history_revise.add_argument("input", type=Path)
+    history_revise.add_argument("output", type=Path)
+    history_revise.add_argument("--config", type=Path, help="TOML provider configuration")
+    history_revise.add_argument("--report", type=Path)
+
+    correction_benchmark = subparsers.add_parser(
+        "correction-benchmark", help="run deterministic M4 latency and disconnect gates"
+    )
+    correction_benchmark.add_argument("--report", type=Path, required=True)
+    correction_benchmark.add_argument("--events", type=int, default=6)
     return parser
 
 
@@ -210,6 +239,14 @@ def main(argv: list[str] | None = None) -> int:
         return run_mt_translate(args)
     if args.command == "mt-benchmark":
         return run_mt_benchmark(args)
+    if args.command == "correction-doctor":
+        return run_correction_doctor(args)
+    if args.command == "correction-revise":
+        return run_correction_revise(args)
+    if args.command == "history-revise":
+        return run_history_revise(args)
+    if args.command == "correction-benchmark":
+        return run_correction_benchmark(args)
     return 2
 
 
@@ -428,6 +465,125 @@ def run_mt_benchmark(args: argparse.Namespace) -> int:
     write_report(report, args.report)
     print(json.dumps(report["acceptance"], ensure_ascii=False, indent=2))
     return 0 if report["acceptance"]["all_routes_passed_latency"] else 1
+
+
+def run_correction_doctor(args: argparse.Namespace) -> int:
+    import os
+
+    from lingua_relay.correction import OpenAICompatibleProvider
+
+    settings = Settings.load(args.config).correction
+    if settings.provider == "none":
+        print(json.dumps({"configured": False, "mode": settings.mode}, indent=2))
+        return 1
+    provider = OpenAICompatibleProvider(settings)
+    report: dict[str, object] = {
+        "configured": True,
+        "mode": settings.mode,
+        "provider": provider.name,
+        "scope": provider.scope,
+        "model": provider.model,
+        "endpoint": provider.url,
+        "api_key_environment": settings.api_key_env,
+        "api_key_present": bool(os.environ.get(settings.api_key_env, "").strip()),
+        "probe_succeeded": None,
+    }
+    if args.probe:
+        try:
+            provider.revise(
+                _single_correction_request(
+                    "The fast path stays available.",
+                    "快速路径保持可用。",
+                    "en",
+                    "zh",
+                    settings,
+                )
+            )
+        except Exception as error:
+            report["probe_succeeded"] = False
+            report["probe_error"] = f"{type(error).__name__}: {error}"
+        else:
+            report["probe_succeeded"] = True
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if report["probe_succeeded"] is not False else 1
+
+
+def run_correction_revise(args: argparse.Namespace) -> int:
+    from dataclasses import asdict
+
+    from lingua_relay.correction import OpenAICompatibleProvider
+
+    settings = Settings.load(args.config).correction
+    provider = OpenAICompatibleProvider(settings)
+    result = provider.revise(
+        _single_correction_request(
+            args.source_text,
+            args.fast_translation,
+            args.source,
+            args.target,
+            settings,
+        )
+    )
+    print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
+    return 0
+
+
+def run_history_revise(args: argparse.Namespace) -> int:
+    from lingua_relay.correction import OpenAICompatibleProvider, revise_history
+    from lingua_relay.correction.batch import write_batch_report
+
+    settings = Settings.load(args.config).correction
+    report = revise_history(
+        args.input,
+        args.output,
+        OpenAICompatibleProvider(settings),
+        settings,
+    )
+    if args.report:
+        write_batch_report(report, args.report)
+    print(json.dumps(asdict(report), ensure_ascii=False, indent=2))
+    return 0 if report.failed_events == 0 else 1
+
+
+def _single_correction_request(
+    source_text: str,
+    fast_translation: str,
+    source: str,
+    target: str,
+    settings,
+):
+    from lingua_relay.correction import CorrectionRequest, glossary_for_route, load_glossary
+    from lingua_relay.events import CaptionEvent
+
+    event = CaptionEvent(
+        source_text=source_text,
+        translated_text=fast_translation,
+        source_language=source,
+        target_language=target,
+        state="final",
+        started_at_ms=0,
+    )
+    glossary = load_glossary(settings.glossary_path)
+    return CorrectionRequest(
+        event=event,
+        context=(),
+        glossary=glossary_for_route(glossary, source, target),
+        state="final",
+        segment_id=event.segment_id,
+        revision=event.revision,
+        submitted_at_ns=time.monotonic_ns(),
+    )
+
+
+def run_correction_benchmark(args: argparse.Namespace) -> int:
+    from lingua_relay.correction.benchmark import run_fault_gate_benchmark, write_report
+
+    if args.events < 2:
+        raise ValueError("correction benchmark requires at least two events")
+    report = run_fault_gate_benchmark(args.events)
+    write_report(report, args.report)
+    print(json.dumps(report["acceptance"], ensure_ascii=False, indent=2))
+    return 0 if report["acceptance"]["all_passed"] else 1  # type: ignore[index]
 
 
 if __name__ == "__main__":

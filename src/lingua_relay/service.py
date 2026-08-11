@@ -9,7 +9,12 @@ from pathlib import Path
 from lingua_relay.asr import FasterWhisperRecognizer, StreamingAsrEngine
 from lingua_relay.audio import WasapiLoopbackCapture
 from lingua_relay.config import Settings
-from lingua_relay.events import CaptionEvent
+from lingua_relay.correction import (
+    AsynchronousRevisionEngine,
+    OpenAICompatibleProvider,
+    load_glossary,
+)
+from lingua_relay.events import CaptionEvent, ProcessingScope
 from lingua_relay.history import JsonlHistory
 from lingua_relay.mt import M2M100Translator, StreamingTranslationEngine
 from lingua_relay.translation import build_m2m100_registry
@@ -22,10 +27,14 @@ class ServiceSnapshot:
     target_language: str
     audio_device: str
     last_error: str | None
+    correction_mode: str
+    correction_state: str
+    correction_scope: ProcessingScope | None
+    correction_error: str | None
 
 
 class RealtimeCaptionService:
-    """Own the M1 -> M2 -> M3 pipeline outside the Qt thread."""
+    """Own the M1 -> M4 pipeline outside the Qt thread."""
 
     def __init__(
         self,
@@ -33,17 +42,22 @@ class RealtimeCaptionService:
         *,
         on_caption: Callable[[CaptionEvent], None],
         on_status: Callable[[str, str], None] | None = None,
+        on_correction_status: Callable[[str, str], None] | None = None,
         model_root: str | Path = "models",
     ) -> None:
         self.settings = settings
         self.on_caption = on_caption
         self.on_status = on_status or (lambda _state, _message: None)
+        self.on_correction_status = on_correction_status or (lambda _state, _message: None)
         self.model_root = Path(model_root)
         self._source = settings.app.source_language
         self._target = settings.app.target_language
         self._device = settings.audio.device
         self._state = "stopped"
         self._last_error: str | None = None
+        self._correction_mode = settings.correction.mode
+        self._correction_state = "off" if settings.correction.mode == "off" else "loading"
+        self._correction_error: str | None = None
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._paused = threading.Event()
@@ -51,6 +65,8 @@ class RealtimeCaptionService:
         self._capture: WasapiLoopbackCapture | None = None
         self._asr: StreamingAsrEngine | None = None
         self._mt: StreamingTranslationEngine | None = None
+        self._correction: AsynchronousRevisionEngine | None = None
+        self._displayed_segment_id: str | None = None
 
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
@@ -88,6 +104,22 @@ class RealtimeCaptionService:
             self._asr.flush()
         self._notify("语言已切换，仍使用手动源语言")
 
+    def set_correction_mode(self, mode: str) -> None:
+        if mode not in {"off", "asynchronous", "live"}:
+            raise ValueError("correction mode must be off, asynchronous, or live")
+        if mode != "off" and self.settings.correction.provider == "none":
+            raise ValueError("configure a correction provider before enabling correction")
+        with self._lock:
+            self._correction_mode = mode
+        if self._correction is not None:
+            self._correction.set_enabled(mode != "off")
+        if mode == "off":
+            self._set_correction_state("off", "修正已关闭；仅显示本地快译")
+        else:
+            label = "仅完整句异步修正" if mode == "asynchronous" else "实时异步修正"
+            scope = "本地处理" if self._correction_scope() == "local" else "云端传输"
+            self._set_correction_state("ready", f"{scope} · {label}")
+
     def set_audio_device(self, device: str) -> None:
         with self._lock:
             self._device = device
@@ -118,6 +150,10 @@ class RealtimeCaptionService:
                 self._target,
                 self._device,
                 self._last_error,
+                self._correction_mode,
+                self._correction_state,
+                self._correction_scope(),
+                self._correction_error,
             )
 
     def _run(self) -> None:
@@ -137,9 +173,12 @@ class RealtimeCaptionService:
             self._mt = StreamingTranslationEngine(
                 build_m2m100_registry(translator), translation_settings, history=history
             )
+            self._prepare_correction(history)
             self._capture = WasapiLoopbackCapture(replace(self.settings.audio, device=self._device))
             self._asr.start()
             self._mt.start()
+            if self._correction is not None:
+                self._correction.start()
             if self._paused.is_set():
                 self._set_state("paused", "已暂停")
             else:
@@ -152,6 +191,7 @@ class RealtimeCaptionService:
                     self._stop.wait(0.05)
                 self._pump_asr()
                 self._pump_captions()
+                self._pump_revisions()
         except Exception as error:
             with self._lock:
                 self._last_error = f"{type(error).__name__}: {error}"
@@ -160,6 +200,28 @@ class RealtimeCaptionService:
             self._shutdown_workers()
             if self._state != "error":
                 self._set_state("stopped", "已停止")
+
+    def _prepare_correction(self, history: JsonlHistory | None) -> None:
+        correction_settings = self.settings.correction
+        if correction_settings.provider == "none":
+            self._set_correction_state("off", "修正未配置；仅显示本地快译")
+            return
+        try:
+            glossary = load_glossary(correction_settings.glossary_path)
+        except (OSError, ValueError) as error:
+            glossary = ()
+            self._set_correction_state("warning", f"术语表无效，已忽略：{error}")
+        provider = OpenAICompatibleProvider(correction_settings)
+        self._correction = AsynchronousRevisionEngine(
+            provider,
+            correction_settings,
+            history=history,
+            glossary=glossary,
+            on_status=self._handle_correction_status,
+        )
+        self._correction.set_enabled(self._correction_mode != "off")
+        if self._correction_mode == "off":
+            self._set_correction_state("off", "修正已关闭；仅显示本地快译")
 
     def _pump_audio(self) -> None:
         assert self._capture is not None and self._asr is not None
@@ -186,9 +248,37 @@ class RealtimeCaptionService:
         assert self._mt is not None
         while True:
             try:
-                self.on_caption(self._mt.get_event(timeout=0))
+                event = self._mt.get_event(timeout=0)
             except queue.Empty:
                 return
+            with self._lock:
+                self._displayed_segment_id = event.segment_id
+            self.on_caption(event)
+            correction = self._correction
+            with self._lock:
+                mode = self._correction_mode
+            if correction is not None and (
+                mode == "live" or (mode == "asynchronous" and event.state == "final")
+            ):
+                correction.submit(event)
+
+    def _pump_revisions(self) -> None:
+        correction = self._correction
+        if correction is None:
+            return
+        while True:
+            try:
+                event = correction.get_event(timeout=0)
+            except queue.Empty:
+                return
+            with self._lock:
+                is_current_segment = self._displayed_segment_id in {
+                    None,
+                    event.segment_id,
+                }
+                mode = self._correction_mode
+            if is_current_segment and mode != "off":
+                self.on_caption(event)
 
     def _shutdown_workers(self) -> None:
         if self._capture is not None:
@@ -200,6 +290,9 @@ class RealtimeCaptionService:
         if self._mt is not None:
             self._mt.stop()
             self._pump_captions()
+        if self._correction is not None:
+            self._correction.stop()
+            self._pump_revisions()
 
     def _set_state(self, state: str, message: str) -> None:
         with self._lock:
@@ -210,3 +303,24 @@ class RealtimeCaptionService:
         with self._lock:
             state = self._state
         self.on_status(state, message)
+
+    def _handle_correction_status(self, state: str, message: str) -> None:
+        with self._lock:
+            if self._correction_mode == "off" and state == "ready":
+                return
+            self._correction_state = state
+            self._correction_error = message if state == "error" else None
+        self.on_correction_status(state, message)
+
+    def _set_correction_state(self, state: str, message: str) -> None:
+        with self._lock:
+            self._correction_state = state
+            self._correction_error = message if state == "error" else None
+        self.on_correction_status(state, message)
+
+    def _correction_scope(self) -> ProcessingScope | None:
+        if self.settings.correction.provider == "local":
+            return "local"
+        if self.settings.correction.provider == "openai_compatible":
+            return "cloud"
+        return None

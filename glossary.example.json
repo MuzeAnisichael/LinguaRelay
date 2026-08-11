@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "source": "fast path",
+      "target": "快速路径",
+      "source_language": "en",
+      "target_language": "zh"
+    },
+    {
+      "source": "LinguaRelay",
+      "target": "LinguaRelay"
+    }
+  ]
+}

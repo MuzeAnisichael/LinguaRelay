@@ -1,0 +1,63 @@
+{
+  "benchmark": "m4-correction-fault-gates",
+  "provider": "deterministic in-process test double",
+  "event_count_per_scenario": 6,
+  "healthy": {
+    "simulated_provider_latency_ms": 25,
+    "fast_events_emitted": 6,
+    "revisions_emitted": 6,
+    "submit_p95_ms": 0.0,
+    "snapshot": {
+      "running": false,
+      "circuit_state": "closed",
+      "processing_scope": "local",
+      "requests_added": 6,
+      "partials_replaced": 0,
+      "partials_dropped": 0,
+      "revisions_emitted": 6,
+      "unchanged_results": 0,
+      "stale_results_dropped": 0,
+      "rate_limited": 0,
+      "circuit_rejected": 0,
+      "provider_errors": 0,
+      "output_drops": 0,
+      "queue_depth": 0,
+      "queue_capacity": 8,
+      "event_queue_depth": 0,
+      "event_queue_capacity": 8,
+      "last_error": null
+    }
+  },
+  "disconnected": {
+    "fast_events_emitted": 6,
+    "revisions_emitted": 0,
+    "snapshot": {
+      "running": false,
+      "circuit_state": "open",
+      "processing_scope": "local",
+      "requests_added": 6,
+      "partials_replaced": 0,
+      "partials_dropped": 0,
+      "revisions_emitted": 0,
+      "unchanged_results": 0,
+      "stale_results_dropped": 0,
+      "rate_limited": 0,
+      "circuit_rejected": 4,
+      "provider_errors": 2,
+      "output_drops": 0,
+      "queue_depth": 0,
+      "queue_capacity": 8,
+      "event_queue_depth": 0,
+      "event_queue_capacity": 8,
+      "last_error": "ConnectionError: scripted provider disconnect"
+    }
+  },
+  "acceptance": {
+    "fast_submit_p95_under_10_ms": true,
+    "healthy_revisions_traceable": true,
+    "disconnect_keeps_all_fast_events": true,
+    "disconnect_emits_no_false_revision": true,
+    "circuit_opens_after_failures": true,
+    "all_passed": true
+  }
+}

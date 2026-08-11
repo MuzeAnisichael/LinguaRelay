@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.3.0-alpha"
+  #define AppVersion "0.4.0-alpha"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\LinguaRelay"

@@ -65,6 +65,19 @@ See `docs/benchmarks/m3-m2m100-cuda-final.json`.
 | Broad MT experiment | NLLB-200 distilled 600M | Research comparison and route coverage only | CC-BY-NC-4.0; not a distributable default |
 | LLM revision | User-selected local model/API | Contextual correction after fast MT | Provider and model dependent |
 
+## M4 correction provider
+
+M4 deliberately does not select or bundle a default LLM. It implements the
+OpenAI-compatible `chat/completions` transport used by local servers such as
+llama.cpp and by opt-in remote APIs. The selected model name and provider scope
+are written to each revision event for traceability. Model weights, API terms,
+cost, output quality, and license remain the user's responsibility.
+
+Every prompt fixes one of the 12 manual source/target routes. The correction
+model is instructed not to detect or change the languages. The deterministic
+M4 report validates isolation, failure behavior, and event provenance; it is
+not a model-quality benchmark.
+
 References:
 
 - faster-whisper: https://github.com/SYSTRAN/faster-whisper

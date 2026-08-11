@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import tomllib
 from dataclasses import dataclass, field
+from ipaddress import ip_address
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from lingua_relay.languages import SUPPORTED_LANGUAGES, normalize_language
 
@@ -84,9 +86,20 @@ class TranslationSettings:
 class CorrectionSettings:
     mode: str = "off"
     provider: str = "none"
+    endpoint: str = "http://127.0.0.1:8080/v1"
+    api_key_env: str = "LINGUA_RELAY_API_KEY"
     model: str = ""
+    glossary_path: Path = Path("data/glossary.json")
     context_segments: int = 6
     timeout_seconds: float = 8.0
+    requests_per_minute: int = 30
+    queue_capacity: int = 8
+    event_queue_capacity: int = 16
+    failure_threshold: int = 3
+    recovery_seconds: float = 30.0
+    max_output_chars: int = 4_000
+    max_tokens: int = 512
+    temperature: float = 0.1
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,7 +146,11 @@ class Settings:
                 raw.get("translation", {}),
                 {"model_path": Path},
             ),
-            correction=_dataclass_from_section(CorrectionSettings, raw.get("correction", {})),
+            correction=_dataclass_from_section(
+                CorrectionSettings,
+                raw.get("correction", {}),
+                {"glossary_path": Path},
+            ),
         )
 
     def validate(self) -> None:
@@ -146,6 +163,30 @@ class Settings:
             raise ValueError("source_language and target_language must be different")
         if self.correction.mode not in {"off", "asynchronous", "live"}:
             raise ValueError("correction.mode must be off, asynchronous, or live")
+        if self.correction.provider not in {"none", "local", "openai_compatible"}:
+            raise ValueError("correction.provider must be none, local, or openai_compatible")
+        if self.correction.mode != "off" and self.correction.provider == "none":
+            raise ValueError("enabled correction.mode requires a correction provider")
+        if self.correction.provider != "none":
+            _validate_correction_endpoint(self.correction.provider, self.correction.endpoint)
+            if not self.correction.model.strip():
+                raise ValueError("correction.model must not be empty when a provider is configured")
+        if not self.correction.api_key_env.isidentifier():
+            raise ValueError("correction.api_key_env must be an environment variable name")
+        if self.correction.context_segments < 0:
+            raise ValueError("correction.context_segments must not be negative")
+        if self.correction.timeout_seconds <= 0:
+            raise ValueError("correction.timeout_seconds must be positive")
+        if self.correction.requests_per_minute < 1:
+            raise ValueError("correction.requests_per_minute must be positive")
+        if self.correction.queue_capacity < 2 or self.correction.event_queue_capacity < 2:
+            raise ValueError("correction queues must have capacity of at least two")
+        if self.correction.failure_threshold < 1 or self.correction.recovery_seconds <= 0:
+            raise ValueError("correction circuit-breaker settings are invalid")
+        if self.correction.max_output_chars < 1 or self.correction.max_tokens < 1:
+            raise ValueError("correction output limits must be positive")
+        if not 0 <= self.correction.temperature <= 2:
+            raise ValueError("correction.temperature must be between 0 and 2")
         if self.audio.sample_rate <= 0 or self.audio.chunk_ms <= 0 or self.audio.raw_frame_ms <= 0:
             raise ValueError("audio sample_rate, chunk_ms, and raw_frame_ms must be positive")
         if self.audio.buffer_seconds < self.audio.chunk_ms / 1000:
@@ -237,3 +278,28 @@ def _dataclass_from_section(
         name: converters.get(name, lambda value: value)(value) for name, value in section.items()
     }
     return target(**values)
+
+
+def _validate_correction_endpoint(provider: str, endpoint: str) -> None:
+    parsed = urlsplit(endpoint)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("correction.endpoint must be an absolute HTTP(S) URL")
+    try:
+        _ = parsed.port
+    except ValueError as error:
+        raise ValueError("correction.endpoint has an invalid port") from error
+    if parsed.username or parsed.password or parsed.fragment:
+        raise ValueError("correction.endpoint must not contain credentials or a fragment")
+    if provider == "openai_compatible" and parsed.scheme != "https":
+        raise ValueError("openai_compatible correction.endpoint must use HTTPS")
+    if provider != "local":
+        return
+    host = parsed.hostname.casefold().rstrip(".")
+    is_loopback = host == "localhost"
+    if not is_loopback:
+        try:
+            is_loopback = ip_address(host).is_loopback
+        except ValueError:
+            is_loopback = False
+    if not is_loopback:
+        raise ValueError("local correction.endpoint must use localhost or a loopback IP")

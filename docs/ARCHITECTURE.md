@@ -90,7 +90,7 @@ Whisper 不是严格的逐 token 流式模型。MVP 使用滑动窗口：
 
 ### `live`（实验性）
 
-只在修正提供方的 P95 延迟稳定低于预算时开放。必须有超时、熔断、速率限制和回退，且不得改变已经确认的专有名词表。
+partial 和 final 都可提交给独立修正线程；快译仍先显示。该模式必须有超时、熔断、速率限制和回退，且不得改变已经确认的专有名词表。
 
 ### 建议的修正输入
 
@@ -99,6 +99,14 @@ Whisper 不是严格的逐 token 流式模型。MVP 使用滑动窗口：
 - 当前原文和快速译文；
 - 用户词汇表；
 - 约束：仅输出修正译文，不解释，不添加原文不存在的信息。
+
+### Provider 与修订记录
+
+- `local` 复用 OpenAI-compatible chat-completions 格式，只接受 `localhost` 或回环 IP；连接前再次验证解析结果，且不跟随重定向；
+- `openai_compatible` 只接受 HTTPS，Bearer 密钥只读取 `api_key_env` 指定的环境变量；
+- provider 超时、断线、限流或熔断只改变修正状态，不得把主字幕服务置为错误；
+- 每条 `revised` 事件复用 `segment_id`，并保存 `parent_revision`、`original_translation`、`revision_source`、`processing_scope`、provider 和 model；
+- `history-revise` 只写入新的 JSONL 文件，先复制所有原事件，再追加批量修订。
 
 ## 7. 延迟与质量预算
 

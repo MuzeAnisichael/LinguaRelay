@@ -89,7 +89,16 @@ class CaptionOverlay(QWidget):
         self.apply_settings(replace(self.settings, click_through=enabled))
 
     def set_status(self, state: str, message: str) -> None:
-        colors = {"running": "#77d6a5", "loading": "#f2c66d", "error": "#ff7d8b"}
+        colors = {
+            "running": "#77d6a5",
+            "ready": "#77d6a5",
+            "loading": "#f2c66d",
+            "processing": "#70b7ff",
+            "warning": "#f2c66d",
+            "rate_limited": "#f2c66d",
+            "circuit_open": "#f2c66d",
+            "error": "#ff7d8b",
+        }
         self.status.setStyleSheet(f"color: {colors.get(state, '#b8c1d1')};")
         self.status.setText(f"LINGUARELAY · {message}")
 
@@ -112,7 +121,14 @@ class CaptionOverlay(QWidget):
             self.source.setStyleSheet("color: rgba(255, 255, 255, 165);")
             self.translation.setStyleSheet("color: white;")
         route = f"{event.source_language.upper()} → {event.target_language.upper()}"
-        suffix = " · 翻译失败，显示原文" if fallback else ""
+        if event.state == "revised":
+            scope = {
+                "local": "本地修正",
+                "cloud": "云端修正",
+            }.get(event.processing_scope, "修正译文")
+            suffix = f" · {scope} · v{event.revision}"
+        else:
+            suffix = " · 翻译失败，显示原文" if fallback else " · 本地快译"
         self.set_status("error" if fallback else "running", route + suffix)
         self.source.setVisible(self.settings.display_mode == "bilingual")
         self.adjustSize()

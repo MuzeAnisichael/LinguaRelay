@@ -48,3 +48,30 @@ def test_exports_csv_and_srt(tmp_path: Path) -> None:
     assert "translated_text" in csv_path.read_text(encoding="utf-8-sig")
     assert "00:00:00,000 --> 00:00:01,500" in srt_path.read_text(encoding="utf-8")
     assert "你好" in srt_path.read_text(encoding="utf-8")
+
+
+def test_csv_export_keeps_revision_provenance(tmp_path: Path) -> None:
+    history = JsonlHistory(tmp_path / "history.jsonl")
+    history.append(
+        CaptionEvent(
+            "source",
+            "revised",
+            "en",
+            "zh",
+            "revised",
+            0,
+            revision=1,
+            parent_revision=0,
+            original_translation="fast",
+            revision_source="llm_correction",
+            processing_scope="cloud",
+            correction_provider="openai_compatible",
+            correction_model="model",
+        )
+    )
+
+    content = history.export(tmp_path / "captions.csv").read_text(encoding="utf-8-sig")
+
+    assert "original_translation" in content
+    assert "fast" in content
+    assert "openai_compatible" in content

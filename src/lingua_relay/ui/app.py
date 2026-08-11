@@ -36,6 +36,7 @@ from lingua_relay.ui.overlay import CaptionOverlay
 class _Bridge(QObject):
     caption = Signal(object)
     status = Signal(str, str)
+    correction_status = Signal(str, str)
 
 
 class _GlobalHotkey(QObject):
@@ -94,10 +95,12 @@ class DesktopController:
         self.overlay = CaptionOverlay(self.settings.overlay)
         self.bridge.caption.connect(self.overlay.publish)
         self.bridge.status.connect(self.overlay.set_status)
+        self.bridge.correction_status.connect(self.overlay.set_status)
         self.service = RealtimeCaptionService(
             self.settings,
             on_caption=self.bridge.caption.emit,
             on_status=self.bridge.status.emit,
+            on_correction_status=self.bridge.correction_status.emit,
             model_root=self.model_root,
         )
         self.icon = _make_icon()
@@ -131,6 +134,14 @@ class DesktopController:
             settings,
             app=replace(settings.app, history_path=self.paths.history_path),
             translation=replace(settings.translation, model_path=model_path),
+            correction=replace(
+                settings.correction,
+                glossary_path=(
+                    self.config_path.parent / settings.correction.glossary_path
+                    if not settings.correction.glossary_path.is_absolute()
+                    else settings.correction.glossary_path
+                ),
+            ),
         )
 
     def _build_menu(self) -> None:
@@ -162,6 +173,30 @@ class DesktopController:
         self.click_action.setChecked(self.settings.overlay.click_through)
         self.click_action.triggered.connect(self.set_click_through)
 
+        correction_menu = self.menu.addMenu("大模型修正")
+        correction_group = QActionGroup(correction_menu)
+        self.correction_actions: dict[str, QAction] = {}
+        for mode, label in (
+            ("off", "关闭（仅本地快译）"),
+            ("asynchronous", "完整句异步修正"),
+            ("live", "实时异步修正（含临时字幕）"),
+        ):
+            action = correction_menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(self.settings.correction.mode == mode)
+            action.triggered.connect(
+                lambda _checked=False, value=mode: self.set_correction_mode(value)
+            )
+            correction_group.addAction(action)
+            self.correction_actions[mode] = action
+        scope = {
+            "none": "未配置 provider",
+            "local": "本地处理（不上传字幕）",
+            "openai_compatible": "云端传输（字幕将发送至配置的 API）",
+        }[self.settings.correction.provider]
+        scope_action = correction_menu.addAction(scope)
+        scope_action.setEnabled(False)
+
         self.device_menu = self.menu.addMenu("音频设备")
         self.device_menu.aboutToShow.connect(self._refresh_devices)
         history_menu = self.menu.addMenu("历史记录")
@@ -171,6 +206,10 @@ class DesktopController:
         self.status_action.setEnabled(False)
         self.menu.addAction(self.status_action)
         self.bridge.status.connect(self._update_status_action)
+        self.correction_status_action = QAction("修正：正在准备", self.menu)
+        self.correction_status_action.setEnabled(False)
+        self.menu.addAction(self.correction_status_action)
+        self.bridge.correction_status.connect(self._update_correction_status)
         self.menu.addSeparator()
         self.menu.addAction("退出", self.app.quit)
 
@@ -223,6 +262,18 @@ class DesktopController:
         )
         self.overlay.set_click_through(enabled)
         persist_setting("overlay", "click_through", enabled, self.config_path, self.template_path)
+
+    def set_correction_mode(self, mode: str) -> None:
+        try:
+            self.service.set_correction_mode(mode)
+        except ValueError as error:
+            self.correction_actions[self.settings.correction.mode].setChecked(True)
+            QMessageBox.warning(None, "无法启用修正", str(error))
+            return
+        self.settings = replace(
+            self.settings, correction=replace(self.settings.correction, mode=mode)
+        )
+        persist_setting("correction", "mode", mode, self.config_path, self.template_path)
 
     def toggle_pause(self) -> None:
         state = self.service.snapshot().state
@@ -309,6 +360,15 @@ class DesktopController:
         if state == "error":
             self.pause_action.setText("重试启动")
             self.tray.showMessage("LinguaRelay", message, QSystemTrayIcon.MessageIcon.Critical)
+
+    def _update_correction_status(self, state: str, message: str) -> None:
+        self.correction_status_action.setText(f"修正：{message}")
+        if state == "error":
+            self.tray.showMessage(
+                "LinguaRelay 修正",
+                message,
+                QSystemTrayIcon.MessageIcon.Warning,
+            )
 
     def _tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:

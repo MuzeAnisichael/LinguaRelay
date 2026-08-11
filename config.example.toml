@@ -62,7 +62,18 @@ translate_partials = true
 
 [correction]
 mode = "off" # off | asynchronous | live
-provider = "none"
-model = ""
+provider = "none" # none | local | openai_compatible
+endpoint = "http://127.0.0.1:8080/v1"
+api_key_env = "LINGUA_RELAY_API_KEY" # store the key in this environment variable
+model = "" # required when provider is local or openai_compatible
+glossary_path = "data/glossary.json"
 context_segments = 6
 timeout_seconds = 8.0
+requests_per_minute = 30
+queue_capacity = 8
+event_queue_capacity = 16
+failure_threshold = 3
+recovery_seconds = 30.0
+max_output_chars = 4000
+max_tokens = 512
+temperature = 0.1

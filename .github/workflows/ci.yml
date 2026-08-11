@@ -26,3 +26,4 @@ jobs:
       - run: python -m pip check
       - run: lingua-relay languages
       - run: lingua-relay doctor --config config.example.toml
+      - run: lingua-relay correction-benchmark --report m4-ci.json

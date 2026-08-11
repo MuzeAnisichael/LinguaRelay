@@ -2,7 +2,7 @@
 
 面向 Windows 的低延迟桌面实时翻译字幕工具，并预留本地大模型或 API 修正层。
 
-> 当前状态：M3 已完成中、日、英、韩实时识别、全部 12 个互译方向和托盘悬浮窗；下一里程碑为大模型修正，项目暂不适合生产使用。
+> 当前状态：M4 已完成中、日、英、韩实时识别、全部 12 个互译方向、托盘悬浮窗，以及可选的本地/云端异步大模型修正；项目暂不适合生产使用。
 
 [English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md)
 
@@ -18,7 +18,7 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 - 暂不启用自动语言检测；
 - M2 使用多语言 `faster-whisper` 实现实时识别；
 - M3 使用按语言方向选择模型的翻译路由，不再固定英中模型；
-- 大模型修正默认关闭，在 M4 以异步方式接入；
+- 大模型修正默认关闭，支持本地和 HTTPS OpenAI-compatible 异步 provider；
 - 默认不保存原始音频，字幕历史仅保存在本地且可关闭。
 
 ## 已完成的 M1 音频能力
@@ -48,6 +48,30 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 - 托盘支持暂停/继续、手动源/目标语言、音频设备、显示模式、历史、导出和退出；
 - JSONL 历史可导出为 JSONL、CSV 或 SRT；
 - 已准备 PyInstaller 应用目录、独立模型包、Inno Setup 安装器定义和 GitHub 打包工作流。
+
+## 已完成的 M4 异步大模型修正
+
+- 托盘可选择关闭、完整句异步修正或实验性的 partial/final 实时异步修正；
+- 本地 provider 只能连接回环地址，云端 OpenAI-compatible provider 必须使用 HTTPS；
+- API 密钥只从环境变量读取，不写入配置、日志或字幕历史；
+- 修正请求固定携带手动选择的源/目标语言、最近上下文和按方向过滤的 JSON 术语表；
+- 修正队列有界，并具备超时、速率限制和熔断；断线或超时不会阻塞本地快译；
+- 每条修正以追加式 `revised` 事件保存父版本、原快译、provider/model 和本地/云端范围；
+- `history-revise` 可把历史修正写入一个新 JSONL 文件，原记录完整保留。
+
+本地 OpenAI-compatible 服务的最小配置示例：
+
+```toml
+[correction]
+mode = "asynchronous"
+provider = "local"
+endpoint = "http://127.0.0.1:8080/v1"
+model = "your-local-model"
+```
+
+云端 provider 使用 `provider = "openai_compatible"` 和 HTTPS 地址，并在启动前设置
+`LINGUA_RELAY_API_KEY`（或 `api_key_env` 指定的其他环境变量）。可用
+`lingua-relay correction-doctor --probe` 检查配置，但不要把密钥写入 TOML。
 
 ## 快速开始
 

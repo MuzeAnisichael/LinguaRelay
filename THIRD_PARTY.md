@@ -4,7 +4,8 @@ LinguaRelay source code is MIT licensed. Dependencies and downloaded model
 weights retain their own licenses. The project does not currently redistribute
 model weights.
 
-Implemented M1/M2/M3 dependencies:
+Implemented M1/M2/M3 dependencies (M4's OpenAI-compatible transport uses only
+the Python standard library):
 
 | Component | Purpose | Declared license | Project |
 |---|---|---|---|

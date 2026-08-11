@@ -1,6 +1,6 @@
 # Windows release preparation
 
-M3 prepares two independent artifacts: an application directory and a pinned
+M4 prepares two independent artifacts: an application directory and a pinned
 model pack. Keeping them separate allows small application updates and makes the
 model licenses/revisions visible.
 
@@ -47,10 +47,12 @@ It offers optional desktop and login-start shortcuts.
 Before the first public release:
 
 1. build in a clean, non-system-site-packages virtual environment;
-2. run unit tests, lint, the M2 audio/ASR gate, and the M3 12-route benchmark;
+2. run unit tests, lint, the M2 audio/ASR gate, the M3 12-route benchmark, and
+   `correction-benchmark` M4 fault gates;
 3. launch the installed CPU and CUDA variants on clean Windows 10/11 VMs;
 4. verify pause/resume, both display modes, click-through, global shortcut,
-   language/device switching, failure fallback, history, export, and uninstall;
+   language/device switching, all three correction modes, local/cloud status,
+   provider disconnect fallback, revision history, export, and uninstall;
 5. generate SHA-256 checksums and an SBOM, sign the executable/installer, scan
    them, and verify signatures on a second machine;
 6. update `version_info.txt`, Inno Setup `AppVersion`, the Python package

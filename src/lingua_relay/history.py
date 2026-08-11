@@ -50,6 +50,13 @@ class JsonlHistory:
                 "translated_text",
                 "state",
                 "segment_id",
+                "revision",
+                "parent_revision",
+                "original_translation",
+                "revision_source",
+                "processing_scope",
+                "correction_provider",
+                "correction_model",
                 "error",
             )
             with target.open("w", encoding="utf-8-sig", newline="") as stream:

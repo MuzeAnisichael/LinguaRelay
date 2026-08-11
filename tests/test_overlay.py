@@ -48,3 +48,26 @@ def test_translated_only_falls_back_to_source_on_failure() -> None:
     app.processEvents()
     assert overlay.source.text() == "source survives"
     assert overlay.translation.text() == ""
+
+
+def test_revised_caption_displays_local_or_cloud_scope() -> None:
+    app = QApplication.instance() or QApplication([])
+    overlay = CaptionOverlay(OverlaySettings())
+    event = CaptionEvent(
+        source_text="source",
+        translated_text="revised",
+        source_language="en",
+        target_language="zh",
+        state="revised",
+        started_at_ms=0,
+        revision=1,
+        parent_revision=0,
+        original_translation="fast",
+        processing_scope="cloud",
+    )
+
+    overlay.publish(event)
+    app.processEvents()
+
+    assert "云端修正" in overlay.status.text()
+    assert "v1" in overlay.status.text()

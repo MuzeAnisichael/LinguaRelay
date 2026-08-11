@@ -3,9 +3,9 @@
 Low-latency desktop translation captions for Windows, with an optional LLM
 revision layer.
 
-> Status: M3 real-time four-language ASR, all 12 translation routes, and the
-> tray/overlay application are implemented. LLM revision is the next milestone;
-> the repository is not production-ready yet.
+> Status: M4 is implemented: real-time four-language ASR, all 12 translation
+> routes, the tray/overlay application, and optional asynchronous local/cloud
+> LLM revision. The repository is not production-ready yet.
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Roadmap](docs/ROADMAP.zh-CN.md)
@@ -27,7 +27,8 @@ The initial product scope is:
 - Automatic language detection: intentionally disabled
 - Real-time ASR: multilingual `faster-whisper` with explicit language selection
 - Fast translation: pinned M2M100/CTranslate2 direct routes for all 12 pairs
-- LLM correction: disabled by default; asynchronous revision planned in M4
+- LLM correction: disabled by default; local and HTTPS OpenAI-compatible
+  asynchronous providers are available
 - Storage: local JSONL history; raw audio is not saved by default
 
 ## M1 audio capture
@@ -69,6 +70,23 @@ The current capture path provides:
 - a PyInstaller onedir build, separate model pack, Inno Setup definition, and
   tag/manual GitHub packaging workflow for the first release.
 
+## M4 asynchronous LLM revision
+
+- `off`, completed-sentence `asynchronous`, and experimental partial+final
+  `live` modes, selectable from the tray and disabled by default;
+- a loopback-only local OpenAI-compatible provider and an HTTPS-only cloud
+  OpenAI-compatible provider, with API keys read only from an environment
+  variable;
+- fixed source/target languages in every correction prompt, recent context, a
+  route-filtered JSON glossary, bounded queues, timeouts, rate limiting, and a
+  circuit breaker;
+- fast captions are emitted before correction submission and survive provider
+  timeout, disconnect, rate limiting, or an open circuit;
+- each changed result is an append-only `revised` event carrying the parent
+  revision, original fast translation, model/provider, and local/cloud scope;
+- offline history correction writes to a separate JSONL file and retains all
+  original events.
+
 ## Quick start
 
 Python 3.11 is recommended.
@@ -87,6 +105,37 @@ lingua-relay audio-monitor --seconds 10
 lingua-relay mt-prepare
 lingua-relay mt-doctor --load
 lingua-relay app
+```
+
+### Configure optional M4 correction
+
+For a local OpenAI-compatible server such as llama.cpp, copy the example
+configuration and set:
+
+```toml
+[correction]
+mode = "asynchronous"
+provider = "local"
+endpoint = "http://127.0.0.1:8080/v1"
+model = "your-local-model"
+```
+
+`local` endpoints are restricted to the loopback interface. For a remote
+OpenAI-compatible API, use `provider = "openai_compatible"`, an `https://`
+endpoint, and put the key in the configured environment variable:
+
+```powershell
+$env:LINGUA_RELAY_API_KEY = "..."
+lingua-relay correction-doctor --probe
+```
+
+Do not write the key into TOML. The tray and overlay explicitly distinguish
+local processing from cloud transmission. Useful M4 commands are:
+
+```powershell
+lingua-relay correction-revise "source" "fast translation" --source en --target zh
+lingua-relay history-revise data/history.jsonl data/history-revised.jsonl
+lingua-relay correction-benchmark --report data/m4-fault-gates.json
 ```
 
 To remember a non-default endpoint:
