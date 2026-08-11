@@ -1,4 +1,5 @@
 .venv/
+.release-venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -7,6 +8,7 @@ __pycache__/
 .mypy_cache/
 build/
 dist/
+release/
 config.toml
 .env
 data/
@@ -14,4 +16,3 @@ models/
 *.wav
 *.flac
 *.mp3
-

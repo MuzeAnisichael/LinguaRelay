@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lingua-relay"
-version = "0.4.0a0"
+version = "0.1.0"
 description = "Low-latency Windows audio translation captions with optional LLM revision"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -12,7 +12,7 @@ license = { file = "LICENSE" }
 authors = [{ name = "MuzeAnisichael" }]
 keywords = ["translation", "captions", "whisper", "wasapi", "llm"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: MIT License",
   "Operating System :: Microsoft :: Windows :: Windows 10",
   "Operating System :: Microsoft :: Windows :: Windows 11",

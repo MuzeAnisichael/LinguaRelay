@@ -3,12 +3,19 @@
 Low-latency desktop translation captions for Windows, with an optional LLM
 revision layer.
 
-> Status: M4 is implemented: real-time four-language ASR, all 12 translation
-> routes, the tray/overlay application, and optional asynchronous local/cloud
-> LLM revision. The repository is not production-ready yet.
+> Status: v0.1.0 is the first public Windows x64 alpha release. It includes
+> real-time four-language ASR, all 12 translation routes, the tray/overlay app,
+> optional asynchronous local/cloud LLM revision, and verified model setup.
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Roadmap](docs/ROADMAP.zh-CN.md)
+[Roadmap](docs/ROADMAP.zh-CN.md) · [v0.1.0 release](docs/releases/v0.1.0.md) ·
+[Privacy](docs/PRIVACY.zh-CN.md)
+
+## Install v0.1.0
+
+Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.0), verify `SHA256SUMS.txt`, and run it. On first launch, accept the displayed upstream model licenses; LinguaRelay downloads the separate pinned model pack and validates every file before use.
+
+The first binaries are not Authenticode-signed, so Windows may show an unknown-publisher warning. See the release notes and threat model before proceeding.
 
 ## Product goal
 

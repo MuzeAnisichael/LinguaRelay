@@ -1,5 +1,13 @@
 # M1 host validation
 
+M5 adds `m5-corpus-manifest.json`, `m5-asr-cpu-final.json`, and
+`m5-release-gate.json`. The public manifest records the pinned FLEURS attribution
+and deterministic acoustic simulations; generated audio remains ignored. The
+release gate aggregates ASR WER/CER, all-route translation quality and latency,
+protected-term retention, composed ASR-to-MT latency, and M4 correction fault
+behavior. It reports measured limitations instead of treating its small corpus
+as a general quality guarantee.
+
 Date: 2026-08-11 (Asia/Shanghai)
 
 Environment reported by the test host:

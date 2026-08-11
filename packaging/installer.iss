@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.4.0-alpha"
+  #define AppVersion "0.1.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\LinguaRelay"
@@ -28,6 +28,7 @@ DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
+InfoBeforeFile=..\docs\PRIVACY.zh-CN.md
 OutputDir={#OutputDir}
 OutputBaseFilename=LinguaRelay-{#AppVersion}-Setup-x64
 Compression=lzma2/ultra64
@@ -42,7 +43,6 @@ UninstallDisplayIcon={app}\{#AppExeName}
 WizardStyle=modern
 
 [Languages]
-Name: "chinesesimp"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]

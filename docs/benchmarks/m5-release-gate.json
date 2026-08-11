@@ -1,0 +1,425 @@
+{
+  "schema_version": 1,
+  "milestone": "M5",
+  "created_at": "2026-08-11T06:44:56.968649+00:00",
+  "release_candidate": "v0.1.0",
+  "methodology": {
+    "corpus": "20 pinned CC-BY-4.0 FLEURS samples with deterministic CC0 acoustic simulations; see corpus manifest for limitations",
+    "end_to_end": "For each ASR sample, measured translation inference is added to measured first-partial and final ASR processing time on the same host.",
+    "translation_quality": "M3 CC0 four-language parallel corpus across all 12 routes.",
+    "terminology": "Exact case-insensitive retention of four protected technical terms."
+  },
+  "inputs": {
+    "asr": "docs\\benchmarks\\m5-asr-cpu-final.json",
+    "translation": "docs\\benchmarks\\m3-m2m100-cuda-final.json",
+    "correction": "docs\\benchmarks\\m4-correction-fault-gates.json",
+    "corpus": "data\\m5-corpus\\manifest.json"
+  },
+  "corpus": {
+    "languages": [
+      "en",
+      "ja",
+      "ko",
+      "zh"
+    ],
+    "scenarios": [
+      "clean_speaker_variation",
+      "simulated_background_music",
+      "simulated_meeting_room",
+      "simulated_meeting_with_music",
+      "simulated_video_audio"
+    ],
+    "samples": 20
+  },
+  "asr": {
+    "metric": "weighted WER/CER by language",
+    "combined_error_rate": 0.2113,
+    "languages": {
+      "zh": {
+        "metric": "cer",
+        "error_rate": 0.13333333333333333,
+        "errors": 26,
+        "units": 195,
+        "sample_count": 5,
+        "rtf": 0.1407538987506068,
+        "first_partial_p50_ms": 1646.618100007181,
+        "first_partial_p95_ms": 2765.257079991279
+      },
+      "ja": {
+        "metric": "cer",
+        "error_rate": 0.164,
+        "errors": 41,
+        "units": 250,
+        "sample_count": 5,
+        "rtf": 0.1369752254428555,
+        "first_partial_p50_ms": 5222.168699991307,
+        "first_partial_p95_ms": 12063.778319988633
+      },
+      "en": {
+        "metric": "wer",
+        "error_rate": 0.40384615384615385,
+        "errors": 42,
+        "units": 104,
+        "sample_count": 5,
+        "rtf": 0.17131106461147239,
+        "first_partial_p50_ms": 1597.3332999931881,
+        "first_partial_p95_ms": 5056.116280013812
+      },
+      "ko": {
+        "metric": "wer",
+        "error_rate": 0.30985915492957744,
+        "errors": 22,
+        "units": 71,
+        "sample_count": 5,
+        "rtf": 0.14480469936718673,
+        "first_partial_p50_ms": 4794.417999983416,
+        "first_partial_p95_ms": 10860.584520020639
+      }
+    }
+  },
+  "translation_quality": {
+    "mean_chrf_pp": 38.573,
+    "mean_bleu": 6.303
+  },
+  "end_to_end": {
+    "first_caption_p50_ms": 2980.813,
+    "first_caption_p95_ms": 11766.267,
+    "final_pipeline_p50_ms": 2100.703,
+    "final_pipeline_p95_ms": 2774.335,
+    "final_pipeline_rtf": 0.1891,
+    "samples": [
+      {
+        "id": "zh-1906-clean_speaker_variation",
+        "route": "zh->en",
+        "first_caption_ms": 2847.585,
+        "final_pipeline_ms": 2239.963
+      },
+      {
+        "id": "zh-2006-simulated_meeting_room",
+        "route": "zh->en",
+        "first_caption_ms": 1584.462,
+        "final_pipeline_ms": 1831.615
+      },
+      {
+        "id": "zh-1883-simulated_video_audio",
+        "route": "zh->en",
+        "first_caption_ms": 2850.676,
+        "final_pipeline_ms": 1934.681
+      },
+      {
+        "id": "zh-1852-simulated_background_music",
+        "route": "zh->en",
+        "first_caption_ms": 1795.694,
+        "final_pipeline_ms": 2929.106
+      },
+      {
+        "id": "zh-1734-simulated_meeting_with_music",
+        "route": "zh->en",
+        "first_caption_ms": 1618.286,
+        "final_pipeline_ms": 1977.108
+      },
+      {
+        "id": "ja-1828-clean_speaker_variation",
+        "route": "ja->ko",
+        "first_caption_ms": 9269.14,
+        "final_pipeline_ms": 2069.028
+      },
+      {
+        "id": "ja-1834-simulated_meeting_room",
+        "route": "ja->ko",
+        "first_caption_ms": 2978.583,
+        "final_pipeline_ms": 2132.378
+      },
+      {
+        "id": "ja-1813-simulated_video_audio",
+        "route": "ja->ko",
+        "first_caption_ms": 12936.546,
+        "final_pipeline_ms": 2766.189
+      },
+      {
+        "id": "ja-1869-simulated_background_music",
+        "route": "ja->ko",
+        "first_caption_ms": 2771.343,
+        "final_pipeline_ms": 2300.78
+      },
+      {
+        "id": "ja-1744-simulated_meeting_with_music",
+        "route": "ja->ko",
+        "first_caption_ms": 5222.169,
+        "final_pipeline_ms": 1930.08
+      },
+      {
+        "id": "en-1904-clean_speaker_variation",
+        "route": "en->zh",
+        "first_caption_ms": 1706.495,
+        "final_pipeline_ms": 1882.825
+      },
+      {
+        "id": "en-1675-simulated_meeting_room",
+        "route": "en->zh",
+        "first_caption_ms": 4079.985,
+        "final_pipeline_ms": 1847.055
+      },
+      {
+        "id": "en-1950-simulated_video_audio",
+        "route": "en->zh",
+        "first_caption_ms": 5440.143,
+        "final_pipeline_ms": 2331.189
+      },
+      {
+        "id": "en-1728-simulated_background_music",
+        "route": "en->zh",
+        "first_caption_ms": 1613.365,
+        "final_pipeline_ms": 1242.574
+      },
+      {
+        "id": "en-1972-simulated_meeting_with_music",
+        "route": "en->zh",
+        "first_caption_ms": 1536.78,
+        "final_pipeline_ms": 1225.11
+      },
+      {
+        "id": "ko-1883-clean_speaker_variation",
+        "route": "ko->ja",
+        "first_caption_ms": 4889.048,
+        "final_pipeline_ms": 2191.883
+      },
+      {
+        "id": "ko-1929-simulated_meeting_room",
+        "route": "ko->ja",
+        "first_caption_ms": 3481.506,
+        "final_pipeline_ms": 2157.353
+      },
+      {
+        "id": "ko-1701-simulated_video_audio",
+        "route": "ko->ja",
+        "first_caption_ms": 2983.043,
+        "final_pipeline_ms": 1975.981
+      },
+      {
+        "id": "ko-2000-simulated_background_music",
+        "route": "ko->ja",
+        "first_caption_ms": 11704.673,
+        "final_pipeline_ms": 2306.011
+      },
+      {
+        "id": "ko-1801-simulated_meeting_with_music",
+        "route": "ko->ja",
+        "first_caption_ms": 8046.567,
+        "final_pipeline_ms": 2467.263
+      }
+    ]
+  },
+  "terminology": {
+    "hits": 48,
+    "opportunities": 48,
+    "hit_rate": 1.0,
+    "routes": [
+      {
+        "route": "zh->ja",
+        "hypothesis": "LinguaRelay は WASAPI、CUDA、OpenAI をサポートしています。",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "zh->en",
+        "hypothesis": "LinguaRelay supports WASAPI, CUDA and OpenAI.",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "zh->ko",
+        "hypothesis": "LinguaRelay은 WASAPI, CUDA 및 OpenAI를 지원합니다.",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "ja->zh",
+        "hypothesis": "LinguaRelay 支持 WASAPI、CUDA 和 OpenAI。",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "ja->en",
+        "hypothesis": "LinguaRelay supports WASAPI, CUDA, and OpenAI.",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "ja->ko",
+        "hypothesis": "LinguaRelay은 WASAPI, CUDA 및 OpenAI를 지원합니다.",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "en->zh",
+        "hypothesis": "LinguaRelay 支持 WASAPI、CUDA 和 OpenAI。",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "en->ja",
+        "hypothesis": "LinguaRelayはWASAPI、CUDA、OpenAIをサポートしています。",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "en->ko",
+        "hypothesis": "LinguaRelay은 WASAPI, CUDA 및 OpenAI를 지원합니다.",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "ko->zh",
+        "hypothesis": "LinguaRelay 支持 WASAPI、CUDA 和 OpenAI。",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "ko->ja",
+        "hypothesis": "LinguaRelay は WASAPI、CUDA、OpenAI をサポートしています。",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      },
+      {
+        "route": "ko->en",
+        "hypothesis": "LinguaRelay supports WASAPI, CUDA and OpenAI.",
+        "matched": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ],
+        "required": [
+          "LinguaRelay",
+          "WASAPI",
+          "CUDA",
+          "OpenAI"
+        ]
+      }
+    ]
+  },
+  "gates": {
+    "four_languages_present": true,
+    "all_acoustic_scenarios_present": true,
+    "asr_error_rate_at_most_100_percent": true,
+    "first_caption_p50_under_4_seconds": true,
+    "first_caption_p95_under_15_seconds": true,
+    "final_pipeline_rtf_under_1": true,
+    "terminology_hit_rate_at_least_75_percent": true,
+    "all_12_translation_routes_measured": true,
+    "translation_latency_gate_passed": true,
+    "correction_fault_gates_passed": true
+  },
+  "all_passed": true
+}

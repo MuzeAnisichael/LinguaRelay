@@ -1,59 +1,37 @@
-# Windows release preparation
+# Windows release process
 
-M4 prepares two independent artifacts: an application directory and a pinned
-model pack. Keeping them separate allows small application updates and makes the
-model licenses/revisions visible.
+v0.1.0 uses separate application and model assets. The per-user installer and portable ZIP contain the CPU-capable runtime; first launch downloads the pinned model ZIP after license consent and validates every installed file against the manifest embedded in the application.
 
-## Build the application
+## Reproduce the quality gate
 
-Use a clean Python 3.11 virtual environment on Windows x64:
+Use Python 3.11 on Windows x64 with the benchmark/runtime extras and the pinned models already prepared:
 
 ```powershell
-scripts\build_windows.ps1 -Runtime cpu
-scripts\build_windows.ps1 -Runtime cuda
+python scripts\build_m5_corpus.py
+python -m lingua_relay.cli asr-benchmark data\m5-corpus\manifest.json --model small --device cpu --compute-type int8 --report docs\benchmarks\m5-asr-cpu-final.json
+python scripts\run_m5_quality_gate.py --asr-report docs\benchmarks\m5-asr-cpu-final.json --mt-report docs\benchmarks\m3-m2m100-cuda-final.json --correction-report docs\benchmarks\m4-correction-fault-gates.json --corpus-manifest data\m5-corpus\manifest.json --output docs\benchmarks\m5-release-gate.json --device cpu --compute-type int8
 ```
 
-The CPU build excludes NVIDIA wheels. The CUDA build sets
-`LINGUA_RELAY_PACKAGE_CUDA=1` and includes cuBLAS/cuDNN DLLs found in the build
-environment. PyInstaller writes an onedir bundle to `dist/LinguaRelay`.
+The FLEURS-derived audio stays ignored; its public manifest and reports are committed. Thresholds are explicit in `run_m5_quality_gate.py` and failures return a non-zero exit code.
 
-## Prepare models
+## Clean build
 
 ```powershell
-lingua-relay asr-doctor --load
-lingua-relay mt-prepare
-scripts\prepare_model_pack.ps1
+py -3.11 -m venv .release-venv
+.\.release-venv\Scripts\python -m pip install --upgrade pip
+.\.release-venv\Scripts\python -m pip install -e ".[dev,runtime,packaging]"
+.\.release-venv\Scripts\python -m pytest
+.\.release-venv\Scripts\python -m ruff check .
+.\.release-venv\Scripts\python -m PyInstaller --noconfirm --clean packaging\LinguaRelay.spec
+& "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" /DAppVersion=0.1.0 "/DSourceDir=$PWD\dist\LinguaRelay" "/DOutputDir=$PWD\release" packaging\installer.iss
 ```
 
-The resulting directory contains the pinned faster-whisper small cache, the
-converted M2M100 model, and `model-manifest.json`. For a release, add SHA-256
-checksums and all required model notices before publishing the model pack.
+Build the portable ZIP, exact model ZIP, SPDX SBOM, and checksums with the release assembly script. Every model file path, size, and SHA-256 comes from `packaging/model-manifest.json`.
 
-## Compile the installer
+## Signing and updates
 
-Install Inno Setup 6, then run:
+Authenticode signing is required once the project obtains a protected code-signing certificate. v0.1.0 is intentionally and visibly published unsigned; never substitute a self-signed certificate while claiming publisher identity. The in-app updater only queries the latest GitHub release and notifies the user. It does not download or execute installers, so upgrade and rollback are explicit installer operations.
 
-```powershell
-scripts\build_windows.ps1 -Runtime cpu -Installer
-scripts\build_windows.ps1 -Runtime cuda -Installer -ModelPackDir release\model-pack
-```
+## Validation
 
-The per-user installer writes the application under LocalAppData and, when a
-model pack is supplied, writes models under `LocalAppData\LinguaRelay\models`.
-It offers optional desktop and login-start shortcuts.
-
-## Release gate
-
-Before the first public release:
-
-1. build in a clean, non-system-site-packages virtual environment;
-2. run unit tests, lint, the M2 audio/ASR gate, the M3 12-route benchmark, and
-   `correction-benchmark` M4 fault gates;
-3. launch the installed CPU and CUDA variants on clean Windows 10/11 VMs;
-4. verify pause/resume, both display modes, click-through, global shortcut,
-   language/device switching, all three correction modes, local/cloud status,
-   provider disconnect fallback, revision history, export, and uninstall;
-5. generate SHA-256 checksums and an SBOM, sign the executable/installer, scan
-   them, and verify signatures on a second machine;
-6. update `version_info.txt`, Inno Setup `AppVersion`, the Python package
-   version, changelog, licenses, and GitHub release notes together.
+Before publishing, test the built EXE in an isolated LocalAppData directory, compile the installer, verify its metadata, create the portable/model assets and SBOM, compute checksums, scan the final asset list, create an immutable `v0.1.0` tag, upload assets, download them again, and compare every checksum. Windows 10/11 and CUDA compatibility remain community validation items unless the exact environment appears in a committed benchmark.

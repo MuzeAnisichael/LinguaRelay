@@ -2,9 +2,15 @@
 
 面向 Windows 的低延迟桌面实时翻译字幕工具，并预留本地大模型或 API 修正层。
 
-> 当前状态：M4 已完成中、日、英、韩实时识别、全部 12 个互译方向、托盘悬浮窗，以及可选的本地/云端异步大模型修正；项目暂不适合生产使用。
+> 当前状态：v0.1.0 是首个公开的 Windows x64 Alpha 发行版，已包含中、日、英、韩实时识别、全部 12 个互译方向、托盘悬浮窗、可选异步大模型修正，以及带完整性校验的首启模型安装。
 
-[English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md)
+[English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md) · [v0.1.0 发布说明](docs/releases/v0.1.0.md) · [隐私说明](docs/PRIVACY.zh-CN.md)
+
+## 安装 v0.1.0
+
+从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.0) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。首次启动会展示两个上游模型的许可证；确认后，应用下载独立模型包并逐文件校验 SHA-256，再启动本地识别与翻译。
+
+首版尚未进行 Authenticode 代码签名，Windows 可能显示“未知发布者”或 SmartScreen 提示。继续前请阅读发布说明、隐私说明和威胁模型。
 
 ## 产品目标
 

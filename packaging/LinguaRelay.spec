@@ -16,6 +16,9 @@ datas = [
     (str(project_root / "glossary.example.json"), "."),
     (str(project_root / "LICENSE"), "."),
     (str(project_root / "THIRD_PARTY.md"), "."),
+    (str(project_root / "SECURITY.md"), "."),
+    (str(project_root / "docs/PRIVACY.zh-CN.md"), "docs"),
+    (str(project_root / "docs/THREAT_MODEL.md"), "docs"),
     (str(project_root / "packaging/model-manifest.json"), "packaging"),
 ]
 binaries = []

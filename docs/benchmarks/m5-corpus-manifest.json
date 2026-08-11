@@ -1,0 +1,240 @@
+{
+  "schema_version": 1,
+  "milestone": "M5",
+  "dataset": "google/fleurs",
+  "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+  "dataset_url": "https://huggingface.co/datasets/google/fleurs",
+  "source_license": "CC-BY-4.0",
+  "derived_signal_license": "CC0-1.0",
+  "sampling_rate": 16000,
+  "methodology": "Pinned FLEURS test speech supplies legal four-language speaker variation. Meeting-room echo, video-like filtering, and synthetic non-copyrighted tonal background music are deterministic acoustic simulations; they are not claims of real meeting or entertainment content.",
+  "scenarios": [
+    "clean_speaker_variation",
+    "simulated_meeting_room",
+    "simulated_video_audio",
+    "simulated_background_music",
+    "simulated_meeting_with_music"
+  ],
+  "samples": [
+    {
+      "id": "zh-1906-clean_speaker_variation",
+      "language": "zh",
+      "dataset_config": "cmn_hans_cn",
+      "split": "test",
+      "path": "zh/1906-clean_speaker_variation.wav",
+      "reference": "“这并不是告别。这是一个篇章的结束，也是新篇章的开始。”",
+      "duration_ms": 10380.0,
+      "scenario": "clean_speaker_variation",
+      "condition_origin": "unaltered FLEURS speaker sample"
+    },
+    {
+      "id": "zh-2006-simulated_meeting_room",
+      "language": "zh",
+      "dataset_config": "cmn_hans_cn",
+      "split": "test",
+      "path": "zh/2006-simulated_meeting_room.wav",
+      "reference": "钙、钾等元素属于金属，银和金等元素当然也是金属。",
+      "duration_ms": 8280.0,
+      "scenario": "simulated_meeting_room",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "zh-1883-simulated_video_audio",
+      "language": "zh",
+      "dataset_config": "cmn_hans_cn",
+      "split": "test",
+      "path": "zh/1883-simulated_video_audio.wav",
+      "reference": "桥下垂直净空 15 米。该项目于 2011 年 8 月完工，但直到 2017 年 3 月才开始通车。",
+      "duration_ms": 13860.0,
+      "scenario": "simulated_video_audio",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "zh-1852-simulated_background_music",
+      "language": "zh",
+      "dataset_config": "cmn_hans_cn",
+      "split": "test",
+      "path": "zh/1852-simulated_background_music.wav",
+      "reference": "\"适当使用博客，\"可以使学生变得更善于分析和进行思辨；通过积极回应网络材料，学生们可以在他人文章的上下文语境中找到自己的立场，并能够针对特定问题提出自己的观点（Oravec, 2002）。\"",
+      "duration_ms": 15420.0,
+      "scenario": "simulated_background_music",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "zh-1734-simulated_meeting_with_music",
+      "language": "zh",
+      "dataset_config": "cmn_hans_cn",
+      "split": "test",
+      "path": "zh/1734-simulated_meeting_with_music.wav",
+      "reference": "科学家们可以得出结论，暗物质对其他暗物质的影响方式与普通物质相同。",
+      "duration_ms": 12900.0,
+      "scenario": "simulated_meeting_with_music",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "ja-1828-clean_speaker_variation",
+      "language": "ja",
+      "dataset_config": "ja_jp",
+      "split": "test",
+      "path": "ja/1828-clean_speaker_variation.wav",
+      "reference": "インターネットで「敵対的環境コース」について検索すると、おそらく現地企業の住所が出てくるでしょう。",
+      "duration_ms": 10440.0,
+      "scenario": "clean_speaker_variation",
+      "condition_origin": "unaltered FLEURS speaker sample"
+    },
+    {
+      "id": "ja-1834-simulated_meeting_room",
+      "language": "ja",
+      "dataset_config": "ja_jp",
+      "split": "test",
+      "path": "ja/1834-simulated_meeting_room.wav",
+      "reference": "また、北側に行くなら世界的に有名なマリア像の聖地であるファティマの聖母の聖域（神社）を訪れましょう。",
+      "duration_ms": 14220.0,
+      "scenario": "simulated_meeting_room",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "ja-1813-simulated_video_audio",
+      "language": "ja",
+      "dataset_config": "ja_jp",
+      "split": "test",
+      "path": "ja/1813-simulated_video_audio.wav",
+      "reference": "バルセロナの公用語はカタルーニャ語とスペイン語です。約半数がカタルーニャ語を好み、大多数がカタルーニャ語を理解し、ほぼ全員がスペイン語を知っています。",
+      "duration_ms": 12840.0,
+      "scenario": "simulated_video_audio",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "ja-1869-simulated_background_music",
+      "language": "ja",
+      "dataset_config": "ja_jp",
+      "split": "test",
+      "path": "ja/1869-simulated_background_music.wav",
+      "reference": "その長い顎には70本以上の鋭い歯が並び、口蓋には別の歯列があり、つまりここを通ったら逃げ道はないということになります。",
+      "duration_ms": 12540.0,
+      "scenario": "simulated_background_music",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "ja-1744-simulated_meeting_with_music",
+      "language": "ja",
+      "dataset_config": "ja_jp",
+      "split": "test",
+      "path": "ja/1744-simulated_meeting_with_music.wav",
+      "reference": "ロスビー数が小さいほど磁気反転に関して星の活性が低下するわけです。",
+      "duration_ms": 12060.0,
+      "scenario": "simulated_meeting_with_music",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "en-1904-clean_speaker_variation",
+      "language": "en",
+      "dataset_config": "en_us",
+      "split": "test",
+      "path": "en/1904-clean_speaker_variation.wav",
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "duration_ms": 10560.0,
+      "scenario": "clean_speaker_variation",
+      "condition_origin": "unaltered FLEURS speaker sample"
+    },
+    {
+      "id": "en-1675-simulated_meeting_room",
+      "language": "en",
+      "dataset_config": "en_us",
+      "split": "test",
+      "path": "en/1675-simulated_meeting_room.wav",
+      "reference": "All nouns, alongside the word Sie for you, always begin with a capital letter, even in the middle of a sentence.",
+      "duration_ms": 8760.0,
+      "scenario": "simulated_meeting_room",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "en-1950-simulated_video_audio",
+      "language": "en",
+      "dataset_config": "en_us",
+      "split": "test",
+      "path": "en/1950-simulated_video_audio.wav",
+      "reference": "To the north and within easy reach is the romantic and fascinating town of Sintra and which was made famous to foreigners after a glowing account of its splendours recorded by Lord Byron.",
+      "duration_ms": 11460.0,
+      "scenario": "simulated_video_audio",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "en-1728-simulated_background_music",
+      "language": "en",
+      "dataset_config": "en_us",
+      "split": "test",
+      "path": "en/1728-simulated_background_music.wav",
+      "reference": "The cabbage juice changes color depending on how acidic or basic (alkaline) the chemical is.",
+      "duration_ms": 5760.0,
+      "scenario": "simulated_background_music",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "en-1972-simulated_meeting_with_music",
+      "language": "en",
+      "dataset_config": "en_us",
+      "split": "test",
+      "path": "en/1972-simulated_meeting_with_music.wav",
+      "reference": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "duration_ms": 4320.0,
+      "scenario": "simulated_meeting_with_music",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "ko-1883-clean_speaker_variation",
+      "language": "ko",
+      "dataset_config": "ko_kr",
+      "split": "test",
+      "path": "ko/1883-clean_speaker_variation.wav",
+      "reference": "다리 밑 수직 간격은 15미터이며, 공사는 2011년 8월에 마무리되었으며, 해당 다리의 통행금지는 2017년 3월까지이다.",
+      "duration_ms": 12480.0,
+      "scenario": "clean_speaker_variation",
+      "condition_origin": "unaltered FLEURS speaker sample"
+    },
+    {
+      "id": "ko-1929-simulated_meeting_room",
+      "language": "ko",
+      "dataset_config": "ko_kr",
+      "split": "test",
+      "path": "ko/1929-simulated_meeting_room.wav",
+      "reference": "델 포트로가 2세트에서 먼저 어드밴티지를 얻었지만 6 대 6이 된 후 다시 타이 브레이크가 필요했다.",
+      "duration_ms": 10800.0,
+      "scenario": "simulated_meeting_room",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "ko-1701-simulated_video_audio",
+      "language": "ko",
+      "dataset_config": "ko_kr",
+      "split": "test",
+      "path": "ko/1701-simulated_video_audio.wav",
+      "reference": "염소 사육은 대략 일만 년 전에 이란의 자그로스산맥에서 시작한 것으로 보입니다.",
+      "duration_ms": 8940.0,
+      "scenario": "simulated_video_audio",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "ko-2000-simulated_background_music",
+      "language": "ko",
+      "dataset_config": "ko_kr",
+      "split": "test",
+      "path": "ko/2000-simulated_background_music.wav",
+      "reference": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에, 객실의 위치를 확인하는 것이 좋다.",
+      "duration_ms": 12540.0,
+      "scenario": "simulated_background_music",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    },
+    {
+      "id": "ko-1801-simulated_meeting_with_music",
+      "language": "ko",
+      "dataset_config": "ko_kr",
+      "split": "test",
+      "path": "ko/1801-simulated_meeting_with_music.wav",
+      "reference": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대그래프에 비유된다.",
+      "duration_ms": 12120.0,
+      "scenario": "simulated_meeting_with_music",
+      "condition_origin": "deterministic LinguaRelay signal simulation"
+    }
+  ]
+}

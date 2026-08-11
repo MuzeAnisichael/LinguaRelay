@@ -1,21 +1,94 @@
 {
-  "schema_version": 1,
-  "release_policy": "Model weights are distributed separately from the application bundle.",
-  "models": [
+  "schema_version": 2,
+  "package_version": "0.1.0",
+  "release_policy": "Model weights are distributed separately and installed on demand.",
+  "download": {
+    "archive_name": "LinguaRelay-0.1.0-models.zip",
+    "url": "https://github.com/MuzeAnisichael/LinguaRelay/releases/download/v0.1.0/LinguaRelay-0.1.0-models.zip",
+    "max_archive_bytes": 2000000000
+  },
+  "total_installed_bytes": 1465078455,
+  "files": [
+    {
+      "path": "models--Systran--faster-whisper-small/refs/main",
+      "size": 40,
+      "sha256": "8d5d066ac370fbf2b2921929949086f12e8466dacb5269c2d4bef92de48844c9"
+    },
+    {
+      "path": "models--Systran--faster-whisper-small/snapshots/536b0662742c02347bc0e980a01041f333bce120/config.json",
+      "size": 2370,
+      "sha256": "b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828"
+    },
+    {
+      "path": "models--Systran--faster-whisper-small/snapshots/536b0662742c02347bc0e980a01041f333bce120/model.bin",
+      "size": 483546902,
+      "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671"
+    },
+    {
+      "path": "models--Systran--faster-whisper-small/snapshots/536b0662742c02347bc0e980a01041f333bce120/tokenizer.json",
+      "size": 2203239,
+      "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+    },
+    {
+      "path": "models--Systran--faster-whisper-small/snapshots/536b0662742c02347bc0e980a01041f333bce120/vocabulary.txt",
+      "size": 459861,
+      "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+    },
+    {
+      "path": "models--Systran--faster-whisper-small/trees/536b0662742c02347bc0e980a01041f333bce120.json",
+      "size": 867,
+      "sha256": "2c2a0eab9d9f5cb5b4585555f2dfd24e40ea4d6503560b99d2624c569be39b53"
+    },
+    {
+      "path": "m2m100_418m_ct2/config.json",
+      "size": 233,
+      "sha256": "72901fbd8abd89fb5cf4a388f26fc681f5c4c58a1e1a88b30b879f107270e7ee"
+    },
+    {
+      "path": "m2m100_418m_ct2/model.bin",
+      "size": 969807398,
+      "sha256": "ea707f0f1c9665d0d14802708fc124b5a910c458dfab4a6a84c5c91fa6d63ea4"
+    },
+    {
+      "path": "m2m100_418m_ct2/sentencepiece.bpe.model",
+      "size": 2423393,
+      "sha256": "d8f7c76ed2a5e0822be39f0a4f95a55eb19c78f4593ce609e2edbc2aea4d380a"
+    },
+    {
+      "path": "m2m100_418m_ct2/shared_vocabulary.json",
+      "size": 2924622,
+      "sha256": "18916ac68f9ac8fbd5250ca603dcb3861aac8672924d93a8dadc82eb3147f941"
+    },
+    {
+      "path": "m2m100_418m_ct2/special_tokens_map.json",
+      "size": 1140,
+      "sha256": "c1a4f86c3874d279ae1b2a05162858db5dd6c61665d84223ed886cbcff08fda6"
+    },
+    {
+      "path": "m2m100_418m_ct2/tokenizer_config.json",
+      "size": 298,
+      "sha256": "a53e6aa83da0b82565ed90c3849056307a9453843322ac5b8439ec4b9497fe48"
+    },
+    {
+      "path": "m2m100_418m_ct2/vocab.json",
+      "size": 3708092,
+      "sha256": "b6e77e474aeea8f441363aca7614317c06381f3eacfe10fb9856d5081d1074cc"
+    }
+  ],
+  "licenses": [
     {
       "component": "asr",
       "name": "Systran/faster-whisper-small",
       "revision": "536b0662742c02347bc0e980a01041f333bce120",
       "license": "MIT",
-      "destination": "models--Systran--faster-whisper-small"
+      "url": "https://huggingface.co/Systran/faster-whisper-small"
     },
     {
       "component": "translation",
       "name": "facebook/m2m100_418M",
       "revision": "55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636",
       "license": "MIT",
-      "conversion": "CTranslate2 float16",
-      "destination": "m2m100_418m_ct2"
+      "url": "https://huggingface.co/facebook/m2m100_418M"
     }
   ]
 }

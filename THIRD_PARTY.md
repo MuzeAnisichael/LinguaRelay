@@ -1,8 +1,8 @@
 # Third-party components
 
 LinguaRelay source code is MIT licensed. Dependencies and downloaded model
-weights retain their own licenses. The project does not currently redistribute
-model weights.
+weights retain their own licenses. Model weights are distributed as a separate
+GitHub Release asset and retain their upstream licenses.
 
 Implemented M1/M2/M3 dependencies (M4's OpenAI-compatible transport uses only
 the Python standard library):
@@ -30,6 +30,5 @@ demand from `google/fleurs` at revision
 redistributed in this repository. Benchmark reports may contain the public
 reference and ASR hypothesis text needed to audit WER/CER.
 
-Before distributing a packaged executable, generate a complete software bill of
-materials, ship all required notices and dynamic libraries, and re-check the
-exact versions selected by the lock file.
+Each release includes an SPDX software bill of materials. The trusted model
+manifest pins every redistributed model file by path, size, and SHA-256.

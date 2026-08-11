@@ -7,8 +7,16 @@ from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QActionGroup, QColor, QIcon, QPainter, QPixmap
+from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import (
+    QAction,
+    QActionGroup,
+    QColor,
+    QDesktopServices,
+    QIcon,
+    QPainter,
+    QPixmap,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -18,11 +26,13 @@ from PySide6.QtWidgets import (
     QTextEdit,
 )
 
+from lingua_relay import __version__
 from lingua_relay.audio import WasapiDeviceManager
 from lingua_relay.config import Settings
 from lingua_relay.history import JsonlHistory
 from lingua_relay.languages import SUPPORTED_LANGUAGES
 from lingua_relay.paths import AppPaths
+from lingua_relay.runtime_state import RuntimeJournal
 from lingua_relay.service import RealtimeCaptionService
 from lingua_relay.settings_io import (
     persist_audio_device,
@@ -30,13 +40,17 @@ from lingua_relay.settings_io import (
     persist_route,
     persist_setting,
 )
+from lingua_relay.ui.model_setup import ensure_model_pack
 from lingua_relay.ui.overlay import CaptionOverlay
+from lingua_relay.updates import UpdateInfo, check_for_update
 
 
 class _Bridge(QObject):
     caption = Signal(object)
     status = Signal(str, str)
     correction_status = Signal(str, str)
+    update = Signal(object, bool)
+    update_error = Signal(str)
 
 
 class _GlobalHotkey(QObject):
@@ -80,14 +94,23 @@ class _GlobalHotkey(QObject):
 
 
 class DesktopController:
-    def __init__(self, app: QApplication, config_path: Path | None) -> None:
+    def __init__(
+        self,
+        app: QApplication,
+        config_path: Path | None,
+        *,
+        model_root: Path | None = None,
+        recovered: bool = False,
+    ) -> None:
         self.app = app
         self.paths = AppPaths.discover()
         self.paths.data_dir.mkdir(parents=True, exist_ok=True)
         development_models = Path.cwd() / "models"
-        self.model_root = (
+        self.model_root = model_root or (
             development_models if development_models.is_dir() else self.paths.model_dir
         )
+        self.recovered = recovered
+        self.latest_release_url: str | None = None
         self.config_path = config_path or self.paths.config_path
         self.template_path = self.paths.resource_dir / "config.example.toml"
         self.settings = self._load_settings()
@@ -96,6 +119,8 @@ class DesktopController:
         self.bridge.caption.connect(self.overlay.publish)
         self.bridge.status.connect(self.overlay.set_status)
         self.bridge.correction_status.connect(self.overlay.set_status)
+        self.bridge.update.connect(self._on_update)
+        self.bridge.update_error.connect(self._on_update_error)
         self.service = RealtimeCaptionService(
             self.settings,
             on_caption=self.bridge.caption.emit,
@@ -120,6 +145,7 @@ class DesktopController:
         self.overlay.show()
         self.hotkey.start()
         QTimer.singleShot(0, self.service.start)
+        QTimer.singleShot(1500, self._after_start)
 
     def _load_settings(self) -> Settings:
         if self.config_path.exists():
@@ -210,6 +236,9 @@ class DesktopController:
         self.correction_status_action.setEnabled(False)
         self.menu.addAction(self.correction_status_action)
         self.bridge.correction_status.connect(self._update_correction_status)
+        self.menu.addAction("检查更新", lambda: self.check_updates(manual=True))
+        self.release_action = self.menu.addAction("打开发布页面", self.open_release_page)
+        self.release_action.setEnabled(False)
         self.menu.addSeparator()
         self.menu.addAction("退出", self.app.quit)
 
@@ -374,6 +403,48 @@ class DesktopController:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.toggle_overlay()
 
+    def _after_start(self) -> None:
+        if self.recovered:
+            self.tray.showMessage(
+                "LinguaRelay 已恢复",
+                "检测到上次未正常退出；模型临时文件已清理，字幕历史仍保留。",
+                QSystemTrayIcon.MessageIcon.Warning,
+            )
+        self.check_updates(manual=False)
+
+    def check_updates(self, *, manual: bool) -> None:
+        def worker() -> None:
+            try:
+                self.bridge.update.emit(check_for_update(__version__), manual)
+            except Exception as error:
+                if manual:
+                    self.bridge.update_error.emit(str(error))
+
+        threading.Thread(target=worker, name="lingua-relay-update", daemon=True).start()
+
+    def _on_update(self, info: UpdateInfo, manual: bool) -> None:
+        self.latest_release_url = info.release_url
+        self.release_action.setEnabled(True)
+        if info.available:
+            self.tray.showMessage(
+                "LinguaRelay 有新版本",
+                f"v{info.latest_version} 已发布。请从 GitHub 下载并运行新安装包。",
+                QSystemTrayIcon.MessageIcon.Information,
+            )
+        elif manual:
+            self.tray.showMessage(
+                "LinguaRelay 更新",
+                f"当前已是最新版 v{__version__}。",
+                QSystemTrayIcon.MessageIcon.Information,
+            )
+
+    def _on_update_error(self, message: str) -> None:
+        QMessageBox.warning(None, "检查更新失败", message)
+
+    def open_release_page(self) -> None:
+        if self.latest_release_url:
+            QDesktopServices.openUrl(QUrl(self.latest_release_url))
+
     def shutdown(self) -> None:
         self.hotkey.stop()
         with suppress(TimeoutError):
@@ -385,9 +456,26 @@ def run_app(config_path: Path | None = None) -> int:
     app.setApplicationName("LinguaRelay")
     app.setApplicationDisplayName("LinguaRelay")
     app.setWindowIcon(_make_icon())
-    controller = DesktopController(app, config_path)
-    controller.run()
-    return app.exec()
+    paths = AppPaths.discover()
+    journal = RuntimeJournal(paths.data_dir, version=__version__)
+    recovery = journal.begin()
+    journal.install_exception_hooks()
+    development_models = Path.cwd() / "models"
+    model_root = development_models if development_models.is_dir() else paths.model_dir
+    manifest_path = paths.resource_dir / "packaging" / "model-manifest.json"
+    try:
+        if not ensure_model_pack(model_root, manifest_path, paths.data_dir / "downloads"):
+            return 0
+        controller = DesktopController(
+            app,
+            config_path,
+            model_root=model_root,
+            recovered=recovery.previous_run_crashed,
+        )
+        controller.run()
+        return app.exec()
+    finally:
+        journal.close_cleanly()
 
 
 def _make_icon() -> QIcon:
