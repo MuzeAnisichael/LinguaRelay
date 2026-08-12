@@ -1,13 +1,23 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
-from scripts import generate_sbom
+
+def _load_generate_sbom():
+    path = Path(__file__).resolve().parents[1] / "scripts" / "generate_sbom.py"
+    spec = importlib.util.spec_from_file_location("linguarelay_generate_sbom", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def test_sbom_has_one_explicit_root_and_deduplicates_packages(monkeypatch, tmp_path) -> None:
+    generate_sbom = _load_generate_sbom()
     duplicate = SimpleNamespace(
         metadata={"Name": "example_dependency", "License": "MIT"},
         version="1.2.3",
