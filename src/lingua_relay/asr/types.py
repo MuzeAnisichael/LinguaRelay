@@ -73,6 +73,7 @@ class AsrSnapshot:
     partials_replaced: int
     partials_dropped: int
     stale_results_dropped: int
+    hallucinations_suppressed: int
     events_emitted: int
     inference_errors: int
     inference_queue_depth: int

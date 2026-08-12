@@ -3,8 +3,13 @@ import threading
 import time
 
 import numpy as np
+import pytest
 
-from lingua_relay.asr.streaming import StreamingAsrEngine, StreamingSegmenter
+from lingua_relay.asr.streaming import (
+    StreamingAsrEngine,
+    StreamingSegmenter,
+    _is_caption_credit_hallucination,
+)
 from lingua_relay.asr.types import AsrResult
 from lingua_relay.audio.types import AudioChunk, AudioLevel
 from lingua_relay.config import AsrSettings
@@ -274,3 +279,42 @@ def test_completed_partial_is_shown_even_when_a_newer_partial_is_waiting() -> No
 
     assert first.revision == 1
     assert first.text == "partial 1"
+
+
+def test_detects_short_template_caption_credit_hallucinations() -> None:
+    assert _is_caption_credit_hallucination("字幕制作人 Zither Harp")
+    assert _is_caption_credit_hallucination("Subtitles by Example")
+    assert _is_caption_credit_hallucination("자막 제작 Example")
+    assert not _is_caption_credit_hallucination("我们正在讨论如何制作字幕和翻译软件。")
+    assert not _is_caption_credit_hallucination(
+        "Subtitles by volunteers can improve accessibility, and this is a full discussion."
+    )
+
+
+class CreditHallucinationRecognizer:
+    def transcribe(
+        self, samples: np.ndarray, *, language: str, vad_filter: bool | None = None
+    ) -> AsrResult:
+        return AsrResult(
+            text="字幕制作人 Zither Harp",
+            language=language,
+            duration_ms=len(samples) / 16,
+            inference_ms=0.1,
+        )
+
+
+def test_credit_hallucination_is_not_emitted_to_the_caption_pipeline() -> None:
+    settings = AsrSettings(
+        partial_interval_ms=320,
+        max_window_seconds=1,
+        max_segment_seconds=1,
+    )
+    engine = StreamingAsrEngine(CreditHallucinationRecognizer(), settings)
+    engine.start()
+    engine.submit_chunk(chunk(0), language="zh")
+    time.sleep(0.05)
+    engine.stop()
+
+    with pytest.raises(queue.Empty):
+        engine.get_event(timeout=0)
+    assert engine.snapshot().hallucinations_suppressed >= 1

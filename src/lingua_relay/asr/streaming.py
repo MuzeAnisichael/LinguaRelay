@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import queue
+import re
 import threading
 import time
 from dataclasses import dataclass
@@ -175,6 +176,7 @@ class StreamingAsrEngine:
         self._boundary_segments: set[str] = set()
         self._events_emitted = 0
         self._stale_results_dropped = 0
+        self._hallucinations_suppressed = 0
         self._inference_errors = 0
         self._last_error: str | None = None
 
@@ -225,6 +227,7 @@ class StreamingAsrEngine:
                 partials_replaced=requests.partials_replaced,
                 partials_dropped=requests.partials_dropped + output_partials_dropped,
                 stale_results_dropped=self._stale_results_dropped,
+                hallucinations_suppressed=self._hallucinations_suppressed,
                 events_emitted=self._events_emitted,
                 inference_errors=self._inference_errors,
                 inference_queue_depth=requests.depth,
@@ -279,6 +282,15 @@ class StreamingAsrEngine:
                 continue
 
             completed_ns = time.monotonic_ns()
+            if self.settings.suppress_credit_hallucinations and _is_caption_credit_hallucination(
+                result.text
+            ):
+                with self._lock:
+                    self._hallucinations_suppressed += 1
+                    if request.state == "final":
+                        self._stabilizers.pop(request.segment_id, None)
+                        self._boundary_segments.discard(request.segment_id)
+                continue
             if request.state == "partial" and not result.text.strip():
                 continue
 
@@ -338,3 +350,26 @@ def _validate_language(language: str) -> str:
 
 def _has_sentence_boundary(text: str) -> bool:
     return text.rstrip().endswith(("。", "！", "？", ".", "!", "?", "…"))
+
+
+def _is_caption_credit_hallucination(text: str) -> bool:
+    """Detect short credit templates Whisper commonly emits over music or silence."""
+    normalized = re.sub(r"[\W_]+", "", text, flags=re.UNICODE).casefold()
+    if not normalized or len(normalized) > 64:
+        return False
+    if "zitherharp" in normalized:
+        return True
+    prefixes = (
+        "字幕制作人",
+        "字幕制作",
+        "字幕由",
+        "subtitlesby",
+        "subtitleby",
+        "captionsby",
+        "captionedby",
+        "字幕作成",
+        "字幕制作",
+        "자막제작",
+        "자막제공",
+    )
+    return normalized.startswith(prefixes)

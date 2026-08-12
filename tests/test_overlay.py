@@ -5,6 +5,7 @@ import os
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QPoint, QRect  # noqa: E402
+from PySide6.QtTest import QTest  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from lingua_relay.asr.types import AsrEvent  # noqa: E402
@@ -133,3 +134,41 @@ def test_transcript_is_visible_before_translation_finishes() -> None:
     assert overlay.source.text() == "recognized immediately"
     assert overlay.translation.text() == "正在翻译…"
     assert "正在识别并翻译" in overlay.status.text()
+
+
+def test_caption_is_cleared_after_user_retention_time() -> None:
+    app = QApplication.instance() or QApplication([])
+    overlay = CaptionOverlay(OverlaySettings(retention_seconds=0.1))
+    overlay.publish(_event("短暂显示"))
+
+    QTest.qWait(150)
+    app.processEvents()
+
+    assert overlay.source.text() == ""
+    assert overlay.translation.text() == ""
+    assert "等待系统音频" in overlay.status.text()
+
+
+def test_overlay_applies_user_fonts_colors_and_status_visibility() -> None:
+    app = QApplication.instance() or QApplication([])
+    overlay = CaptionOverlay(
+        OverlaySettings(
+            source_font_family="Arial",
+            source_font_size=15,
+            source_color="#112233",
+            translation_font_family="Arial",
+            translation_font_size=24,
+            translation_color="#59D395",
+            background_color="#20242C",
+            background_opacity=0.7,
+            status_visible=False,
+        )
+    )
+    overlay.publish(_event("自定义颜色"))
+    app.processEvents()
+
+    assert overlay.source.font().pointSize() == 15
+    assert overlay.translation.font().pointSize() == 24
+    assert "89, 211, 149" in overlay.translation.styleSheet()
+    assert "32, 36, 44" in overlay.frame.styleSheet()
+    assert overlay.status.isHidden()

@@ -1,7 +1,7 @@
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(0, 1, 1, 0),
-    prodvers=(0, 1, 1, 0),
+    filevers=(0, 1, 2, 0),
+    prodvers=(0, 1, 2, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
@@ -13,14 +13,14 @@ VSVersionInfo(
     StringFileInfo([
       StringTable(
         u'080404b0',
-        [StringStruct(u'CompanyName', u'LinguaRelay contributors'),
+        [StringStruct(u'CompanyName', u'Leeleelee'),
          StringStruct(u'FileDescription', u'LinguaRelay real-time translation captions'),
-         StringStruct(u'FileVersion', u'0.1.1'),
+         StringStruct(u'FileVersion', u'0.1.2'),
          StringStruct(u'InternalName', u'LinguaRelay'),
-         StringStruct(u'LegalCopyright', u'Copyright (c) LinguaRelay contributors'),
+         StringStruct(u'LegalCopyright', u'Copyright (c) 2026 Leeleelee'),
          StringStruct(u'OriginalFilename', u'LinguaRelay.exe'),
          StringStruct(u'ProductName', u'LinguaRelay'),
-         StringStruct(u'ProductVersion', u'0.1.1')])
+         StringStruct(u'ProductVersion', u'0.1.2')])
     ]),
     VarFileInfo([VarStruct(u'Translation', [2052, 1200])])
   ]

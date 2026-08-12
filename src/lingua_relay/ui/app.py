@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+import gc
 import os
 import sys
 import threading
@@ -8,7 +9,7 @@ from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, QUrl, Signal
+from PySide6.QtCore import QObject, QProcess, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -28,6 +29,7 @@ from lingua_relay.audio import WasapiDeviceManager
 from lingua_relay.config import Settings
 from lingua_relay.history import JsonlHistory
 from lingua_relay.languages import SUPPORTED_LANGUAGES
+from lingua_relay.model_pack import load_model_pack_manifest, uninstall_model_pack
 from lingua_relay.paths import AppPaths
 from lingua_relay.runtime_state import RuntimeJournal
 from lingua_relay.service import RealtimeCaptionService
@@ -37,10 +39,12 @@ from lingua_relay.settings_io import (
     persist_overlay_geometry,
     persist_route,
     persist_setting,
+    persist_settings,
 )
 from lingua_relay.ui.history_view import HistoryWindow
 from lingua_relay.ui.model_setup import ensure_model_pack
 from lingua_relay.ui.overlay import CaptionOverlay
+from lingua_relay.ui.settings_view import SettingsDialog
 from lingua_relay.updates import UpdateInfo, check_for_update
 
 
@@ -187,6 +191,7 @@ class DesktopController:
 
         display_menu = self.menu.addMenu("字幕显示")
         display_group = QActionGroup(display_menu)
+        self.display_actions: dict[str, QAction] = {}
         for mode, label in (("translated", "仅显示译文"), ("bilingual", "双语同时显示")):
             action = display_menu.addAction(label)
             action.setCheckable(True)
@@ -195,11 +200,13 @@ class DesktopController:
                 lambda _checked=False, value=mode: self.set_display_mode(value)
             )
             display_group.addAction(action)
+            self.display_actions[mode] = action
         self.click_action = display_menu.addAction("点击穿透")
         self.click_action.setCheckable(True)
         self.click_action.setChecked(self.settings.overlay.click_through)
         self.click_action.triggered.connect(self.set_click_through)
         display_menu.addAction("重置悬浮窗位置和大小", self.overlay.reset_geometry)
+        self.menu.addAction("用户设置…", self.show_settings)
 
         correction_menu = self.menu.addMenu("大模型修正")
         correction_group = QActionGroup(correction_menu)
@@ -230,6 +237,9 @@ class DesktopController:
         history_menu = self.menu.addMenu("历史记录")
         history_menu.addAction("查看最近记录", self.show_history)
         history_menu.addAction("导出…", self.export_history)
+        storage_menu = self.menu.addMenu("模型与卸载")
+        storage_menu.addAction("删除本地模型并退出…", self.remove_local_models)
+        storage_menu.addAction("卸载 LinguaRelay…", self.uninstall_application)
         self.status_action = QAction("状态：正在准备", self.menu)
         self.status_action.setEnabled(False)
         self.menu.addAction(self.status_action)
@@ -241,6 +251,7 @@ class DesktopController:
         self.menu.addAction("检查更新", lambda: self.check_updates(manual=True))
         self.release_action = self.menu.addAction("打开发布页面", self.open_release_page)
         self.release_action.setEnabled(False)
+        self.menu.addAction("关于 LinguaRelay", self.show_about)
         self.menu.addSeparator()
         self.menu.addAction("退出", self.app.quit)
 
@@ -293,6 +304,99 @@ class DesktopController:
         )
         self.overlay.set_click_through(enabled)
         persist_setting("overlay", "click_through", enabled, self.config_path, self.template_path)
+
+    def show_settings(self) -> None:
+        dialog = SettingsDialog(self.settings)
+        dialog.setWindowIcon(self.icon)
+        dialog.remove_models_requested.connect(
+            lambda: QTimer.singleShot(0, self.remove_local_models)
+        )
+        dialog.uninstall_requested.connect(lambda: QTimer.singleShot(0, self.uninstall_application))
+        if dialog.exec() != SettingsDialog.DialogCode.Accepted:
+            return
+        previous = self.settings
+        updated = dialog.result_settings()
+        self.settings = updated
+
+        persist_route(
+            updated.app.source_language,
+            updated.app.target_language,
+            self.config_path,
+            self.template_path,
+        )
+        persist_setting(
+            "app",
+            "history_enabled",
+            updated.app.history_enabled,
+            self.config_path,
+            self.template_path,
+        )
+        persist_settings(
+            "overlay",
+            {
+                "opacity": updated.overlay.opacity,
+                "click_through": updated.overlay.click_through,
+                "display_mode": updated.overlay.display_mode,
+                "source_font_size": updated.overlay.source_font_size,
+                "translation_font_size": updated.overlay.translation_font_size,
+                "source_font_family": updated.overlay.source_font_family,
+                "translation_font_family": updated.overlay.translation_font_family,
+                "source_color": updated.overlay.source_color,
+                "translation_color": updated.overlay.translation_color,
+                "background_color": updated.overlay.background_color,
+                "background_opacity": updated.overlay.background_opacity,
+                "status_visible": updated.overlay.status_visible,
+                "retention_seconds": updated.overlay.retention_seconds,
+            },
+            self.config_path,
+            self.template_path,
+        )
+        persist_settings(
+            "asr",
+            {
+                "partial_interval_ms": updated.asr.partial_interval_ms,
+                "punctuation_boundary_enabled": updated.asr.punctuation_boundary_enabled,
+                "punctuation_boundary_min_seconds": (updated.asr.punctuation_boundary_min_seconds),
+                "preferred_segment_seconds": updated.asr.preferred_segment_seconds,
+                "max_caption_seconds": updated.asr.max_caption_seconds,
+                "suppress_credit_hallucinations": (updated.asr.suppress_credit_hallucinations),
+            },
+            self.config_path,
+            self.template_path,
+        )
+
+        self.overlay.apply_settings(updated.overlay)
+        self.click_action.setChecked(updated.overlay.click_through)
+        self.display_actions[updated.overlay.display_mode].setChecked(True)
+        if (
+            previous.app.source_language,
+            previous.app.target_language,
+        ) != (
+            updated.app.source_language,
+            updated.app.target_language,
+        ):
+            self.service.set_route(
+                updated.app.source_language,
+                updated.app.target_language,
+            )
+            self.source_menu.clear()
+            self.target_menu.clear()
+            self._populate_languages(self.source_menu, source=True)
+            self._populate_languages(self.target_menu, source=False)
+
+        restart_reasons = []
+        if previous.asr != updated.asr:
+            restart_reasons.append("实时识别参数")
+        if previous.app.history_enabled != updated.app.history_enabled:
+            restart_reasons.append("历史记录开关")
+        if restart_reasons:
+            QMessageBox.information(
+                None,
+                "设置已保存",
+                "字幕外观与语言已立即应用。"
+                + "、".join(restart_reasons)
+                + "将在下次启动 LinguaRelay 时生效。",
+            )
 
     def _persist_overlay_geometry(self, x: int, y: int, width: int, height: int) -> None:
         self.settings = replace(
@@ -398,6 +502,88 @@ class DesktopController:
         except Exception as error:
             QMessageBox.critical(None, "导出失败", str(error))
 
+    def remove_local_models(self) -> None:
+        manifest_path = self.paths.resource_dir / "packaging" / "model-manifest.json"
+        try:
+            manifest = load_model_pack_manifest(manifest_path)
+        except Exception as error:
+            QMessageBox.critical(None, "无法读取模型清单", str(error))
+            return
+        answer = QMessageBox.question(
+            None,
+            "删除本地模型",
+            "将停止实时翻译并删除受 LinguaRelay 清单管理的语音识别与翻译模型，"
+            "预计释放约 1.36 GiB 空间。\n\n"
+            f"模型目录：{self.model_root}\n\n"
+            "配置、字幕历史和目录中的其他文件会保留。软件将在完成后退出，是否继续？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        self.overlay.set_status("stopping", "正在停止实时翻译并释放模型…")
+        try:
+            self.service.stop()
+            self.service.release_resources()
+            gc.collect()
+            removed = list(uninstall_model_pack(self.model_root, manifest))
+            removed.extend(self._remove_model_download_cache(manifest.archive_name))
+        except Exception as error:
+            QMessageBox.critical(
+                None,
+                "模型删除失败",
+                f"未能安全删除本地模型：{error}\n\n请退出 LinguaRelay 后重试。",
+            )
+            return
+
+        result = "本地模型和下载缓存已删除。" if removed else "未发现可删除的本地模型。"
+        QMessageBox.information(
+            None,
+            "模型已卸载",
+            result + "\n配置与字幕历史已保留；下次启动时可重新安装模型。",
+        )
+        self.app.quit()
+
+    def _remove_model_download_cache(self, archive_name: str) -> tuple[Path, ...]:
+        download_root = (self.paths.data_dir / "downloads").resolve(strict=False)
+        archive = download_root / archive_name
+        candidates = (archive, archive.with_suffix(archive.suffix + ".part"))
+        removed: list[Path] = []
+        for candidate in candidates:
+            if candidate.resolve(strict=False).parent != download_root:
+                raise ValueError(f"refusing to remove unsafe download path: {candidate}")
+            if candidate.is_file() and not candidate.is_symlink():
+                candidate.unlink()
+                removed.append(candidate)
+        return tuple(removed)
+
+    def uninstall_application(self) -> None:
+        uninstaller = Path(sys.executable).resolve().parent / "unins000.exe"
+        if not getattr(sys, "frozen", False) or not uninstaller.is_file():
+            QMessageBox.information(
+                None,
+                "卸载 LinguaRelay",
+                "当前运行的不是已安装版本。请在 Windows“设置 → 应用 → 已安装的应用”中"
+                "找到 LinguaRelay，或运行安装目录中的 unins000.exe。",
+            )
+            return
+        answer = QMessageBox.question(
+            None,
+            "卸载 LinguaRelay",
+            "即将退出软件并启动 Windows 卸载程序。是否继续？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        started = QProcess.startDetached(str(uninstaller), [])
+        success = started[0] if isinstance(started, tuple) else bool(started)
+        if not success:
+            QMessageBox.critical(None, "无法启动卸载程序", str(uninstaller))
+            return
+        self.app.quit()
+
     def _update_status_action(self, state: str, message: str) -> None:
         self.status_action.setText(f"状态：{message}")
         self.tray.setToolTip(f"LinguaRelay · {message}")
@@ -466,6 +652,17 @@ class DesktopController:
     def open_release_page(self) -> None:
         if self.latest_release_url:
             QDesktopServices.openUrl(QUrl(self.latest_release_url))
+
+    def show_about(self) -> None:
+        QMessageBox.about(
+            None,
+            "关于 LinguaRelay",
+            f"LinguaRelay v{__version__}\n\n"
+            "实时系统音频翻译字幕\n\n"
+            "制作人：Leeleelee\n"
+            "版权所有 © 2026 Leeleelee\n"
+            "根据 MIT License 开源发布。",
+        )
 
     def shutdown(self) -> None:
         self.hotkey.stop()

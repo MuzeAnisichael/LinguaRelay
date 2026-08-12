@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.1"
+  #define AppVersion "0.1.2"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\LinguaRelay"
@@ -12,7 +12,7 @@
 #endif
 
 #define AppName "LinguaRelay"
-#define AppPublisher "LinguaRelay contributors"
+#define AppPublisher "Leeleelee"
 #define AppURL "https://github.com/MuzeAnisichael/LinguaRelay"
 #define AppExeName "LinguaRelay.exe"
 
@@ -58,6 +58,7 @@ Source: "{#ModelPackDir}\*"; DestDir: "{localappdata}\LinguaRelay\models"; Flags
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
+Name: "{autoprograms}\卸载 {#AppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: startup
 
@@ -70,6 +71,7 @@ Type: filesandordirs; Name: "{app}"
 [Code]
 var
   ModelCheckReported: Boolean;
+  RemoveModelsOnUninstall: Boolean;
 
 function ExistingModelsDetected(): Boolean;
 var
@@ -98,5 +100,21 @@ end;
 
 function InitializeUninstall(): Boolean;
 begin
+  RemoveModelsOnUninstall :=
+    MsgBox(
+      '是否同时删除 LinguaRelay 的本地模型？' + #13#10 + #13#10 +
+      '选择“是”将删除约 1.36 GiB 的语音识别、翻译模型与下载缓存。' + #13#10 +
+      '配置和字幕历史将继续保留。',
+      mbConfirmation,
+      MB_YESNO or MB_DEFBUTTON2) = IDYES;
   Result := True;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if (CurUninstallStep = usUninstall) and RemoveModelsOnUninstall then
+  begin
+    DelTree(ExpandConstant('{localappdata}\LinguaRelay\models'), True, True, True);
+    DelTree(ExpandConstant('{localappdata}\LinguaRelay\downloads'), True, True, True);
+  end;
 end;

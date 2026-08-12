@@ -9,7 +9,7 @@ from pathlib import Path
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Assemble LinguaRelay release assets")
-    parser.add_argument("--version", default="0.1.1")
+    parser.add_argument("--version", default="0.1.2")
     parser.add_argument("--dist", type=Path, default=Path("dist/LinguaRelay"))
     parser.add_argument("--models", type=Path, default=Path("models"))
     parser.add_argument("--manifest", type=Path, default=Path("packaging/model-manifest.json"))

@@ -1,0 +1,376 @@
+from __future__ import annotations
+
+from dataclasses import replace
+
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor, QFont
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QColorDialog,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFontComboBox,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+from lingua_relay.config import OverlaySettings, Settings
+from lingua_relay.languages import SUPPORTED_LANGUAGES
+
+
+class ColorButton(QPushButton):
+    """Compact color picker that keeps a validated #RRGGBB value."""
+
+    def __init__(self, color: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._color = QColor(color)
+        self.clicked.connect(self._choose)
+        self._refresh()
+
+    def color(self) -> str:
+        return self._color.name(QColor.NameFormat.HexRgb).upper()
+
+    def set_color(self, color: str) -> None:
+        resolved = QColor(color)
+        if not resolved.isValid():
+            raise ValueError(f"invalid color: {color}")
+        self._color = resolved
+        self._refresh()
+
+    def _choose(self) -> None:
+        selected = QColorDialog.getColor(self._color, self, "选择颜色")
+        if selected.isValid():
+            self._color = selected
+            self._refresh()
+
+    def _refresh(self) -> None:
+        value = self.color()
+        foreground = "#101218" if self._color.lightnessF() > 0.58 else "#FFFFFF"
+        self.setText(value)
+        self.setStyleSheet(
+            f"QPushButton {{ background: {value}; color: {foreground}; "
+            "border: 1px solid #667085; border-radius: 5px; padding: 5px 12px; }}"
+        )
+
+
+class SettingsDialog(QDialog):
+    """User-facing settings editor for captions, appearance, and live cadence."""
+
+    remove_models_requested = Signal()
+    uninstall_requested = Signal()
+
+    def __init__(self, settings: Settings, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._initial = settings
+        self._result = settings
+        self.setWindowTitle("LinguaRelay · 用户设置")
+        self.resize(640, 590)
+        self.setMinimumSize(560, 520)
+
+        root = QVBoxLayout(self)
+        intro = QLabel("字幕外观会立即应用；标注为“下次启动”的实时参数需重启软件。")
+        intro.setWordWrap(True)
+        intro.setStyleSheet("color: #667085;")
+        root.addWidget(intro)
+
+        tabs = QTabWidget()
+        tabs.addTab(self._build_general_tab(), "常规")
+        tabs.addTab(self._build_appearance_tab(), "字幕外观")
+        tabs.addTab(self._build_realtime_tab(), "实时性")
+        tabs.addTab(self._build_storage_tab(), "存储与卸载")
+        root.addWidget(tabs, 1)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Save).setText("保存并应用")
+        buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("取消")
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        root.addWidget(buttons)
+
+    def result_settings(self) -> Settings:
+        return self._result
+
+    def realtime_changed(self) -> bool:
+        return self._result.asr != self._initial.asr
+
+    def _build_general_tab(self) -> QWidget:
+        page = QWidget()
+        form = QFormLayout(page)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+
+        self.source_language = self._language_combo(self._initial.app.source_language)
+        self.target_language = self._language_combo(self._initial.app.target_language)
+        self.source_language.currentIndexChanged.connect(lambda: self._avoid_same_route(True))
+        self.target_language.currentIndexChanged.connect(lambda: self._avoid_same_route(False))
+        form.addRow("源语言", self.source_language)
+        form.addRow("目标语言", self.target_language)
+
+        self.display_mode = QComboBox()
+        self.display_mode.addItem("双语同时显示", "bilingual")
+        self.display_mode.addItem("仅显示译文", "translated")
+        self._select_data(self.display_mode, self._initial.overlay.display_mode)
+        form.addRow("字幕显示", self.display_mode)
+
+        self.retention_seconds = QDoubleSpinBox()
+        self.retention_seconds.setRange(0, 120)
+        self.retention_seconds.setDecimals(1)
+        self.retention_seconds.setSingleStep(0.5)
+        self.retention_seconds.setSuffix(" 秒")
+        self.retention_seconds.setSpecialValueText("一直保留")
+        self.retention_seconds.setValue(self._initial.overlay.retention_seconds)
+        form.addRow("字幕保留时间", self.retention_seconds)
+
+        self.history_enabled = QCheckBox("保存字幕历史记录")
+        self.history_enabled.setChecked(self._initial.app.history_enabled)
+        form.addRow("历史记录", self.history_enabled)
+
+        self.status_visible = QCheckBox("显示语言方向和处理状态")
+        self.status_visible.setChecked(self._initial.overlay.status_visible)
+        form.addRow("状态栏", self.status_visible)
+
+        self.click_through = QCheckBox("让鼠标点击穿过悬浮窗")
+        self.click_through.setChecked(self._initial.overlay.click_through)
+        form.addRow("交互", self.click_through)
+        return page
+
+    def _build_appearance_tab(self) -> QWidget:
+        page = QWidget()
+        form = QFormLayout(page)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+
+        self.source_font = QFontComboBox()
+        self.source_font.setCurrentFont(QFont(self._initial.overlay.source_font_family))
+        self.source_size = self._font_size(self._initial.overlay.source_font_size)
+        form.addRow("原文字体", self._font_row(self.source_font, self.source_size))
+        self.source_color = ColorButton(self._initial.overlay.source_color)
+        form.addRow("原文颜色", self.source_color)
+
+        self.translation_font = QFontComboBox()
+        self.translation_font.setCurrentFont(QFont(self._initial.overlay.translation_font_family))
+        self.translation_size = self._font_size(self._initial.overlay.translation_font_size)
+        form.addRow("译文字体", self._font_row(self.translation_font, self.translation_size))
+        self.translation_color = ColorButton(self._initial.overlay.translation_color)
+        form.addRow("译文颜色", self.translation_color)
+
+        self.background_color = ColorButton(self._initial.overlay.background_color)
+        form.addRow("背景颜色", self.background_color)
+        self.background_opacity = self._percentage(
+            self._initial.overlay.background_opacity, minimum=10
+        )
+        form.addRow("背景不透明度", self.background_opacity)
+        self.window_opacity = self._percentage(self._initial.overlay.opacity)
+        form.addRow("窗口整体不透明度", self.window_opacity)
+
+        reset = QPushButton("恢复外观默认值")
+        reset.clicked.connect(self._reset_appearance)
+        form.addRow("", reset)
+        return page
+
+    def _build_realtime_tab(self) -> QWidget:
+        page = QWidget()
+        root = QVBoxLayout(page)
+        note = QLabel(
+            "以下参数影响识别切片和模型任务队列，保存后将在下次启动时生效。"
+            "更短的间隔更及时，但会增加 CPU/GPU 占用。"
+        )
+        note.setWordWrap(True)
+        note.setStyleSheet("color: #9A6700; background: #FFF8C5; padding: 8px;")
+        root.addWidget(note)
+        form = QFormLayout()
+
+        self.partial_interval = QComboBox()
+        for value in (320, 640, 960, 1280):
+            self.partial_interval.addItem(f"{value} 毫秒", value)
+        if self.partial_interval.findData(self._initial.asr.partial_interval_ms) < 0:
+            self.partial_interval.addItem(
+                f"{self._initial.asr.partial_interval_ms} 毫秒",
+                self._initial.asr.partial_interval_ms,
+            )
+        self._select_data(self.partial_interval, self._initial.asr.partial_interval_ms)
+        form.addRow("增量识别间隔", self.partial_interval)
+
+        self.punctuation_enabled = QCheckBox("稳定结果出现句末标点时立即断句")
+        self.punctuation_enabled.setChecked(self._initial.asr.punctuation_boundary_enabled)
+        form.addRow("标点断句", self.punctuation_enabled)
+
+        self.punctuation_min = QDoubleSpinBox()
+        self.punctuation_min.setRange(0.32, 5.0)
+        self.punctuation_min.setDecimals(2)
+        self.punctuation_min.setSingleStep(0.1)
+        self.punctuation_min.setSuffix(" 秒")
+        self.punctuation_min.setValue(self._initial.asr.punctuation_boundary_min_seconds)
+        form.addRow("标点断句最短语音", self.punctuation_min)
+
+        self.preferred_segment = QDoubleSpinBox()
+        self.preferred_segment.setRange(1.0, 10.0)
+        self.preferred_segment.setDecimals(1)
+        self.preferred_segment.setSingleStep(0.5)
+        self.preferred_segment.setSuffix(" 秒")
+        self.preferred_segment.setValue(self._initial.asr.preferred_segment_seconds)
+        form.addRow("优先切段时长", self.preferred_segment)
+
+        self.max_caption = QDoubleSpinBox()
+        self.max_caption.setRange(2.0, 10.0)
+        self.max_caption.setDecimals(1)
+        self.max_caption.setSingleStep(0.5)
+        self.max_caption.setSuffix(" 秒")
+        self.max_caption.setValue(self._initial.asr.max_caption_seconds)
+        form.addRow("单条字幕最长时长", self.max_caption)
+
+        self.suppress_credits = QCheckBox("过滤“字幕制作人 / Subtitles by”等模板化误识别")
+        self.suppress_credits.setChecked(self._initial.asr.suppress_credit_hallucinations)
+        form.addRow("幻觉抑制", self.suppress_credits)
+        root.addLayout(form)
+        root.addStretch(1)
+        return page
+
+    def _build_storage_tab(self) -> QWidget:
+        page = QWidget()
+        root = QVBoxLayout(page)
+
+        model_title = QLabel("本地模型")
+        model_title.setStyleSheet("font-weight: 600; font-size: 15px;")
+        root.addWidget(model_title)
+        model_note = QLabel(
+            "删除语音识别与翻译模型可释放约 1.36 GiB 空间。配置和字幕历史不会被删除；"
+            "下次启动时可以重新选择现有模型或下载模型包。"
+        )
+        model_note.setWordWrap(True)
+        root.addWidget(model_note)
+        self.remove_models_button = QPushButton("删除本地模型并退出…")
+        self.remove_models_button.clicked.connect(self._request_model_removal)
+        root.addWidget(self.remove_models_button)
+
+        uninstall_title = QLabel("卸载应用")
+        uninstall_title.setStyleSheet("font-weight: 600; font-size: 15px; margin-top: 18px;")
+        root.addWidget(uninstall_title)
+        uninstall_note = QLabel(
+            "启动 Windows 卸载程序。卸载时可以选择是否同时删除本地模型；配置和字幕历史默认保留。"
+        )
+        uninstall_note.setWordWrap(True)
+        root.addWidget(uninstall_note)
+        self.uninstall_button = QPushButton("卸载 LinguaRelay…")
+        self.uninstall_button.clicked.connect(self._request_uninstall)
+        root.addWidget(self.uninstall_button)
+        root.addStretch(1)
+        return page
+
+    def _request_model_removal(self) -> None:
+        self.reject()
+        self.remove_models_requested.emit()
+
+    def _request_uninstall(self) -> None:
+        self.reject()
+        self.uninstall_requested.emit()
+
+    def accept(self) -> None:
+        try:
+            candidate = self._collect()
+            candidate.validate()
+        except ValueError as error:
+            QMessageBox.warning(self, "设置无效", str(error))
+            return
+        self._result = candidate
+        super().accept()
+
+    def _collect(self) -> Settings:
+        overlay = replace(
+            self._initial.overlay,
+            display_mode=str(self.display_mode.currentData()),
+            retention_seconds=self.retention_seconds.value(),
+            status_visible=self.status_visible.isChecked(),
+            click_through=self.click_through.isChecked(),
+            source_font_family=self.source_font.currentFont().family(),
+            source_font_size=self.source_size.value(),
+            source_color=self.source_color.color(),
+            translation_font_family=self.translation_font.currentFont().family(),
+            translation_font_size=self.translation_size.value(),
+            translation_color=self.translation_color.color(),
+            background_color=self.background_color.color(),
+            background_opacity=self.background_opacity.value() / 100,
+            opacity=self.window_opacity.value() / 100,
+        )
+        asr = replace(
+            self._initial.asr,
+            partial_interval_ms=int(self.partial_interval.currentData()),
+            punctuation_boundary_enabled=self.punctuation_enabled.isChecked(),
+            punctuation_boundary_min_seconds=self.punctuation_min.value(),
+            preferred_segment_seconds=self.preferred_segment.value(),
+            max_caption_seconds=self.max_caption.value(),
+            suppress_credit_hallucinations=self.suppress_credits.isChecked(),
+        )
+        app = replace(
+            self._initial.app,
+            source_language=str(self.source_language.currentData()),
+            target_language=str(self.target_language.currentData()),
+            history_enabled=self.history_enabled.isChecked(),
+        )
+        return replace(self._initial, app=app, overlay=overlay, asr=asr)
+
+    def _avoid_same_route(self, source_changed: bool) -> None:
+        if self.source_language.currentData() != self.target_language.currentData():
+            return
+        combo = self.target_language if source_changed else self.source_language
+        combo.setCurrentIndex((combo.currentIndex() + 1) % combo.count())
+
+    def _reset_appearance(self) -> None:
+        defaults = OverlaySettings()
+        self.source_font.setCurrentFont(QFont(defaults.source_font_family))
+        self.source_size.setValue(defaults.source_font_size)
+        self.source_color.set_color(defaults.source_color)
+        self.translation_font.setCurrentFont(QFont(defaults.translation_font_family))
+        self.translation_size.setValue(defaults.translation_font_size)
+        self.translation_color.set_color(defaults.translation_color)
+        self.background_color.set_color(defaults.background_color)
+        self.background_opacity.setValue(round(defaults.background_opacity * 100))
+        self.window_opacity.setValue(round(defaults.opacity * 100))
+
+    @staticmethod
+    def _language_combo(current: str) -> QComboBox:
+        combo = QComboBox()
+        for code, language in SUPPORTED_LANGUAGES.items():
+            combo.addItem(f"{language.native_name} ({code})", code)
+        SettingsDialog._select_data(combo, current)
+        return combo
+
+    @staticmethod
+    def _select_data(combo: QComboBox, value: object) -> None:
+        index = combo.findData(value)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+
+    @staticmethod
+    def _font_size(value: int) -> QSpinBox:
+        control = QSpinBox()
+        control.setRange(8, 72)
+        control.setSuffix(" pt")
+        control.setValue(value)
+        return control
+
+    @staticmethod
+    def _font_row(font: QFontComboBox, size: QSpinBox) -> QWidget:
+        container = QWidget()
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(font, 1)
+        layout.addWidget(size)
+        return container
+
+    @staticmethod
+    def _percentage(value: float, *, minimum: int = 20) -> QSpinBox:
+        control = QSpinBox()
+        control.setRange(minimum, 100)
+        control.setSuffix(" %")
+        control.setValue(round(value * 100))
+        return control

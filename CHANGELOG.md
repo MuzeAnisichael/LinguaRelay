@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2 - 2026-08-12
+
+- Added a persistent user settings dialog for language route, subtitle retention, fonts, colors, opacity, status visibility, history, and live recognition cadence.
+- Added automatic subtitle clearing with a configurable 0–120 second retention period; zero keeps the latest subtitle indefinitely.
+- Added optional filtering for short template-like Whisper hallucinations such as “字幕制作人 Zither Harp” and “Subtitles by”.
+- Added in-app model removal and application-uninstall entry points; the Windows uninstaller can optionally remove the 1.36 GiB local model pack while preserving configuration and caption history.
+- Changed the producer, package author, Windows publisher, and copyright owner to Leeleelee.
+
 ## 0.1.1 - 2026-08-12
 
 - Added drag, edge/corner resize, geometry persistence, and tray reset for the overlay.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -88,6 +89,19 @@ def persist_setting(
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def persist_settings(
+    section_name: str,
+    values: Mapping[str, Any],
+    config_path: str | Path = "config.toml",
+    template_path: str | Path = "config.example.toml",
+) -> Path:
+    """Persist a validated group of settings while preserving unrelated TOML sections."""
+    path = Path(config_path)
+    for key, value in values.items():
+        persist_setting(section_name, key, value, path, template_path)
     return path
 
 

@@ -51,6 +51,39 @@ class ModelPackStatus:
     error: str | None = None
 
 
+def uninstall_model_pack(
+    model_root: str | Path,
+    manifest: ModelPackManifest,
+) -> tuple[Path, ...]:
+    """Delete only top-level model paths owned by the trusted manifest.
+
+    The model root itself and any unrelated user files are deliberately retained.
+    Symbolic links or junctions resolving outside the selected root are refused.
+    """
+    root = Path(model_root).resolve(strict=False)
+    if not root.exists():
+        return ()
+    owned_folders = sorted({PurePosixPath(item.path).parts[0] for item in manifest.files})
+    removed: list[Path] = []
+    for folder in owned_folders:
+        target = root / folder
+        if not target.exists() and not target.is_symlink():
+            continue
+        resolved = target.resolve(strict=False)
+        if resolved.parent != root or target.is_symlink():
+            raise ValueError(f"refusing to remove unsafe model path: {target}")
+        if target.is_dir():
+            shutil.rmtree(target)
+        else:
+            target.unlink()
+        removed.append(target)
+    marker = root / "installed-models.json"
+    if marker.is_file() and not marker.is_symlink():
+        marker.unlink()
+        removed.append(marker)
+    return tuple(removed)
+
+
 def load_model_pack_manifest(path: str | Path) -> ModelPackManifest:
     raw_bytes = Path(path).read_bytes()
     raw: Any = json.loads(raw_bytes.decode("utf-8"))
@@ -191,7 +224,7 @@ def download_model_pack(
     partial = target.with_suffix(target.suffix + ".part")
     request = urllib.request.Request(
         manifest.download_url,
-        headers={"Accept": "application/octet-stream", "User-Agent": "LinguaRelay/0.1.1"},
+        headers={"Accept": "application/octet-stream", "User-Agent": "LinguaRelay/0.1.2"},
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310

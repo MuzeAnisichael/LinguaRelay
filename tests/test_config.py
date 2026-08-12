@@ -19,6 +19,9 @@ def test_defaults_match_first_language_route() -> None:
     assert settings.asr.max_segment_seconds == 10.0
     assert settings.overlay.display_mode == "bilingual"
     assert settings.overlay.height == 180
+    assert settings.overlay.retention_seconds == 8.0
+    assert settings.overlay.translation_color == "#FFFFFF"
+    assert settings.asr.suppress_credit_hallucinations is True
     assert settings.translation.provider == "m2m100_ct2"
 
 
@@ -66,4 +69,11 @@ def test_rejects_partial_interval_that_does_not_align_to_audio_chunks() -> None:
     settings = Settings.from_mapping({"asr": {"partial_interval_ms": 500}})
 
     with pytest.raises(ValueError, match="multiple"):
+        settings.validate()
+
+
+def test_rejects_invalid_overlay_color() -> None:
+    settings = Settings.from_mapping({"overlay": {"translation_color": "white"}})
+
+    with pytest.raises(ValueError, match="translation_color"):
         settings.validate()

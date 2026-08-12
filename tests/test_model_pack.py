@@ -13,6 +13,7 @@ from lingua_relay.model_pack import (
     load_model_pack_manifest,
     model_files_status,
     model_pack_status,
+    uninstall_model_pack,
 )
 from lingua_relay.ui.model_setup import ensure_model_pack
 
@@ -121,3 +122,20 @@ def test_first_launch_reuses_a_verified_candidate_directory(tmp_path: Path) -> N
     )
 
     assert selected == candidate.resolve()
+
+
+def test_uninstall_model_pack_removes_only_manifest_owned_paths(tmp_path: Path) -> None:
+    manifest_path, _ = _manifest(tmp_path)
+    manifest = load_model_pack_manifest(manifest_path)
+    root = tmp_path / "installed"
+    (root / "model").mkdir(parents=True)
+    (root / "model" / "model.bin").write_bytes(b"trusted model")
+    (root / "installed-models.json").write_text("{}", encoding="utf-8")
+    (root / "keep-me.txt").write_text("personal", encoding="utf-8")
+
+    removed = uninstall_model_pack(root, manifest)
+
+    assert root in {path.parent for path in removed}
+    assert not (root / "model").exists()
+    assert not (root / "installed-models.json").exists()
+    assert (root / "keep-me.txt").read_text(encoding="utf-8") == "personal"

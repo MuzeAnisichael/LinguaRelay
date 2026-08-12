@@ -14,6 +14,14 @@ display_mode = "bilingual" # bilingual | translated
 position = "bottom" # bottom | top
 source_font_size = 12
 translation_font_size = 18
+source_font_family = "Segoe UI"
+translation_font_family = "Microsoft YaHei UI"
+source_color = "#D5DAE3"
+translation_color = "#FFFFFF"
+background_color = "#101218"
+background_opacity = 0.88
+status_visible = true
+retention_seconds = 8.0 # 0 keeps the latest subtitle until a new one arrives
 toggle_shortcut = "Ctrl+Alt+L"
 
 [audio]
@@ -44,6 +52,7 @@ preferred_silence_ms = 320 # after the preferred duration, a short pause can end
 partial_interval_ms = 320
 punctuation_boundary_enabled = true
 punctuation_boundary_min_seconds = 1.2 # stable sentence punctuation ends the caption early
+suppress_credit_hallucinations = true # filters short template-like "subtitles by" false positives
 preferred_segment_seconds = 6.0
 max_caption_seconds = 10.0 # applies to existing configs that still have a longer model window
 max_window_seconds = 10.0

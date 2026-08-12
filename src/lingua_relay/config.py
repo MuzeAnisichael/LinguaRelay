@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import tomllib
 from dataclasses import dataclass, field
 from ipaddress import ip_address
@@ -31,6 +32,14 @@ class OverlaySettings:
     position: str = "bottom"
     source_font_size: int = 12
     translation_font_size: int = 18
+    source_font_family: str = "Segoe UI"
+    translation_font_family: str = "Microsoft YaHei UI"
+    source_color: str = "#D5DAE3"
+    translation_color: str = "#FFFFFF"
+    background_color: str = "#101218"
+    background_opacity: float = 0.88
+    status_visible: bool = True
+    retention_seconds: float = 8.0
     toggle_shortcut: str = "Ctrl+Alt+L"
 
 
@@ -65,6 +74,7 @@ class AsrSettings:
     partial_interval_ms: int = 320
     punctuation_boundary_enabled: bool = True
     punctuation_boundary_min_seconds: float = 1.2
+    suppress_credit_hallucinations: bool = True
     preferred_segment_seconds: float = 6.0
     max_caption_seconds: float = 10.0
     max_window_seconds: float = 10.0
@@ -207,6 +217,10 @@ class Settings:
             raise ValueError("audio reconnect interval is invalid")
         if not 0.2 <= self.overlay.opacity <= 1.0:
             raise ValueError("overlay.opacity must be between 0.2 and 1.0")
+        if not 0.1 <= self.overlay.background_opacity <= 1.0:
+            raise ValueError("overlay.background_opacity must be between 0.1 and 1.0")
+        if not 0 <= self.overlay.retention_seconds <= 120:
+            raise ValueError("overlay.retention_seconds must be between 0 and 120")
         if self.overlay.width < 360 or self.overlay.height < 96:
             raise ValueError("overlay dimensions must be at least 360 x 96")
         if (self.overlay.x is None) != (self.overlay.y is None):
@@ -217,6 +231,18 @@ class Settings:
             raise ValueError("overlay.position must be top or bottom")
         if self.overlay.source_font_size < 8 or self.overlay.translation_font_size < 8:
             raise ValueError("overlay font sizes must be at least 8")
+        if (
+            not self.overlay.source_font_family.strip()
+            or not self.overlay.translation_font_family.strip()
+        ):
+            raise ValueError("overlay font families must not be empty")
+        for name, color in (
+            ("source_color", self.overlay.source_color),
+            ("translation_color", self.overlay.translation_color),
+            ("background_color", self.overlay.background_color),
+        ):
+            if re.fullmatch(r"#[0-9a-fA-F]{6}", color) is None:
+                raise ValueError(f"overlay.{name} must be a #RRGGBB color")
         if self.asr.provider != "faster_whisper":
             raise ValueError("asr.provider must be faster_whisper in M2")
         if not self.asr.model or self.asr.model.endswith(".en"):

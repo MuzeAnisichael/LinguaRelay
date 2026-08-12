@@ -35,7 +35,7 @@ def test_sbom_has_one_explicit_root_and_deduplicates_packages(monkeypatch, tmp_p
     monkeypatch.setattr(
         sys,
         "argv",
-        ["generate_sbom.py", "--version", "0.1.1", "--output", str(output)],
+        ["generate_sbom.py", "--version", "0.1.2", "--output", str(output)],
     )
 
     assert generate_sbom.main() == 0
@@ -45,4 +45,17 @@ def test_sbom_has_one_explicit_root_and_deduplicates_packages(monkeypatch, tmp_p
     assert identifiers.count("SPDXRef-Package-LinguaRelay") == 1
     assert len(identifiers) == len(set(identifiers))
     assert document["documentDescribes"] == ["SPDXRef-Package-LinguaRelay"]
-    assert document["packages"][0]["versionInfo"] == "0.1.1"
+    assert document["packages"][0]["versionInfo"] == "0.1.2"
+    assert document["packages"][0]["copyrightText"] == "Copyright (c) 2026 Leeleelee"
+    assert document["packages"][1]["copyrightText"] == "NOASSERTION"
+
+
+def test_installer_exposes_uninstall_and_optional_model_removal() -> None:
+    installer = (Path(__file__).resolve().parents[1] / "packaging" / "installer.iss").read_text(
+        encoding="utf-8"
+    )
+
+    assert 'Filename: "{uninstallexe}"' in installer
+    assert "RemoveModelsOnUninstall" in installer
+    assert "{localappdata}\\LinguaRelay\\models" in installer
+    assert "{localappdata}\\LinguaRelay\\downloads" in installer

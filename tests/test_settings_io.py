@@ -6,6 +6,7 @@ from lingua_relay.settings_io import (
     persist_display_mode,
     persist_overlay_geometry,
     persist_route,
+    persist_settings,
 )
 
 
@@ -49,3 +50,23 @@ def test_persists_overlay_geometry(tmp_path: Path) -> None:
 
     overlay = Settings.load(config).overlay
     assert (overlay.x, overlay.y, overlay.width, overlay.height) == (120, 80, 720, 210)
+
+
+def test_persists_overlay_preferences_as_a_group(tmp_path: Path) -> None:
+    config = tmp_path / "config.toml"
+
+    persist_settings(
+        "overlay",
+        {
+            "retention_seconds": 4.5,
+            "translation_color": "#59D395",
+            "status_visible": False,
+        },
+        config,
+        tmp_path / "missing.toml",
+    )
+
+    overlay = Settings.load(config).overlay
+    assert overlay.retention_seconds == 4.5
+    assert overlay.translation_color == "#59D395"
+    assert overlay.status_visible is False

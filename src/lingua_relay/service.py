@@ -145,6 +145,16 @@ class RealtimeCaptionService:
                 raise TimeoutError("caption service did not stop in time")
         self._thread = None
 
+    def release_resources(self) -> None:
+        """Release model owners after the worker has stopped for model removal."""
+        thread = self._thread
+        if thread is not None and thread.is_alive():
+            raise RuntimeError("caption service must stop before releasing model resources")
+        self._capture = None
+        self._asr = None
+        self._mt = None
+        self._correction = None
+
     def snapshot(self) -> ServiceSnapshot:
         with self._lock:
             return ServiceSnapshot(

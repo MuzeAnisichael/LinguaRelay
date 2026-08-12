@@ -4,7 +4,7 @@ import sys
 from dataclasses import replace
 
 from PySide6.QtCore import QEvent, QPoint, QRect, Qt, QTimer, Signal
-from PySide6.QtGui import QFont, QMouseEvent, QShowEvent
+from PySide6.QtGui import QColor, QFont, QMouseEvent, QShowEvent
 from PySide6.QtWidgets import QApplication, QFrame, QLabel, QVBoxLayout, QWidget
 
 from lingua_relay.asr.types import AsrEvent
@@ -32,6 +32,9 @@ class CaptionOverlay(QWidget):
         self._press_geometry: QRect | None = None
         self._resize_edges = 0
         self._positioned = False
+        self._retention_timer = QTimer(self)
+        self._retention_timer.setSingleShot(True)
+        self._retention_timer.timeout.connect(self.clear_caption)
         self._build_window()
         self._build_content()
         self.apply_settings(settings)
@@ -46,13 +49,6 @@ class CaptionOverlay(QWidget):
         self.frame.setObjectName("captionFrame")
         self.frame.setMouseTracking(True)
         self.frame.installEventFilter(self)
-        self.frame.setStyleSheet(
-            "#captionFrame {"
-            "background-color: rgba(16, 18, 24, 224);"
-            "border: 1px solid rgba(255, 255, 255, 36);"
-            "border-radius: 14px;"
-            "} QLabel { color: white; background: transparent; }"
-        )
         self.status = QLabel("LINGUARELAY · 正在准备")
         self.status.setToolTip("拖动窗口移动；拖动边缘或四角缩放")
         self.status.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
@@ -87,13 +83,23 @@ class CaptionOverlay(QWidget):
         visible = self.isVisible()
         self.setWindowFlags(flags)
         self.setWindowOpacity(settings.opacity)
+        self._apply_frame_style()
         self.setMinimumSize(360, 96)
         self.resize(settings.width, settings.height)
-        self.source.setFont(QFont("Segoe UI", settings.source_font_size))
+        self.source.setFont(QFont(settings.source_font_family, settings.source_font_size))
         self.translation.setFont(
-            QFont("Microsoft YaHei UI", settings.translation_font_size, QFont.Weight.DemiBold)
+            QFont(
+                settings.translation_font_family,
+                settings.translation_font_size,
+                QFont.Weight.DemiBold,
+            )
         )
+        self.status.setVisible(settings.status_visible)
         self.source.setVisible(settings.display_mode == "bilingual")
+        if self._last_event is not None:
+            self.publish(self._last_event)
+        elif settings.retention_seconds == 0:
+            self._retention_timer.stop()
         if settings.x is not None and settings.y is not None:
             self.move(settings.x, settings.y)
             self._keep_on_screen()
@@ -132,10 +138,14 @@ class CaptionOverlay(QWidget):
         if self._last_event is None:
             if state == "loading":
                 self.translation.setText(message)
-                self.translation.setStyleSheet("color: rgba(255, 255, 255, 175);")
+                self.translation.setStyleSheet(
+                    self._text_style(self.settings.translation_color, 0.7)
+                )
             elif state in {"ready", "running"}:
                 self.translation.setText("模型已就绪，等待系统音频…")
-                self.translation.setStyleSheet("color: rgba(255, 255, 255, 190);")
+                self.translation.setStyleSheet(
+                    self._text_style(self.settings.translation_color, 0.76)
+                )
 
     def publish_transcript(self, event: AsrEvent, target_language: str) -> None:
         """Show recognition immediately while the newest translation is still running."""
@@ -146,12 +156,13 @@ class CaptionOverlay(QWidget):
         self._active_segment_id = event.segment_id
         self.source.setText(source)
         self.source.setVisible(self.settings.display_mode == "bilingual")
-        self.source.setStyleSheet("color: rgba(255, 255, 255, 145);")
+        self.source.setStyleSheet(self._text_style(self.settings.source_color, 0.7))
         if new_segment:
             self.translation.setText("正在翻译…")
-            self.translation.setStyleSheet("color: rgba(255, 255, 255, 150);")
+            self.translation.setStyleSheet(self._text_style(self.settings.translation_color, 0.65))
         route = f"{event.language.upper()} → {target_language.upper()}"
         self.set_status("processing", route + " · 正在识别并翻译")
+        self._arm_retention_timer()
 
     def publish(self, event: CaptionEvent) -> None:
         self._last_event = event
@@ -167,11 +178,11 @@ class CaptionOverlay(QWidget):
         else:
             self.translation.setText("")
         if event.state == "partial":
-            self.source.setStyleSheet("color: rgba(255, 255, 255, 125);")
-            self.translation.setStyleSheet("color: rgba(255, 255, 255, 175);")
+            self.source.setStyleSheet(self._text_style(self.settings.source_color, 0.62))
+            self.translation.setStyleSheet(self._text_style(self.settings.translation_color, 0.72))
         else:
-            self.source.setStyleSheet("color: rgba(255, 255, 255, 165);")
-            self.translation.setStyleSheet("color: white;")
+            self.source.setStyleSheet(self._text_style(self.settings.source_color, 0.82))
+            self.translation.setStyleSheet(self._text_style(self.settings.translation_color))
         route = f"{event.source_language.upper()} → {event.target_language.upper()}"
         if event.state == "revised":
             scope = {
@@ -183,6 +194,41 @@ class CaptionOverlay(QWidget):
             suffix = " · 翻译失败，显示原文" if fallback else " · 本地快译"
         self.set_status("error" if fallback else "running", route + suffix)
         self.source.setVisible(self.settings.display_mode == "bilingual")
+        self._arm_retention_timer()
+
+    def clear_caption(self) -> None:
+        """Clear expired text without hiding or moving the overlay."""
+        self._retention_timer.stop()
+        self._last_event = None
+        self._active_segment_id = None
+        self.source.clear()
+        self.translation.clear()
+        self.status.setText("LINGUARELAY · 等待系统音频")
+        self.status.setStyleSheet("color: #77d6a5;")
+
+    def _arm_retention_timer(self) -> None:
+        seconds = self.settings.retention_seconds
+        if seconds <= 0:
+            self._retention_timer.stop()
+            return
+        self._retention_timer.start(max(100, round(seconds * 1000)))
+
+    def _apply_frame_style(self) -> None:
+        background = QColor(self.settings.background_color)
+        background.setAlphaF(self.settings.background_opacity)
+        self.frame.setStyleSheet(
+            "#captionFrame {"
+            f"background-color: {_rgba(background)};"
+            "border: 1px solid rgba(255, 255, 255, 36);"
+            "border-radius: 14px;"
+            "} QLabel { background: transparent; }"
+        )
+
+    @staticmethod
+    def _text_style(color: str, opacity: float = 1.0) -> str:
+        resolved = QColor(color)
+        resolved.setAlphaF(max(0.0, min(1.0, opacity)))
+        return f"color: {_rgba(resolved)};"
 
     def reposition(self) -> None:
         screen = self.screen() or QApplication.primaryScreen()
@@ -347,6 +393,10 @@ class CaptionOverlay(QWidget):
         if not self._positioned:
             self.reposition()
         super().showEvent(event)
+
+
+def _rgba(color: QColor) -> str:
+    return f"rgba({color.red()}, {color.green()}, {color.blue()}, {color.alpha()})"
 
 
 def run_demo(settings: Settings) -> int:

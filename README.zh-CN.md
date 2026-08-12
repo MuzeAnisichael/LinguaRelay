@@ -2,13 +2,13 @@
 
 面向 Windows 的低延迟桌面实时翻译字幕工具，并预留本地大模型或 API 修正层。
 
-> 当前状态：v0.1.1 是 Windows x64 Alpha 维护版，改进了模型就绪反馈、增量字幕、标点断句、可拖放缩放悬浮窗、模型复用、历史浏览和应用图标。
+> 当前状态：v0.1.2 是 Windows x64 Alpha 维护版，新增完整用户设置页、字幕保留时间、字体与配色自定义、模板化 ASR 幻觉抑制，并将制作人与版权所有者统一为 Leeleelee。
 
-[English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md) · [v0.1.1 发布说明](docs/releases/v0.1.1.md) · [隐私说明](docs/PRIVACY.zh-CN.md)
+[English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md) · [v0.1.2 发布说明](docs/releases/v0.1.2.md) · [隐私说明](docs/PRIVACY.zh-CN.md)
 
-## 安装 v0.1.1
+## 安装 v0.1.2
 
-从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.1) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。安装器会预检 LocalAppData；首次启动还会扫描程序旁、当前目录、`LINGUA_RELAY_MODEL_DIR` 指定目录和上次选择的目录，也可手动选择模型目录。任何现有模型在使用前都会按固定清单校验 SHA-256。模型文件与 v0.1.0 相同，升级用户不需要重复下载。
+从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.2) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。安装器会预检 LocalAppData；首次启动还会扫描程序旁、当前目录、`LINGUA_RELAY_MODEL_DIR` 指定目录和上次选择的目录，也可手动选择模型目录。任何现有模型在使用前都会按固定清单校验 SHA-256。模型文件与 v0.1.0 相同，升级用户不需要重复下载。
 
 首版尚未进行 Authenticode 代码签名，Windows 可能显示“未知发布者”或 SmartScreen 提示。继续前请阅读发布说明、隐私说明和威胁模型。
 
@@ -55,6 +55,9 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 - 托盘支持暂停/继续、手动源/目标语言、音频设备、显示模式、历史、导出和退出；
 - JSONL 历史可导出为 JSONL、CSV 或 SRT；
 - 历史窗口支持搜索、语言方向与快译/LLM 修正筛选、详情查看和复制译文；
+- 托盘“用户设置…”可调整字幕保留时间、显示模式、原文/译文字体和颜色、背景颜色、透明度、状态栏、点击穿透、语言方向、历史开关和实时识别节奏；
+- 默认过滤噪声或音乐上容易出现的短模板化署名幻觉，例如“字幕制作人 Zither Harp”；可在实时性设置中关闭；
+- 托盘“模型与卸载”及设置页可单独卸载本地模型或启动应用卸载器；卸载应用时可选择一并删除约 1.36 GiB 模型，配置和字幕历史默认保留；
 - 已准备 PyInstaller 应用目录、独立模型包、Inno Setup 安装器定义和 GitHub 打包工作流。
 
 ## 已完成的 M4 异步大模型修正

@@ -3,17 +3,17 @@
 Low-latency desktop translation captions for Windows, with an optional LLM
 revision layer.
 
-> Status: v0.1.1 is a Windows x64 alpha maintenance release with clearer model
-> readiness, faster incremental captions, punctuation endpointing, movable and
-> resizable overlays, model reuse, a history browser, and refreshed icons.
+> Status: v0.1.2 is a Windows x64 alpha maintenance release with a persistent
+> settings dialog, configurable subtitle retention, fonts and colors, template-like
+> ASR hallucination suppression, and producer/copyright metadata owned by Leeleelee.
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Roadmap](docs/ROADMAP.zh-CN.md) · [v0.1.1 release](docs/releases/v0.1.1.md) ·
+[Roadmap](docs/ROADMAP.zh-CN.md) · [v0.1.2 release](docs/releases/v0.1.2.md) ·
 [Privacy](docs/PRIVACY.zh-CN.md)
 
-## Install v0.1.1
+## Install v0.1.2
 
-Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.1), verify `SHA256SUMS.txt`, and run it. Setup checks LocalAppData; first launch also discovers models beside the executable, in the working directory, at `LINGUA_RELAY_MODEL_DIR`, or at the last manually selected directory. Existing files are SHA-256 verified. The model files are unchanged from v0.1.0, so upgrades do not download them again.
+Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.2), verify `SHA256SUMS.txt`, and run it. Setup checks LocalAppData; first launch also discovers models beside the executable, in the working directory, at `LINGUA_RELAY_MODEL_DIR`, or at the last manually selected directory. Existing files are SHA-256 verified. The model files are unchanged from v0.1.0, so upgrades do not download them again.
 
 The first binaries are not Authenticode-signed, so Windows may show an unknown-publisher warning. See the release notes and threat model before proceeding.
 
@@ -80,6 +80,11 @@ The current capture path provides:
   local history, CSV/JSONL/SRT export, and exit;
 - a searchable and filterable latest-revision history browser with detail and
   copy controls;
+- a tray-accessible settings dialog for retention, fonts, colors, background,
+  opacity, status visibility, languages, history, and live recognition cadence;
+- optional filtering of short template-like credit hallucinations over music or silence;
+- tray and settings actions to remove the verified local model pack independently
+  or launch the Windows uninstaller while retaining settings and history by default;
 - a PyInstaller onedir build, separate model pack, Inno Setup definition, and
   tag/manual GitHub packaging workflow for the first release.
 

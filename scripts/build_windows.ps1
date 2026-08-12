@@ -2,7 +2,7 @@
 param(
     [ValidateSet("cpu", "cuda")]
     [string]$Runtime = "cpu",
-    [string]$Version = "0.1.1",
+    [string]$Version = "0.1.2",
     [switch]$Installer,
     [string]$ModelPackDir = ""
 )
