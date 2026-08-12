@@ -10,6 +10,7 @@ import pytest
 from lingua_relay.model_pack import (
     adopt_existing_models,
     install_model_pack,
+    load_model_catalog,
     load_model_pack_manifest,
     model_files_status,
     model_pack_status,
@@ -139,3 +140,14 @@ def test_uninstall_model_pack_removes_only_manifest_owned_paths(tmp_path: Path) 
     assert not (root / "model").exists()
     assert not (root / "installed-models.json").exists()
     assert (root / "keep-me.txt").read_text(encoding="utf-8") == "personal"
+
+
+def test_release_catalog_offers_one_recommended_small_and_one_lightweight_base() -> None:
+    catalog = Path(__file__).resolve().parents[1] / "packaging" / "model-catalog.json"
+    profiles = load_model_catalog(catalog)
+
+    assert [(profile.profile_id, profile.asr_model) for profile in profiles] == [
+        ("balanced", "small"),
+        ("lightweight", "base"),
+    ]
+    assert sum(profile.recommended for profile in profiles) == 1

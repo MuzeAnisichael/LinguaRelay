@@ -184,6 +184,8 @@ class FasterWhisperRecognizer:
             vad_parameters={"threshold": self.settings.vad_threshold},
             condition_on_previous_text=False,
             word_timestamps=False,
+            initial_prompt=self.settings.context_hint.strip() or None,
+            hotwords=self.settings.context_hint.strip() or None,
         )
         segments = tuple(self._consume_segments(generated, normalized))
         inference_ms = (time.perf_counter() - started) * 1000

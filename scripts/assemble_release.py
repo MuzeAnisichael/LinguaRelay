@@ -9,10 +9,10 @@ from pathlib import Path
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Assemble LinguaRelay release assets")
-    parser.add_argument("--version", default="0.1.2")
+    parser.add_argument("--version", default="0.1.5")
     parser.add_argument("--dist", type=Path, default=Path("dist/LinguaRelay"))
     parser.add_argument("--models", type=Path, default=Path("models"))
-    parser.add_argument("--manifest", type=Path, default=Path("packaging/model-manifest.json"))
+    parser.add_argument("--catalog", type=Path, default=Path("packaging/model-catalog.json"))
     parser.add_argument("--release", type=Path, default=Path("release"))
     parser.add_argument("--skip-models", action="store_true")
     args = parser.parse_args()
@@ -20,11 +20,15 @@ def main() -> int:
     portable = args.release / f"LinguaRelay-{args.version}-Windows-x64-portable.zip"
     _zip_directory(args.dist, portable, prefix="LinguaRelay")
     if not args.skip_models:
-        _zip_models(
-            args.models,
-            args.manifest,
-            args.release / f"LinguaRelay-{args.version}-models.zip",
-        )
+        catalog = json.loads(args.catalog.read_text(encoding="utf-8"))
+        for profile in catalog["profiles"]:
+            manifest_path = args.catalog.parent / profile["manifest"]
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            _zip_models(
+                args.models,
+                manifest_path,
+                args.release / manifest["download"]["archive_name"],
+            )
     checksum_targets = sorted(
         path for path in args.release.iterdir() if path.is_file() and path.name != "SHA256SUMS.txt"
     )

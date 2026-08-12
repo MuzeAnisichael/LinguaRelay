@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from lingua_relay.config import Settings
+from lingua_relay.config import Settings, migrate_legacy_realtime_defaults
 
 
 def test_defaults_match_first_language_route() -> None:
@@ -13,10 +13,11 @@ def test_defaults_match_first_language_route() -> None:
     assert settings.correction.mode == "off"
     assert settings.audio.save_audio is False
     assert settings.asr.device == "auto"
-    assert settings.asr.preferred_segment_seconds == 6.0
-    assert settings.asr.max_caption_seconds == 10.0
+    assert settings.asr.preferred_segment_seconds == 3.2
+    assert settings.asr.max_caption_seconds == 6.0
+    assert settings.asr.adaptive_partial_enabled is True
     assert settings.asr.punctuation_boundary_enabled is True
-    assert settings.asr.max_segment_seconds == 10.0
+    assert settings.asr.max_segment_seconds == 6.0
     assert settings.overlay.display_mode == "bilingual"
     assert settings.overlay.height == 180
     assert settings.overlay.retention_seconds == 8.0
@@ -77,3 +78,25 @@ def test_rejects_invalid_overlay_color() -> None:
 
     with pytest.raises(ValueError, match="translation_color"):
         settings.validate()
+
+
+def test_migrates_unchanged_v012_realtime_defaults_without_overriding_custom_values() -> None:
+    legacy = Settings.from_mapping(
+        {
+            "asr": {
+                "punctuation_boundary_min_seconds": 1.2,
+                "preferred_segment_seconds": 6.0,
+                "max_caption_seconds": 10.0,
+                "max_window_seconds": 10.0,
+                "max_segment_seconds": 10.0,
+            }
+        }
+    )
+    upgraded, changed = migrate_legacy_realtime_defaults(legacy)
+
+    assert changed is True
+    assert upgraded.asr.preferred_segment_seconds == 3.2
+    assert upgraded.asr.max_caption_seconds == 6.0
+
+    custom = Settings.from_mapping({"asr": {"preferred_segment_seconds": 4.0}})
+    assert migrate_legacy_realtime_defaults(custom) == (custom, False)

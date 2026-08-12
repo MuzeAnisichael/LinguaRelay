@@ -15,7 +15,9 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QSpinBox,
     QTabWidget,
@@ -73,8 +75,8 @@ class SettingsDialog(QDialog):
         self._initial = settings
         self._result = settings
         self.setWindowTitle("LinguaRelay · 用户设置")
-        self.resize(640, 590)
-        self.setMinimumSize(560, 520)
+        self.resize(700, 650)
+        self.setMinimumSize(600, 560)
 
         root = QVBoxLayout(self)
         intro = QLabel("字幕外观会立即应用；标注为“下次启动”的实时参数需重启软件。")
@@ -86,6 +88,7 @@ class SettingsDialog(QDialog):
         tabs.addTab(self._build_general_tab(), "常规")
         tabs.addTab(self._build_appearance_tab(), "字幕外观")
         tabs.addTab(self._build_realtime_tab(), "实时性")
+        tabs.addTab(self._build_llm_tab(), "大模型")
         tabs.addTab(self._build_storage_tab(), "存储与卸载")
         root.addWidget(tabs, 1)
 
@@ -103,6 +106,9 @@ class SettingsDialog(QDialog):
 
     def realtime_changed(self) -> bool:
         return self._result.asr != self._initial.asr
+
+    def correction_changed(self) -> bool:
+        return self._result.correction != self._initial.correction
 
     def _build_general_tab(self) -> QWidget:
         page = QWidget()
@@ -189,6 +195,14 @@ class SettingsDialog(QDialog):
         root.addWidget(note)
         form = QFormLayout()
 
+        self.latency_profile = QComboBox()
+        self.latency_profile.addItem("平衡（推荐）", "balanced")
+        self.latency_profile.addItem("极速字幕", "realtime")
+        self.latency_profile.addItem("省资源", "efficient")
+        self.latency_profile.addItem("自定义", "custom")
+        self.latency_profile.currentIndexChanged.connect(self._apply_latency_profile)
+        form.addRow("使用方案", self.latency_profile)
+
         self.partial_interval = QComboBox()
         for value in (320, 640, 960, 1280):
             self.partial_interval.addItem(f"{value} 毫秒", value)
@@ -199,6 +213,10 @@ class SettingsDialog(QDialog):
             )
         self._select_data(self.partial_interval, self._initial.asr.partial_interval_ms)
         form.addRow("增量识别间隔", self.partial_interval)
+
+        self.adaptive_partial = QCheckBox("长语音自动降低重复识别频率，避免队列积压")
+        self.adaptive_partial.setChecked(self._initial.asr.adaptive_partial_enabled)
+        form.addRow("自适应刷新", self.adaptive_partial)
 
         self.punctuation_enabled = QCheckBox("稳定结果出现句末标点时立即断句")
         self.punctuation_enabled.setChecked(self._initial.asr.punctuation_boundary_enabled)
@@ -231,8 +249,107 @@ class SettingsDialog(QDialog):
         self.suppress_credits = QCheckBox("过滤“字幕制作人 / Subtitles by”等模板化误识别")
         self.suppress_credits.setChecked(self._initial.asr.suppress_credit_hallucinations)
         form.addRow("幻觉抑制", self.suppress_credits)
+
+        self.context_hint = QPlainTextEdit()
+        self.context_hint.setPlainText(self._initial.asr.context_hint)
+        self.context_hint.setPlaceholderText(
+            "可选：会议主题、参会者姓名、产品名和专业术语。不要填写密码或敏感信息。"
+        )
+        self.context_hint.setMaximumHeight(88)
+        form.addRow("识别上下文", self.context_hint)
         root.addLayout(form)
         root.addStretch(1)
+        self._select_latency_profile()
+        return page
+
+    def _build_llm_tab(self) -> QWidget:
+        page = QWidget()
+        root = QVBoxLayout(page)
+        note = QLabel(
+            "大模型只负责异步修正，不会阻塞本地识别与快速翻译。推荐先使用“完整句异步修正”；"
+            "云端模式会把字幕和少量上下文发送到所填 API。API 密钥只从环境变量读取，不写入配置文件。"
+        )
+        note.setWordWrap(True)
+        note.setStyleSheet("color: #175CD3; background: #EFF8FF; padding: 9px;")
+        root.addWidget(note)
+        form = QFormLayout()
+
+        self.llm_mode = QComboBox()
+        self.llm_mode.addItem("关闭", "off")
+        self.llm_mode.addItem("完整句异步修正（推荐）", "asynchronous")
+        self.llm_mode.addItem("临时字幕也异步修正（更耗资源）", "live")
+        self._select_data(self.llm_mode, self._initial.correction.mode)
+        form.addRow("修正方式", self.llm_mode)
+
+        self.llm_provider = QComboBox()
+        self.llm_provider.addItem("不接入大模型", "none")
+        self.llm_provider.addItem("本地 OpenAI 兼容服务", "local")
+        self.llm_provider.addItem("云端 OpenAI 兼容 API", "openai_compatible")
+        self._select_data(self.llm_provider, self._initial.correction.provider)
+        self.llm_provider.currentIndexChanged.connect(self._update_llm_controls)
+        form.addRow("服务类型", self.llm_provider)
+
+        presets = QWidget()
+        preset_layout = QHBoxLayout(presets)
+        preset_layout.setContentsMargins(0, 0, 0, 0)
+        ollama = QPushButton("Ollama 本地")
+        ollama.clicked.connect(
+            lambda: self._apply_llm_preset("local", "http://127.0.0.1:11434/v1")
+        )
+        lm_studio = QPushButton("LM Studio 本地")
+        lm_studio.clicked.connect(
+            lambda: self._apply_llm_preset("local", "http://127.0.0.1:1234/v1")
+        )
+        presets.layout().addWidget(ollama)
+        presets.layout().addWidget(lm_studio)
+        presets.layout().addStretch(1)
+        form.addRow("快速预设", presets)
+
+        self.llm_endpoint = QLineEdit(self._initial.correction.endpoint)
+        self.llm_endpoint.setPlaceholderText("例如 http://127.0.0.1:11434/v1 或 https://…/v1")
+        form.addRow("API 地址", self.llm_endpoint)
+        self.llm_model = QLineEdit(self._initial.correction.model)
+        self.llm_model.setPlaceholderText("填写服务端显示的模型 ID")
+        form.addRow("模型 ID", self.llm_model)
+        self.llm_api_key_env = QLineEdit(self._initial.correction.api_key_env)
+        self.llm_api_key_env.setPlaceholderText("LINGUA_RELAY_API_KEY")
+        form.addRow("密钥环境变量", self.llm_api_key_env)
+
+        self.llm_context = QSpinBox()
+        self.llm_context.setRange(0, 20)
+        self.llm_context.setValue(self._initial.correction.context_segments)
+        self.llm_context.setSuffix(" 条")
+        form.addRow("参考前文", self.llm_context)
+        self.llm_timeout = QDoubleSpinBox()
+        self.llm_timeout.setRange(1, 60)
+        self.llm_timeout.setValue(self._initial.correction.timeout_seconds)
+        self.llm_timeout.setSuffix(" 秒")
+        form.addRow("请求超时", self.llm_timeout)
+        self.llm_rpm = QSpinBox()
+        self.llm_rpm.setRange(1, 600)
+        self.llm_rpm.setValue(self._initial.correction.requests_per_minute)
+        self.llm_rpm.setSuffix(" 次/分")
+        form.addRow("速率上限", self.llm_rpm)
+        self.llm_max_tokens = QSpinBox()
+        self.llm_max_tokens.setRange(64, 4096)
+        self.llm_max_tokens.setValue(self._initial.correction.max_tokens)
+        form.addRow("最大输出 Token", self.llm_max_tokens)
+        self.llm_temperature = QDoubleSpinBox()
+        self.llm_temperature.setRange(0, 2)
+        self.llm_temperature.setDecimals(2)
+        self.llm_temperature.setSingleStep(0.05)
+        self.llm_temperature.setValue(self._initial.correction.temperature)
+        form.addRow("温度", self.llm_temperature)
+        root.addLayout(form)
+        key_help = QLabel(
+            "云端密钥示例：先在 PowerShell 设置 $env:LINGUA_RELAY_API_KEY='…'，再从同一终端启动；"
+            "如需长期使用，请设置 Windows 用户环境变量并重新启动 LinguaRelay。"
+        )
+        key_help.setWordWrap(True)
+        key_help.setStyleSheet("color: #667085;")
+        root.addWidget(key_help)
+        root.addStretch(1)
+        self._update_llm_controls()
         return page
 
     def _build_storage_tab(self) -> QWidget:
@@ -243,7 +360,7 @@ class SettingsDialog(QDialog):
         model_title.setStyleSheet("font-weight: 600; font-size: 15px;")
         root.addWidget(model_title)
         model_note = QLabel(
-            "删除语音识别与翻译模型可释放约 1.36 GiB 空间。配置和字幕历史不会被删除；"
+            "删除当前语音识别与翻译模型可释放约 1.05–1.36 GiB 空间。配置和字幕历史不会被删除；"
             "下次启动时可以重新选择现有模型或下载模型包。"
         )
         model_note.setWordWrap(True)
@@ -304,11 +421,15 @@ class SettingsDialog(QDialog):
         asr = replace(
             self._initial.asr,
             partial_interval_ms=int(self.partial_interval.currentData()),
+            adaptive_partial_enabled=self.adaptive_partial.isChecked(),
             punctuation_boundary_enabled=self.punctuation_enabled.isChecked(),
             punctuation_boundary_min_seconds=self.punctuation_min.value(),
             preferred_segment_seconds=self.preferred_segment.value(),
             max_caption_seconds=self.max_caption.value(),
+            max_window_seconds=self.max_caption.value(),
+            max_segment_seconds=self.max_caption.value(),
             suppress_credit_hallucinations=self.suppress_credits.isChecked(),
+            context_hint=self.context_hint.toPlainText().strip(),
         )
         app = replace(
             self._initial.app,
@@ -316,7 +437,72 @@ class SettingsDialog(QDialog):
             target_language=str(self.target_language.currentData()),
             history_enabled=self.history_enabled.isChecked(),
         )
-        return replace(self._initial, app=app, overlay=overlay, asr=asr)
+        provider = str(self.llm_provider.currentData())
+        correction = replace(
+            self._initial.correction,
+            mode="off" if provider == "none" else str(self.llm_mode.currentData()),
+            provider=provider,
+            endpoint=self.llm_endpoint.text().strip(),
+            model=self.llm_model.text().strip(),
+            api_key_env=self.llm_api_key_env.text().strip(),
+            context_segments=self.llm_context.value(),
+            timeout_seconds=self.llm_timeout.value(),
+            requests_per_minute=self.llm_rpm.value(),
+            max_tokens=self.llm_max_tokens.value(),
+            temperature=self.llm_temperature.value(),
+        )
+        return replace(self._initial, app=app, overlay=overlay, asr=asr, correction=correction)
+
+    def _select_latency_profile(self) -> None:
+        current = (
+            self._initial.asr.partial_interval_ms,
+            self._initial.asr.adaptive_partial_enabled,
+            round(self._initial.asr.preferred_segment_seconds, 1),
+            round(self._initial.asr.max_caption_seconds, 1),
+        )
+        profiles = {
+            (320, True, 3.2, 6.0): "balanced",
+            (320, False, 2.4, 4.0): "realtime",
+            (640, True, 4.8, 8.0): "efficient",
+        }
+        self._select_data(self.latency_profile, profiles.get(current, "custom"))
+
+    def _apply_latency_profile(self) -> None:
+        profile = self.latency_profile.currentData()
+        values = {
+            "balanced": (320, True, 3.2, 6.0),
+            "realtime": (320, False, 2.4, 4.0),
+            "efficient": (640, True, 4.8, 8.0),
+        }.get(profile)
+        if values is None or not hasattr(self, "partial_interval"):
+            return
+        interval, adaptive, preferred, maximum = values
+        self._select_data(self.partial_interval, interval)
+        self.adaptive_partial.setChecked(adaptive)
+        self.preferred_segment.setValue(preferred)
+        self.max_caption.setValue(maximum)
+
+    def _apply_llm_preset(self, provider: str, endpoint: str) -> None:
+        self._select_data(self.llm_provider, provider)
+        self.llm_endpoint.setText(endpoint)
+        if self.llm_mode.currentData() == "off":
+            self._select_data(self.llm_mode, "asynchronous")
+        self.llm_model.setFocus()
+
+    def _update_llm_controls(self) -> None:
+        enabled = self.llm_provider.currentData() != "none"
+        for control in (
+            self.llm_mode,
+            self.llm_endpoint,
+            self.llm_model,
+            self.llm_api_key_env,
+            self.llm_context,
+            self.llm_timeout,
+            self.llm_rpm,
+            self.llm_max_tokens,
+            self.llm_temperature,
+        ):
+            control.setEnabled(enabled)
 
     def _avoid_same_route(self, source_changed: bool) -> None:
         if self.source_language.currentData() != self.target_language.currentData():

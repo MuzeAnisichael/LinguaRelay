@@ -3,17 +3,17 @@
 Low-latency desktop translation captions for Windows, with an optional LLM
 revision layer.
 
-> Status: v0.1.2 is a Windows x64 alpha maintenance release with a persistent
-> settings dialog, configurable subtitle retention, fonts and colors, template-like
-> ASR hallucination suppression, and producer/copyright metadata owned by Leeleelee.
+> Status: v0.1.5 is a Windows x64 alpha optimization release with shorter,
+> steadier live captions, graphical LLM setup, compact overlay controls, and
+> selectable Small or Base local model packs.
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Roadmap](docs/ROADMAP.zh-CN.md) · [v0.1.2 release](docs/releases/v0.1.2.md) ·
+[v0.1.5 design](docs/OPTIMIZATION-v0.1.5.zh-CN.md) · [v0.1.5 release](docs/releases/v0.1.5.md) ·
 [Privacy](docs/PRIVACY.zh-CN.md)
 
-## Install v0.1.2
+## Install v0.1.5
 
-Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.2), verify `SHA256SUMS.txt`, and run it. Setup checks LocalAppData; first launch also discovers models beside the executable, in the working directory, at `LINGUA_RELAY_MODEL_DIR`, or at the last manually selected directory. Existing files are SHA-256 verified. The model files are unchanged from v0.1.0, so upgrades do not download them again.
+Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5), verify `SHA256SUMS.txt`, and run it. First launch verifies and reuses existing models, or offers a recommended Small pack (about 1.36 GiB), a lighter Base pack (about 1.05 GiB), an existing directory, or an offline ZIP. Both packs support Chinese, Japanese, English, and Korean.
 
 The first binaries are not Authenticode-signed, so Windows may show an unknown-publisher warning. See the release notes and threat model before proceeding.
 
@@ -57,9 +57,11 @@ The current capture path provides:
 - one warmed, reusable multilingual `faster-whisper-small` model;
 - explicit `zh`, `ja`, `en`, or `ko` on every request, with no automatic
   language-detection fallback;
-- 320 ms overlapping updates, online energy endpointing, Silero VAD on final
-  segments, and stable/unstable partial text; after six seconds a short pause
-  ends the caption, while ten seconds is the hard caption limit;
+- 320 ms onset updates that adapt to 640/960 ms on long speech, online energy
+  endpointing, Silero VAD on final segments, and stable/unstable partial text;
+- short pauses after 3.2 seconds and a six-second default hard limit keep captions
+  readable; stable sentence punctuation or semicolons end the segment immediately;
+- optional meeting-topic, participant-name, product, and terminology hints;
 - stable sentence punctuation ends the current segment immediately; recognized
   source text is displayed before its newest translation finishes;
 - bounded inference and event queues that replace stale partials while
@@ -76,6 +78,7 @@ The current capture path provides:
 - translated-only and bilingual overlay modes, partial fading, whole-window
   dragging, edge/corner resizing with persisted geometry, configurable
   opacity/fonts/click-through, and a global show/hide shortcut;
+- compact overlay buttons for pause/resume, display mode, history, settings, and hide;
 - tray controls for pause/resume, manual languages, audio device, display mode,
   local history, CSV/JSONL/SRT export, and exit;
 - a searchable and filterable latest-revision history browser with detail and
@@ -104,6 +107,8 @@ The current capture path provides:
   revision, original fast translation, model/provider, and local/cloud scope;
 - offline history correction writes to a separate JSONL file and retains all
   original events.
+- the complete provider, endpoint, model ID, mode, context, timeout, rate, token,
+  and temperature configuration is now available under **Settings → LLM**;
 
 ## Quick start
 

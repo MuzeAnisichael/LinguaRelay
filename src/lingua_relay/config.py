@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import tomllib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from ipaddress import ip_address
 from pathlib import Path
 from typing import Any
@@ -72,13 +72,15 @@ class AsrSettings:
     min_silence_ms: int = 640
     preferred_silence_ms: int = 320
     partial_interval_ms: int = 320
+    adaptive_partial_enabled: bool = True
     punctuation_boundary_enabled: bool = True
-    punctuation_boundary_min_seconds: float = 1.2
+    punctuation_boundary_min_seconds: float = 0.96
     suppress_credit_hallucinations: bool = True
-    preferred_segment_seconds: float = 6.0
-    max_caption_seconds: float = 10.0
-    max_window_seconds: float = 10.0
-    max_segment_seconds: float = 10.0
+    context_hint: str = ""
+    preferred_segment_seconds: float = 3.2
+    max_caption_seconds: float = 6.0
+    max_window_seconds: float = 6.0
+    max_segment_seconds: float = 6.0
     inference_queue_capacity: int = 4
     event_queue_capacity: int = 16
 
@@ -275,6 +277,8 @@ class Settings:
             raise ValueError("asr.partial_interval_ms must be at least audio.chunk_ms")
         if self.asr.partial_interval_ms % self.audio.chunk_ms:
             raise ValueError("asr.partial_interval_ms must be a multiple of audio.chunk_ms")
+        if len(self.asr.context_hint) > 1_000:
+            raise ValueError("asr.context_hint must not exceed 1000 characters")
         if self.asr.punctuation_boundary_min_seconds < self.asr.partial_interval_ms / 1000:
             raise ValueError("asr.punctuation_boundary_min_seconds is too short")
         if self.asr.max_window_seconds < self.asr.partial_interval_ms / 1000:
@@ -353,3 +357,27 @@ def _validate_correction_endpoint(provider: str, endpoint: str) -> None:
             is_loopback = False
     if not is_loopback:
         raise ValueError("local correction.endpoint must use localhost or a loopback IP")
+
+
+def migrate_legacy_realtime_defaults(settings: Settings) -> tuple[Settings, bool]:
+    """Move unchanged v0.1.2 cadence defaults to the v0.1.5 readability profile."""
+    legacy = settings.asr
+    if (
+        legacy.partial_interval_ms,
+        legacy.punctuation_boundary_min_seconds,
+        legacy.preferred_segment_seconds,
+        legacy.max_caption_seconds,
+        legacy.max_window_seconds,
+        legacy.max_segment_seconds,
+    ) != (320, 1.2, 6.0, 10.0, 10.0, 10.0):
+        return settings, False
+    upgraded = replace(
+        legacy,
+        adaptive_partial_enabled=True,
+        punctuation_boundary_min_seconds=0.96,
+        preferred_segment_seconds=3.2,
+        max_caption_seconds=6.0,
+        max_window_seconds=6.0,
+        max_segment_seconds=6.0,
+    )
+    return replace(settings, asr=upgraded), True

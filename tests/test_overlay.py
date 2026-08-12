@@ -172,3 +172,23 @@ def test_overlay_applies_user_fonts_colors_and_status_visibility() -> None:
     assert "89, 211, 149" in overlay.translation.styleSheet()
     assert "32, 36, 44" in overlay.frame.styleSheet()
     assert overlay.status.isHidden()
+
+
+def test_overlay_exposes_compact_controls_and_hides_them_in_click_through_mode() -> None:
+    app = QApplication.instance() or QApplication([])
+    overlay = CaptionOverlay(OverlaySettings())
+    requested: list[str] = []
+    overlay.pause_requested.connect(lambda: requested.append("pause"))
+    overlay.display_mode_requested.connect(lambda: requested.append("display"))
+    overlay.history_requested.connect(lambda: requested.append("history"))
+    overlay.settings_requested.connect(lambda: requested.append("settings"))
+
+    overlay.pause_button.click()
+    overlay.display_button.click()
+    overlay.history_button.click()
+    overlay.settings_button.click()
+    app.processEvents()
+
+    assert requested == ["pause", "display", "history", "settings"]
+    overlay.set_click_through(True)
+    assert all(button.isHidden() for button in overlay.control_buttons)

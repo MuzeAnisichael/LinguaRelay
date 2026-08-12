@@ -70,6 +70,7 @@ class RealtimeCaptionService:
         self._mt: StreamingTranslationEngine | None = None
         self._correction: AsynchronousRevisionEngine | None = None
         self._displayed_segment_id: str | None = None
+        self._displayed_revision = 0
 
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
@@ -258,6 +259,7 @@ class RealtimeCaptionService:
             with self._lock:
                 target = self._target
                 self._displayed_segment_id = event.segment_id
+                self._displayed_revision = event.revision
             self.on_transcript(event, target)
             self._mt.submit(event, target=target)
 
@@ -270,9 +272,11 @@ class RealtimeCaptionService:
                 return
             with self._lock:
                 is_current_segment = self._displayed_segment_id in {None, event.segment_id}
-                if is_current_segment:
+                is_current_revision = event.revision >= self._displayed_revision
+                if is_current_segment and is_current_revision:
                     self._displayed_segment_id = event.segment_id
-            if is_current_segment:
+                    self._displayed_revision = event.revision
+            if is_current_segment and is_current_revision:
                 self.on_caption(event)
             correction = self._correction
             with self._lock:

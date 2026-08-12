@@ -26,10 +26,10 @@ from PySide6.QtWidgets import (
 
 from lingua_relay import __version__
 from lingua_relay.audio import WasapiDeviceManager
-from lingua_relay.config import Settings
+from lingua_relay.config import Settings, migrate_legacy_realtime_defaults
 from lingua_relay.history import JsonlHistory
 from lingua_relay.languages import SUPPORTED_LANGUAGES
-from lingua_relay.model_pack import load_model_pack_manifest, uninstall_model_pack
+from lingua_relay.model_pack import load_model_catalog, uninstall_model_pack
 from lingua_relay.paths import AppPaths
 from lingua_relay.runtime_state import RuntimeJournal
 from lingua_relay.service import RealtimeCaptionService
@@ -42,7 +42,7 @@ from lingua_relay.settings_io import (
     persist_settings,
 )
 from lingua_relay.ui.history_view import HistoryWindow
-from lingua_relay.ui.model_setup import ensure_model_pack
+from lingua_relay.ui.model_setup import ensure_model_installation
 from lingua_relay.ui.overlay import CaptionOverlay
 from lingua_relay.ui.settings_view import SettingsDialog
 from lingua_relay.updates import UpdateInfo, check_for_update
@@ -122,6 +122,11 @@ class DesktopController:
         self.bridge = _Bridge()
         self.overlay = CaptionOverlay(self.settings.overlay)
         self.overlay.geometry_changed.connect(self._persist_overlay_geometry)
+        self.overlay.pause_requested.connect(self.toggle_pause)
+        self.overlay.display_mode_requested.connect(self.toggle_display_mode)
+        self.overlay.history_requested.connect(self.show_history)
+        self.overlay.settings_requested.connect(self.show_settings)
+        self.overlay.hide_requested.connect(self.toggle_overlay)
         self.bridge.caption.connect(self.overlay.publish)
         self.bridge.transcript.connect(self.overlay.publish_transcript)
         self.bridge.status.connect(self.overlay.set_status)
@@ -159,6 +164,23 @@ class DesktopController:
             settings = Settings.load(self.config_path)
         else:
             settings = Settings.load(None)
+        settings, migrated = migrate_legacy_realtime_defaults(settings)
+        if migrated:
+            persist_settings(
+                "asr",
+                {
+                    "adaptive_partial_enabled": settings.asr.adaptive_partial_enabled,
+                    "punctuation_boundary_min_seconds": (
+                        settings.asr.punctuation_boundary_min_seconds
+                    ),
+                    "preferred_segment_seconds": settings.asr.preferred_segment_seconds,
+                    "max_caption_seconds": settings.asr.max_caption_seconds,
+                    "max_window_seconds": settings.asr.max_window_seconds,
+                    "max_segment_seconds": settings.asr.max_segment_seconds,
+                },
+                self.config_path,
+                self.template_path,
+            )
         translation_path = settings.translation.model_path
         packaged_model = self.model_root / translation_path.name
         return replace(
@@ -229,8 +251,8 @@ class DesktopController:
             "local": "本地处理（不上传字幕）",
             "openai_compatible": "云端传输（字幕将发送至配置的 API）",
         }[self.settings.correction.provider]
-        scope_action = correction_menu.addAction(scope)
-        scope_action.setEnabled(False)
+        self.correction_scope_action = correction_menu.addAction(scope)
+        self.correction_scope_action.setEnabled(False)
 
         self.device_menu = self.menu.addMenu("音频设备")
         self.device_menu.aboutToShow.connect(self._refresh_devices)
@@ -298,6 +320,10 @@ class DesktopController:
         self.overlay.set_display_mode(mode)
         persist_display_mode(mode, self.config_path, self.template_path)
 
+    def toggle_display_mode(self) -> None:
+        target = "translated" if self.settings.overlay.display_mode == "bilingual" else "bilingual"
+        self.set_display_mode(target)
+
     def set_click_through(self, enabled: bool) -> None:
         self.settings = replace(
             self.settings, overlay=replace(self.settings.overlay, click_through=enabled)
@@ -355,11 +381,32 @@ class DesktopController:
             "asr",
             {
                 "partial_interval_ms": updated.asr.partial_interval_ms,
+                "adaptive_partial_enabled": updated.asr.adaptive_partial_enabled,
                 "punctuation_boundary_enabled": updated.asr.punctuation_boundary_enabled,
                 "punctuation_boundary_min_seconds": (updated.asr.punctuation_boundary_min_seconds),
                 "preferred_segment_seconds": updated.asr.preferred_segment_seconds,
                 "max_caption_seconds": updated.asr.max_caption_seconds,
+                "max_window_seconds": updated.asr.max_window_seconds,
+                "max_segment_seconds": updated.asr.max_segment_seconds,
                 "suppress_credit_hallucinations": (updated.asr.suppress_credit_hallucinations),
+                "context_hint": updated.asr.context_hint,
+            },
+            self.config_path,
+            self.template_path,
+        )
+        persist_settings(
+            "correction",
+            {
+                "mode": updated.correction.mode,
+                "provider": updated.correction.provider,
+                "endpoint": updated.correction.endpoint,
+                "api_key_env": updated.correction.api_key_env,
+                "model": updated.correction.model,
+                "context_segments": updated.correction.context_segments,
+                "timeout_seconds": updated.correction.timeout_seconds,
+                "requests_per_minute": updated.correction.requests_per_minute,
+                "max_tokens": updated.correction.max_tokens,
+                "temperature": updated.correction.temperature,
             },
             self.config_path,
             self.template_path,
@@ -389,6 +436,18 @@ class DesktopController:
             restart_reasons.append("实时识别参数")
         if previous.app.history_enabled != updated.app.history_enabled:
             restart_reasons.append("历史记录开关")
+        previous_provider = replace(previous.correction, mode=updated.correction.mode)
+        correction_runtime_changed = previous_provider != updated.correction
+        if correction_runtime_changed:
+            restart_reasons.append("大模型服务")
+            self.correction_scope_action.setText("大模型新配置将在重启后生效")
+        elif previous.correction.mode != updated.correction.mode:
+            try:
+                self.service.set_correction_mode(updated.correction.mode)
+            except ValueError:
+                restart_reasons.append("大模型修正方式")
+            else:
+                self.correction_actions[updated.correction.mode].setChecked(True)
         if restart_reasons:
             QMessageBox.information(
                 None,
@@ -503,17 +562,17 @@ class DesktopController:
             QMessageBox.critical(None, "导出失败", str(error))
 
     def remove_local_models(self) -> None:
-        manifest_path = self.paths.resource_dir / "packaging" / "model-manifest.json"
+        catalog_path = self.paths.resource_dir / "packaging" / "model-catalog.json"
         try:
-            manifest = load_model_pack_manifest(manifest_path)
+            profiles = load_model_catalog(catalog_path)
         except Exception as error:
-            QMessageBox.critical(None, "无法读取模型清单", str(error))
+            QMessageBox.critical(None, "无法读取模型目录", str(error))
             return
         answer = QMessageBox.question(
             None,
             "删除本地模型",
             "将停止实时翻译并删除受 LinguaRelay 清单管理的语音识别与翻译模型，"
-            "预计释放约 1.36 GiB 空间。\n\n"
+            "并清理对应下载缓存。\n\n"
             f"模型目录：{self.model_root}\n\n"
             "配置、字幕历史和目录中的其他文件会保留。软件将在完成后退出，是否继续？",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -527,8 +586,12 @@ class DesktopController:
             self.service.stop()
             self.service.release_resources()
             gc.collect()
-            removed = list(uninstall_model_pack(self.model_root, manifest))
-            removed.extend(self._remove_model_download_cache(manifest.archive_name))
+            removed: list[Path] = []
+            for profile in profiles:
+                removed.extend(uninstall_model_pack(self.model_root, profile.manifest))
+                removed.extend(
+                    self._remove_model_download_cache(profile.manifest.archive_name)
+                )
         except Exception as error:
             QMessageBox.critical(
                 None,
@@ -587,6 +650,12 @@ class DesktopController:
     def _update_status_action(self, state: str, message: str) -> None:
         self.status_action.setText(f"状态：{message}")
         self.tray.setToolTip(f"LinguaRelay · {message}")
+        paused = state == "paused"
+        self.overlay.set_paused(paused)
+        if paused:
+            self.pause_action.setText("继续")
+        elif state not in {"error", "stopped"}:
+            self.pause_action.setText("暂停")
         if state == "error":
             self.pause_action.setText("重试启动")
             self.tray.showMessage("LinguaRelay", message, QSystemTrayIcon.MessageIcon.Critical)
@@ -687,20 +756,28 @@ def run_app(config_path: Path | None = None) -> int:
         if development_models.is_dir()
         else paths.model_dir
     )
-    manifest_path = paths.resource_dir / "packaging" / "model-manifest.json"
+    catalog_path = paths.resource_dir / "packaging" / "model-catalog.json"
     try:
-        model_root = ensure_model_pack(
+        installation = ensure_model_installation(
             target_model_root,
-            manifest_path,
+            catalog_path,
             paths.data_dir / "downloads",
             _local_model_candidates(paths),
         )
-        if model_root is None:
+        if installation is None:
             return 0
+        active_config = config_path or paths.config_path
+        persist_setting(
+            "asr",
+            "model",
+            installation.profile.asr_model,
+            active_config,
+            paths.resource_dir / "config.example.toml",
+        )
         controller = DesktopController(
             app,
-            config_path,
-            model_root=model_root,
+            active_config,
+            model_root=installation.root,
             recovered=recovery.previous_run_crashed,
         )
         controller.run()

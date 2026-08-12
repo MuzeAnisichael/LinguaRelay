@@ -10,8 +10,8 @@ from pathlib import Path
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify final LinguaRelay release assets")
     parser.add_argument("--release", type=Path, default=Path("release"))
-    parser.add_argument("--manifest", type=Path, default=Path("packaging/model-manifest.json"))
-    parser.add_argument("--version", default="0.1.2")
+    parser.add_argument("--catalog", type=Path, default=Path("packaging/model-catalog.json"))
+    parser.add_argument("--version", default="0.1.5")
     parser.add_argument("--skip-models", action="store_true")
     args = parser.parse_args()
     expected_checksums = _read_checksums(args.release / "SHA256SUMS.txt")
@@ -19,12 +19,20 @@ def main() -> int:
         path = args.release / name
         if _sha256(path) != expected:
             raise ValueError(f"release checksum mismatch: {name}")
-    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
-    model_zip = args.release / manifest["download"]["archive_name"]
+    catalog = json.loads(args.catalog.read_text(encoding="utf-8"))
+    model_files = 0
+    model_archive_bytes = 0
     if not args.skip_models:
-        if model_zip.stat().st_size > manifest["download"]["max_archive_bytes"]:
-            raise ValueError("model archive exceeds the app safety limit")
-        _verify_models(model_zip, manifest)
+        for profile in catalog["profiles"]:
+            manifest = json.loads(
+                (args.catalog.parent / profile["manifest"]).read_text(encoding="utf-8")
+            )
+            model_zip = args.release / manifest["download"]["archive_name"]
+            if model_zip.stat().st_size > manifest["download"]["max_archive_bytes"]:
+                raise ValueError("model archive exceeds the app safety limit")
+            _verify_models(model_zip, manifest)
+            model_files += len(manifest["files"])
+            model_archive_bytes += model_zip.stat().st_size
     _verify_portable(args.release / f"LinguaRelay-{args.version}-Windows-x64-portable.zip")
     _verify_sbom(args.release / f"LinguaRelay-{args.version}.spdx.json")
     installer = args.release / f"LinguaRelay-{args.version}-Setup-x64.exe"
@@ -36,8 +44,8 @@ def main() -> int:
         json.dumps(
             {
                 "verified_assets": sorted(expected_checksums),
-                "model_files": 0 if args.skip_models else len(manifest["files"]),
-                "model_archive_bytes": 0 if args.skip_models else model_zip.stat().st_size,
+                "model_files": model_files,
+                "model_archive_bytes": model_archive_bytes,
                 "status": "passed",
             },
             indent=2,
@@ -68,6 +76,8 @@ def _verify_portable(path: Path) -> None:
         required = {
             "LinguaRelay/LinguaRelay.exe",
             "LinguaRelay/_internal/packaging/model-manifest.json",
+            "LinguaRelay/_internal/packaging/model-manifest-base.json",
+            "LinguaRelay/_internal/packaging/model-catalog.json",
             "LinguaRelay/_internal/docs/PRIVACY.zh-CN.md",
             "LinguaRelay/_internal/docs/THREAT_MODEL.md",
         }

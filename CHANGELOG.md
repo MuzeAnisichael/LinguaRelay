@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.5 - 2026-08-12
+
+- Added balanced, real-time, and resource-saving caption profiles; long speech now adapts partial inference cadence from 320 ms to 640/960 ms and defaults to a six-second caption cap.
+- Added optional ASR context hints for meeting topics, participant names, product names, and specialist terminology, plus stable semicolon endpointing.
+- Added a complete graphical LLM settings tab with local/cloud OpenAI-compatible providers, Ollama and LM Studio presets, safe environment-variable credentials, and correction limits.
+- Added compact overlay controls for pause/resume, translated/bilingual display, history, settings, and hide while preserving drag, resize, and click-through behavior.
+- Added recommended Small and lightweight Base model profiles, first-launch guidance, existing-model adoption, offline ZIP installation, and separate verified release packs.
+- Rewrote the installer introduction, model detection messages, privacy/LLM explanation, model-selection guidance, and uninstall wording.
+- Prevented an older partial translation from replacing a newer recognition revision in the overlay.
+
 ## 0.1.2 - 2026-08-12
 
 - Added a persistent user settings dialog for language route, subtitle retention, fonts, colors, opacity, status visibility, history, and live recognition cadence.

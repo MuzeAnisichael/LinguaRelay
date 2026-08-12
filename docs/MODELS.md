@@ -19,6 +19,17 @@ All 12 ordered source/target pairs must be supported. Automatic language
 detection stays disabled. The internal translation configuration uses a route
 registry rather than a single hard-coded English-to-Chinese model.
 
+## v0.1.5 install profiles
+
+First launch exposes two fully verified profiles instead of silently forcing one pack:
+
+| Profile | ASR | Installed size | Choose when |
+|---|---|---:|---|
+| Balanced (recommended) | multilingual `small` | about 1.36 GiB including MT | 16 GB RAM, newer six-core CPU or NVIDIA GPU; quality matters |
+| Lightweight | multilingual `base` | about 1.05 GiB including MT | 8 GB RAM, low-power laptop or CPU-only; responsiveness matters |
+
+Both profiles use the same M2M100 translation model and cover all 12 routes. The catalog, manifests, archive URLs, sizes, file paths, SHA-256 hashes, revisions, and licenses are bundled with the app. A detected directory is adopted only after full hash verification.
+
 ## M2 ASR selection
 
 The M2 host benchmark selected multilingual `small` with CUDA float16. The

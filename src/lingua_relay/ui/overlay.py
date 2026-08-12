@@ -5,7 +5,15 @@ from dataclasses import replace
 
 from PySide6.QtCore import QEvent, QPoint, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QMouseEvent, QShowEvent
-from PySide6.QtWidgets import QApplication, QFrame, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from lingua_relay.asr.types import AsrEvent
 from lingua_relay.config import OverlaySettings, Settings
@@ -16,6 +24,11 @@ class CaptionOverlay(QWidget):
     """Small always-on-top caption surface; model work never runs here."""
 
     geometry_changed = Signal(int, int, int, int)
+    pause_requested = Signal()
+    display_mode_requested = Signal()
+    history_requested = Signal()
+    settings_requested = Signal()
+    hide_requested = Signal()
 
     _LEFT = 1
     _TOP = 2
@@ -53,6 +66,30 @@ class CaptionOverlay(QWidget):
         self.status.setToolTip("拖动窗口移动；拖动边缘或四角缩放")
         self.status.setFont(QFont("Segoe UI", 9, QFont.Weight.DemiBold))
         self.status.setStyleSheet("color: #77d6a5;")
+        self.pause_button = self._tool_button("Ⅱ", "暂停 / 继续实时字幕")
+        self.pause_button.clicked.connect(self.pause_requested.emit)
+        self.display_button = self._tool_button("双", "切换仅译文 / 双语显示")
+        self.display_button.clicked.connect(self.display_mode_requested.emit)
+        self.history_button = self._tool_button("历", "打开字幕历史")
+        self.history_button.clicked.connect(self.history_requested.emit)
+        self.settings_button = self._tool_button("设", "打开用户设置")
+        self.settings_button.clicked.connect(self.settings_requested.emit)
+        self.hide_button = self._tool_button("×", "隐藏悬浮窗（Ctrl+Alt+L 恢复）")
+        self.hide_button.clicked.connect(self.hide_requested.emit)
+        self.control_buttons = (
+            self.pause_button,
+            self.display_button,
+            self.history_button,
+            self.settings_button,
+            self.hide_button,
+        )
+        header = QWidget()
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(3)
+        header_layout.addWidget(self.status, 1)
+        for button in self.control_buttons:
+            header_layout.addWidget(button)
         self.source = QLabel("")
         self.source.setWordWrap(True)
         self.translation = QLabel("正在加载模型…")
@@ -63,7 +100,7 @@ class CaptionOverlay(QWidget):
         content = QVBoxLayout(self.frame)
         content.setContentsMargins(22, 14, 22, 15)
         content.setSpacing(5)
-        content.addWidget(self.status)
+        content.addWidget(header)
         content.addWidget(self.source)
         content.addWidget(self.translation)
         root = QVBoxLayout(self)
@@ -95,6 +132,9 @@ class CaptionOverlay(QWidget):
             )
         )
         self.status.setVisible(settings.status_visible)
+        self.display_button.setText("双" if settings.display_mode == "bilingual" else "译")
+        for button in self.control_buttons:
+            button.setVisible(not settings.click_through)
         self.source.setVisible(settings.display_mode == "bilingual")
         if self._last_event is not None:
             self.publish(self._last_event)
@@ -122,10 +162,17 @@ class CaptionOverlay(QWidget):
     def set_click_through(self, enabled: bool) -> None:
         self.apply_settings(replace(self.settings, click_through=enabled))
 
+    def set_paused(self, paused: bool) -> None:
+        self.pause_button.setText("▶" if paused else "Ⅱ")
+        self.pause_button.setToolTip("继续实时字幕" if paused else "暂停实时字幕")
+
     def set_status(self, state: str, message: str) -> None:
         colors = {
             "running": "#77d6a5",
             "ready": "#77d6a5",
+            "paused": "#f2c66d",
+            "stopped": "#b8c1d1",
+            "stopping": "#f2c66d",
             "loading": "#f2c66d",
             "processing": "#70b7ff",
             "warning": "#f2c66d",
@@ -146,6 +193,21 @@ class CaptionOverlay(QWidget):
                 self.translation.setStyleSheet(
                     self._text_style(self.settings.translation_color, 0.76)
                 )
+
+    @staticmethod
+    def _tool_button(text: str, tooltip: str) -> QToolButton:
+        button = QToolButton()
+        button.setText(text)
+        button.setToolTip(tooltip)
+        button.setFixedSize(26, 24)
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setStyleSheet(
+            "QToolButton { color: rgba(255,255,255,190); background: rgba(255,255,255,14); "
+            "border: 0; border-radius: 5px; font-weight: 600; }"
+            "QToolButton:hover { background: rgba(255,255,255,35); color: white; }"
+            "QToolButton:pressed { background: rgba(112,183,255,80); }"
+        )
+        return button
 
     def publish_transcript(self, event: AsrEvent, target_language: str) -> None:
         """Show recognition immediately while the newest translation is still running."""

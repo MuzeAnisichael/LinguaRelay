@@ -44,3 +44,19 @@ def test_settings_dialog_keeps_language_route_distinct() -> None:
     app.processEvents()
 
     assert dialog.source_language.currentData() != dialog.target_language.currentData()
+
+
+def test_settings_dialog_configures_local_llm_without_putting_a_key_in_config() -> None:
+    _app = QApplication.instance() or QApplication([])
+    dialog = SettingsDialog(Settings())
+    dialog._apply_llm_preset("local", "http://127.0.0.1:11434/v1")
+    dialog.llm_model.setText("local-translator")
+    dialog.llm_api_key_env.setText("LINGUA_RELAY_API_KEY")
+
+    result = dialog._collect()
+    result.validate()
+
+    assert result.correction.mode == "asynchronous"
+    assert result.correction.provider == "local"
+    assert result.correction.endpoint == "http://127.0.0.1:11434/v1"
+    assert result.correction.model == "local-translator"

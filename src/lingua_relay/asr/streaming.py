@@ -46,6 +46,12 @@ class StreamingSegmenter:
         self._min_silence_samples = round(settings.min_silence_ms * sample_rate / 1000)
         self._preferred_silence_samples = round(settings.preferred_silence_ms * sample_rate / 1000)
         self._partial_step_samples = round(settings.partial_interval_ms * sample_rate / 1000)
+        self._medium_partial_step_samples = max(
+            self._partial_step_samples, round(640 * sample_rate / 1000)
+        )
+        self._long_partial_step_samples = max(
+            self._partial_step_samples, round(960 * sample_rate / 1000)
+        )
         self._max_window_samples = round(settings.max_window_seconds * sample_rate)
         self._max_segment_samples = round(
             min(settings.max_segment_seconds, settings.max_caption_seconds) * sample_rate
@@ -112,8 +118,21 @@ class StreamingSegmenter:
             return tuple(requests)
         if active.sample_count >= active.next_partial_samples:
             requests.append(self._request("partial"))
-            active.next_partial_samples = active.sample_count + self._partial_step_samples
+            active.next_partial_samples = active.sample_count + self._next_partial_step(
+                active.sample_count
+            )
         return tuple(requests)
+
+    def _next_partial_step(self, sample_count: int) -> int:
+        """Keep the first words responsive without repeatedly decoding long audio every 320 ms."""
+        if not self.settings.adaptive_partial_enabled:
+            return self._partial_step_samples
+        elapsed_seconds = sample_count / self.sample_rate
+        if elapsed_seconds < 1.6:
+            return self._partial_step_samples
+        if elapsed_seconds < 3.2:
+            return self._medium_partial_step_samples
+        return self._long_partial_step_samples
 
     def flush(self) -> InferenceRequest | None:
         if self._active is None:
@@ -349,7 +368,7 @@ def _validate_language(language: str) -> str:
 
 
 def _has_sentence_boundary(text: str) -> bool:
-    return text.rstrip().endswith(("。", "！", "？", ".", "!", "?", "…"))
+    return text.rstrip().endswith(("。", "！", "？", ".", "!", "?", "…", "；", ";", "\n"))
 
 
 def _is_caption_credit_hallucination(text: str) -> bool:

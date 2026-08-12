@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.2"
+  #define AppVersion "0.1.5"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\LinguaRelay"
@@ -28,7 +28,7 @@ DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 LicenseFile=..\LICENSE
-InfoBeforeFile=..\docs\PRIVACY.zh-CN.md
+InfoBeforeFile=..\docs\INSTALL.zh-CN.txt
 OutputDir={#OutputDir}
 OutputBaseFilename=LinguaRelay-{#AppVersion}-Setup-x64
 Compression=lzma2/ultra64
@@ -79,7 +79,8 @@ var
 begin
   ModelRoot := ExpandConstant('{localappdata}\LinguaRelay\models');
   Result :=
-    FileExists(ModelRoot + '\models--Systran--faster-whisper-small\snapshots\536b0662742c02347bc0e980a01041f333bce120\model.bin') and
+    (FileExists(ModelRoot + '\models--Systran--faster-whisper-small\snapshots\536b0662742c02347bc0e980a01041f333bce120\model.bin') or
+     FileExists(ModelRoot + '\models--Systran--faster-whisper-base\snapshots\ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66\model.bin')) and
     FileExists(ModelRoot + '\m2m100_418m_ct2\model.bin');
 end;
 
@@ -90,10 +91,10 @@ begin
     WizardForm.ReadyMemo.Lines.Add('');
     if ExistingModelsDetected() then
       WizardForm.ReadyMemo.Lines.Add(
-        'Local models detected. First launch will verify and reuse them; no duplicate download is needed.')
+        '已检测到本地模型。首次启动会校验并直接复用，不会重复下载。')
     else
       WizardForm.ReadyMemo.Lines.Add(
-        'No complete local model pack was detected. First launch can scan another folder or download it.');
+        '未检测到完整模型。首次启动时可选择“均衡 Small”或“轻量 Base”，也可使用现有目录或离线 ZIP。');
     ModelCheckReported := True;
   end;
 end;
@@ -103,7 +104,7 @@ begin
   RemoveModelsOnUninstall :=
     MsgBox(
       '是否同时删除 LinguaRelay 的本地模型？' + #13#10 + #13#10 +
-      '选择“是”将删除约 1.36 GiB 的语音识别、翻译模型与下载缓存。' + #13#10 +
+      '选择“是”将删除已安装的语音识别、翻译模型与下载缓存。' + #13#10 +
       '配置和字幕历史将继续保留。',
       mbConfirmation,
       MB_YESNO or MB_DEFBUTTON2) = IDYES;

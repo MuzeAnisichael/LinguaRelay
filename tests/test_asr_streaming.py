@@ -67,6 +67,25 @@ def test_segmenter_never_uses_automatic_language_detection() -> None:
         raise AssertionError("auto language must not be accepted")
 
 
+def test_segmenter_adapts_partial_frequency_for_long_speech() -> None:
+    settings = AsrSettings(
+        min_speech_ms=320,
+        partial_interval_ms=320,
+        adaptive_partial_enabled=True,
+        max_window_seconds=6,
+        max_segment_seconds=6,
+    )
+    segmenter = StreamingSegmenter(settings)
+    partial_sequences = []
+    for sequence in range(12):
+        requests = segmenter.push(chunk(sequence), language="en")
+        if requests and requests[0].state == "partial":
+            partial_sequences.append(sequence)
+
+    assert partial_sequences[:5] == [0, 1, 2, 3, 4]
+    assert partial_sequences[5:] == [6, 8, 10]
+
+
 def test_segmenter_uses_short_pause_after_preferred_duration() -> None:
     settings = AsrSettings(
         min_speech_ms=320,

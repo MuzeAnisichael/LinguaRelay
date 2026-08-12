@@ -51,6 +51,61 @@ class ModelPackStatus:
     error: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class ModelProfile:
+    profile_id: str
+    label: str
+    summary: str
+    guidance: str
+    asr_model: str
+    recommended: bool
+    manifest_path: Path
+    manifest: ModelPackManifest
+
+
+@dataclass(frozen=True, slots=True)
+class ModelInstallation:
+    root: Path
+    profile: ModelProfile
+
+
+def load_model_catalog(path: str | Path) -> tuple[ModelProfile, ...]:
+    """Load the bundled, trusted list of selectable model packs."""
+    catalog_path = Path(path)
+    raw: Any = json.loads(catalog_path.read_text(encoding="utf-8"))
+    if raw.get("schema_version") != 1 or not isinstance(raw.get("profiles"), list):
+        raise ValueError("unsupported model catalog schema")
+    profiles: list[ModelProfile] = []
+    for item in raw["profiles"]:
+        manifest_name = _validate_relative_path(str(item["manifest"]))
+        if len(PurePosixPath(manifest_name).parts) != 1:
+            raise ValueError("model catalog manifests must be adjacent files")
+        manifest_path = catalog_path.parent / manifest_name
+        profile_id = str(item["id"]).strip()
+        asr_model = str(item["asr_model"]).strip()
+        if not profile_id or not asr_model or asr_model.endswith(".en"):
+            raise ValueError("model catalog contains an invalid multilingual profile")
+        profiles.append(
+            ModelProfile(
+                profile_id=profile_id,
+                label=str(item["label"]).strip(),
+                summary=str(item["summary"]).strip(),
+                guidance=str(item["guidance"]).strip(),
+                asr_model=asr_model,
+                recommended=bool(item.get("recommended", False)),
+                manifest_path=manifest_path,
+                manifest=load_model_pack_manifest(manifest_path),
+            )
+        )
+    if (
+        not profiles
+        or len({profile.profile_id for profile in profiles}) != len(profiles)
+        or sum(profile.recommended for profile in profiles) != 1
+    ):
+        raise ValueError("model catalog must contain unique profiles and one recommendation")
+    return tuple(profiles)
+
+
 def uninstall_model_pack(
     model_root: str | Path,
     manifest: ModelPackManifest,
@@ -224,7 +279,7 @@ def download_model_pack(
     partial = target.with_suffix(target.suffix + ".part")
     request = urllib.request.Request(
         manifest.download_url,
-        headers={"Accept": "application/octet-stream", "User-Agent": "LinguaRelay/0.1.2"},
+        headers={"Accept": "application/octet-stream", "User-Agent": "LinguaRelay/0.1.5"},
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310

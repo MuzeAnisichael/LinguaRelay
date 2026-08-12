@@ -2,13 +2,13 @@
 
 面向 Windows 的低延迟桌面实时翻译字幕工具，并预留本地大模型或 API 修正层。
 
-> 当前状态：v0.1.2 是 Windows x64 Alpha 维护版，新增完整用户设置页、字幕保留时间、字体与配色自定义、模板化 ASR 幻觉抑制，并将制作人与版权所有者统一为 Leeleelee。
+> 当前状态：v0.1.5 是 Windows x64 Alpha 优化版，带来更短、更稳定的实时字幕、大模型图形化配置、悬浮窗快捷控制，以及 Small/Base 两档模型安装方案。
 
-[English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md) · [v0.1.2 发布说明](docs/releases/v0.1.2.md) · [隐私说明](docs/PRIVACY.zh-CN.md)
+[English](README.md) · [架构](docs/ARCHITECTURE.md) · [v0.1.5 优化设计](docs/OPTIMIZATION-v0.1.5.zh-CN.md) · [v0.1.5 发布说明](docs/releases/v0.1.5.md) · [隐私说明](docs/PRIVACY.zh-CN.md)
 
-## 安装 v0.1.2
+## 安装 v0.1.5
 
-从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.2) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。安装器会预检 LocalAppData；首次启动还会扫描程序旁、当前目录、`LINGUA_RELAY_MODEL_DIR` 指定目录和上次选择的目录，也可手动选择模型目录。任何现有模型在使用前都会按固定清单校验 SHA-256。模型文件与 v0.1.0 相同，升级用户不需要重复下载。
+从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。首次启动会扫描 LocalAppData、程序旁、当前目录、`LINGUA_RELAY_MODEL_DIR` 和上次选择的位置；完整模型会被校验并复用。未找到时可选择均衡 Small（推荐，约 1.36 GiB）、轻量 Base（约 1.05 GiB）、已有目录或离线 ZIP。两档都支持中、日、英、韩互译。
 
 首版尚未进行 Authenticode 代码签名，Windows 可能显示“未知发布者”或 SmartScreen 提示。继续前请阅读发布说明、隐私说明和威胁模型。
 
@@ -41,8 +41,9 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 
 - 复用并预热一个多语言 `faster-whisper-small` 模型；
 - 每次识别显式传入 `zh / ja / en / ko`，不允许自动语言检测回退；
-- 每 320 ms 生成重叠窗口，在线能量端点检测，final 使用 Silero VAD；连续语音优先在 6 秒后的短停顿切段，并以 10 秒为单条字幕硬上限；
-- 稳定识别结果出现明确的句号、问号或感叹号后立即结束当前段；识别文本会先显示，译文完成后原位替换；
+- 开头保持 320 ms 更新，长语音自动降为 640/960 ms，减少不断重跑增长窗口造成的积压；final 使用 Silero VAD；
+- 连续语音优先在 3.2 秒后的短停顿切段，以 6 秒为默认硬上限；稳定的句末标点或分号会立即结束当前段；
+- 可填写会议主题、人名、产品名和专业术语作为 Whisper 初始提示与热词；识别文本会先显示，译文完成后原位替换；
 - partial 区分稳定与未稳定文本，连续假设提交稳定前缀；
 - 推理和事件队列均有固定上限，过载时替换旧 partial，保留 final；
 - 提供 CPU/CUDA 诊断、音频文件识别、WASAPI 实时识别和可复现的 FLEURS 四语基准。
@@ -51,18 +52,18 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 
 - 固定版本的 M2M100 418M/CTranslate2 通过一个预热实例直接覆盖四语全部 12 个方向；
 - 翻译队列有界，旧 partial 可替换而 final 不丢失，翻译失败时继续显示原文；
-- 悬浮窗支持整面拖动、四边/四角缩放并持久化布局，也支持“仅显示译文”和“双语同时显示”、partial 淡化、透明度、字号与点击穿透；
+- 悬浮窗支持整面拖动、四边/四角缩放并持久化布局，也支持“仅显示译文”和“双语同时显示”、partial 淡化、透明度、字号与点击穿透；顶栏可直接暂停、切换显示、打开历史/设置或隐藏；
 - 托盘支持暂停/继续、手动源/目标语言、音频设备、显示模式、历史、导出和退出；
 - JSONL 历史可导出为 JSONL、CSV 或 SRT；
 - 历史窗口支持搜索、语言方向与快译/LLM 修正筛选、详情查看和复制译文；
 - 托盘“用户设置…”可调整字幕保留时间、显示模式、原文/译文字体和颜色、背景颜色、透明度、状态栏、点击穿透、语言方向、历史开关和实时识别节奏；
 - 默认过滤噪声或音乐上容易出现的短模板化署名幻觉，例如“字幕制作人 Zither Harp”；可在实时性设置中关闭；
-- 托盘“模型与卸载”及设置页可单独卸载本地模型或启动应用卸载器；卸载应用时可选择一并删除约 1.36 GiB 模型，配置和字幕历史默认保留；
+- 托盘“模型与卸载”及设置页可单独卸载本地模型或启动应用卸载器；卸载应用时可选择一并删除当前模型，配置和字幕历史默认保留；
 - 已准备 PyInstaller 应用目录、独立模型包、Inno Setup 安装器定义和 GitHub 打包工作流。
 
 ## 已完成的 M4 异步大模型修正
 
-- 托盘可选择关闭、完整句异步修正或实验性的 partial/final 实时异步修正；
+- “用户设置 → 大模型”可选择关闭、完整句异步修正或实验性的 partial/final 实时异步修正，并配置 Ollama、LM Studio 或其他 OpenAI-compatible 服务；
 - 本地 provider 只能连接回环地址，云端 OpenAI-compatible provider 必须使用 HTTPS；
 - API 密钥只从环境变量读取，不写入配置、日志或字幕历史；
 - 修正请求固定携带手动选择的源/目标语言、最近上下文和按方向过滤的 JSON 术语表；

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "id": "balanced",
+      "label": "均衡模型 · Small",
+      "summary": "四语识别质量更好，是默认推荐方案。",
+      "guidance": "适合 16 GB 内存、较新的 6 核 CPU，或带 NVIDIA GPU 的电脑；日语、韩语和嘈杂音频优先选择。",
+      "asr_model": "small",
+      "recommended": true,
+      "manifest": "model-manifest.json"
+    },
+    {
+      "id": "lightweight",
+      "label": "轻量模型 · Base",
+      "summary": "启动和识别更快，内存与 CPU 占用更低。",
+      "guidance": "适合 8 GB 内存、低功耗笔记本或纯 CPU 使用；速度优先，但口音、专有名词和复杂音频准确率较低。",
+      "asr_model": "base",
+      "recommended": false,
+      "manifest": "model-manifest-base.json"
+    }
+  ]
+}
