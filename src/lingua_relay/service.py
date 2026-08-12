@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from lingua_relay.asr import FasterWhisperRecognizer, StreamingAsrEngine
+from lingua_relay.asr.types import AsrEvent
 from lingua_relay.audio import WasapiLoopbackCapture
 from lingua_relay.config import Settings
 from lingua_relay.correction import (
@@ -41,12 +42,14 @@ class RealtimeCaptionService:
         settings: Settings,
         *,
         on_caption: Callable[[CaptionEvent], None],
+        on_transcript: Callable[[AsrEvent, str], None] | None = None,
         on_status: Callable[[str, str], None] | None = None,
         on_correction_status: Callable[[str, str], None] | None = None,
         model_root: str | Path = "models",
     ) -> None:
         self.settings = settings
         self.on_caption = on_caption
+        self.on_transcript = on_transcript or (lambda _event, _target: None)
         self.on_status = on_status or (lambda _state, _message: None)
         self.on_correction_status = on_correction_status or (lambda _state, _message: None)
         self.model_root = Path(model_root)
@@ -158,12 +161,14 @@ class RealtimeCaptionService:
 
     def _run(self) -> None:
         try:
-            self._set_state("loading", "正在加载并预热语音与翻译模型…")
+            self._set_state("loading", "正在加载语音识别模型…")
             recognizer = FasterWhisperRecognizer(self.settings.asr, download_root=self.model_root)
             recognizer.load()
+            self._set_state("loading", "语音识别已就绪，正在加载翻译模型…")
             translation_settings = self.settings.translation
             translator = M2M100Translator(translation_settings)
             translator.load()
+            self._set_state("ready", "模型加载完成，正在启动音频捕获…")
             history = (
                 JsonlHistory(self.settings.app.history_path)
                 if self.settings.app.history_enabled
@@ -242,6 +247,8 @@ class RealtimeCaptionService:
                 return
             with self._lock:
                 target = self._target
+                self._displayed_segment_id = event.segment_id
+            self.on_transcript(event, target)
             self._mt.submit(event, target=target)
 
     def _pump_captions(self) -> None:
@@ -252,8 +259,11 @@ class RealtimeCaptionService:
             except queue.Empty:
                 return
             with self._lock:
-                self._displayed_segment_id = event.segment_id
-            self.on_caption(event)
+                is_current_segment = self._displayed_segment_id in {None, event.segment_id}
+                if is_current_segment:
+                    self._displayed_segment_id = event.segment_id
+            if is_current_segment:
+                self.on_caption(event)
             correction = self._correction
             with self._lock:
                 mode = self._correction_mode

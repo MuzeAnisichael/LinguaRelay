@@ -1,4 +1,5 @@
 import queue
+import threading
 import time
 
 import numpy as np
@@ -197,3 +198,79 @@ def test_engine_replaces_partials_under_overload_without_exceeding_capacity() ->
     assert snapshot.inference_queue_depth <= snapshot.inference_queue_capacity
     assert snapshot.partials_replaced > 0
     assert snapshot.inference_errors == 0
+
+
+class PunctuatedRecognizer:
+    def transcribe(
+        self, samples: np.ndarray, *, language: str, vad_filter: bool | None = None
+    ) -> AsrResult:
+        return AsrResult(
+            text="Sentence complete.",
+            language=language,
+            duration_ms=len(samples) / 16,
+            inference_ms=0.1,
+        )
+
+
+def test_stable_sentence_punctuation_finishes_the_active_segment() -> None:
+    settings = AsrSettings(
+        min_speech_ms=320,
+        min_silence_ms=640,
+        partial_interval_ms=320,
+        punctuation_boundary_min_seconds=0.64,
+        max_window_seconds=4,
+        max_segment_seconds=4,
+    )
+    engine = StreamingAsrEngine(PunctuatedRecognizer(), settings)
+    engine.start()
+    engine.submit_chunk(chunk(0), language="en")
+    first = engine.get_event(timeout=2)
+    engine.submit_chunk(chunk(1), language="en")
+    second = engine.get_event(timeout=2)
+    assert first.stable_text == ""
+    assert second.stable_text.endswith(".")
+
+    engine.submit_chunk(chunk(2), language="en")
+    final = engine.get_event(timeout=2)
+    engine.stop()
+
+    assert final.state == "final"
+    assert final.segment_id == second.segment_id
+
+
+class BlockingRecognizer:
+    def __init__(self) -> None:
+        self.started = threading.Event()
+        self.release = threading.Event()
+        self.calls = 0
+
+    def transcribe(
+        self, samples: np.ndarray, *, language: str, vad_filter: bool | None = None
+    ) -> AsrResult:
+        self.calls += 1
+        if self.calls == 1:
+            self.started.set()
+            assert self.release.wait(2)
+        return AsrResult(
+            text=f"partial {self.calls}",
+            language=language,
+            duration_ms=len(samples) / 16,
+            inference_ms=0.1,
+        )
+
+
+def test_completed_partial_is_shown_even_when_a_newer_partial_is_waiting() -> None:
+    recognizer = BlockingRecognizer()
+    settings = AsrSettings(partial_interval_ms=320, max_window_seconds=4, max_segment_seconds=4)
+    engine = StreamingAsrEngine(recognizer, settings)
+    engine.start()
+    engine.submit_chunk(chunk(0), language="en")
+    assert recognizer.started.wait(2)
+    engine.submit_chunk(chunk(1), language="en")
+    recognizer.release.set()
+
+    first = engine.get_event(timeout=2)
+    engine.stop()
+
+    assert first.revision == 1
+    assert first.text == "partial 1"

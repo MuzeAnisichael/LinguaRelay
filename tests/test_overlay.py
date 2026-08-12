@@ -7,6 +7,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QPoint, QRect  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
+from lingua_relay.asr.types import AsrEvent  # noqa: E402
 from lingua_relay.config import OverlaySettings  # noqa: E402
 from lingua_relay.events import CaptionEvent  # noqa: E402
 from lingua_relay.ui.overlay import CaptionOverlay  # noqa: E402
@@ -97,3 +98,38 @@ def test_overlay_detects_corners_and_enforces_minimum_resize() -> None:
     resized = overlay._resized_geometry(QRect(20, 30, 640, 180), QPoint(900, 900))
     assert resized.width() == overlay.minimumWidth()
     assert resized.height() == overlay.minimumHeight()
+
+
+def test_ready_status_replaces_loading_placeholder() -> None:
+    app = QApplication.instance() or QApplication([])
+    overlay = CaptionOverlay(OverlaySettings())
+
+    overlay.set_status("running", "正在监听系统音频")
+    app.processEvents()
+
+    assert "模型已就绪" in overlay.translation.text()
+
+
+def test_transcript_is_visible_before_translation_finishes() -> None:
+    app = QApplication.instance() or QApplication([])
+    overlay = CaptionOverlay(OverlaySettings(display_mode="bilingual"))
+    event = AsrEvent(
+        text="recognized immediately",
+        stable_text="recognized",
+        unstable_text="immediately",
+        newly_stable_text="recognized",
+        language="en",
+        state="partial",
+        segment_id="segment-live",
+        revision=1,
+        started_at_ms=0,
+        ended_at_ms=320,
+        emitted_at_ns=1,
+    )
+
+    overlay.publish_transcript(event, "zh")
+    app.processEvents()
+
+    assert overlay.source.text() == "recognized immediately"
+    assert overlay.translation.text() == "正在翻译…"
+    assert "正在识别并翻译" in overlay.status.text()

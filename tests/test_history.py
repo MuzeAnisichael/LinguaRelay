@@ -75,3 +75,68 @@ def test_csv_export_keeps_revision_provenance(tmp_path: Path) -> None:
     assert "original_translation" in content
     assert "fast" in content
     assert "openai_compatible" in content
+
+
+def test_srt_export_uses_latest_revision_without_duplicate_caption(tmp_path: Path) -> None:
+    history = JsonlHistory(tmp_path / "history.jsonl")
+    fast = CaptionEvent(
+        "source",
+        "fast",
+        "en",
+        "zh",
+        "final",
+        1_000,
+        ended_at_ms=2_000,
+        segment_id="one",
+    )
+    revised = CaptionEvent(
+        "source",
+        "revised",
+        "en",
+        "zh",
+        "revised",
+        1_000,
+        ended_at_ms=2_000,
+        segment_id="one",
+        revision=1,
+    )
+    history.append(fast)
+    history.append(revised)
+
+    content = history.export(tmp_path / "captions.srt").read_text(encoding="utf-8")
+
+    assert "revised" in content
+    assert "fast" not in content
+    assert content.count(" --> ") == 1
+
+
+def test_srt_export_keeps_segments_in_playback_order(tmp_path: Path) -> None:
+    history = JsonlHistory(tmp_path / "history.jsonl")
+    history.append(
+        CaptionEvent(
+            "first source",
+            "first translation",
+            "en",
+            "zh",
+            "final",
+            1_000,
+            ended_at_ms=2_000,
+            segment_id="first",
+        )
+    )
+    history.append(
+        CaptionEvent(
+            "second source",
+            "second translation",
+            "en",
+            "zh",
+            "final",
+            3_000,
+            ended_at_ms=4_000,
+            segment_id="second",
+        )
+    )
+
+    content = history.export(tmp_path / "captions.srt").read_text(encoding="utf-8")
+
+    assert content.index("first translation") < content.index("second translation")

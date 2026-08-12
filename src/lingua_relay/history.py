@@ -65,6 +65,15 @@ class JsonlHistory:
                 writer.writerows(rows)
         elif suffix == ".srt":
             blocks: list[str] = []
+            rows = tuple(
+                sorted(
+                    latest_history_rows(rows),
+                    key=lambda row: (
+                        int(row.get("started_at_ms") or 0),
+                        str(row.get("created_at") or ""),
+                    ),
+                )
+            )
             starts = [int(row.get("started_at_ms") or 0) for row in rows]
             origin = min(starts, default=0)
             for index, row in enumerate(rows, start=1):
@@ -76,6 +85,26 @@ class JsonlHistory:
         else:
             raise ValueError("history export must use .jsonl, .csv, or .srt")
         return target
+
+
+def latest_history_rows(
+    rows: Iterable[dict[str, object]],
+) -> tuple[dict[str, object], ...]:
+    """Collapse append-only revisions to the newest row for each caption segment."""
+    latest: dict[str, dict[str, object]] = {}
+    ungrouped: list[dict[str, object]] = []
+    for row in rows:
+        segment_id = str(row.get("segment_id") or "")
+        if not segment_id:
+            ungrouped.append(row)
+            continue
+        current = latest.get(segment_id)
+        revision = int(row.get("revision") or 0)
+        current_revision = int(current.get("revision") or 0) if current is not None else -1
+        if current is None or revision >= current_revision:
+            latest[segment_id] = row
+    result = [*ungrouped, *latest.values()]
+    return tuple(sorted(result, key=lambda row: str(row.get("created_at") or ""), reverse=True))
 
 
 def _srt_timestamp(milliseconds: int) -> str:

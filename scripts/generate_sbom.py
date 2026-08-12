@@ -12,20 +12,27 @@ from pathlib import Path
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate an SPDX 2.3 JSON SBOM")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--version", default="0.1.1")
     args = parser.parse_args()
     distributions = sorted(
         importlib.metadata.distributions(),
         key=lambda item: (item.metadata.get("Name", "").casefold(), item.version),
     )
-    packages = [_package(distribution) for distribution in distributions]
     root_id = "SPDXRef-Package-LinguaRelay"
+    packages_by_id: dict[str, dict[str, object]] = {}
+    for distribution in distributions:
+        package = _package(distribution)
+        if package["name"].casefold() == "linguarelay":
+            continue
+        packages_by_id.setdefault(str(package["SPDXID"]), package)
+    packages = [_root_package(args.version), *packages_by_id.values()]
     namespace_seed = "|".join(f"{item['name']}@{item['versionInfo']}" for item in packages).encode()
     namespace_hash = hashlib.sha256(namespace_seed).hexdigest()
     document = {
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
-        "name": "LinguaRelay-0.1.0-Windows-x64",
+        "name": f"LinguaRelay-{args.version}-Windows-x64",
         "documentNamespace": f"https://github.com/MuzeAnisichael/LinguaRelay/sbom/{namespace_hash}",
         "creationInfo": {
             "created": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -70,6 +77,26 @@ def _package(distribution: importlib.metadata.Distribution) -> dict[str, object]
                 "referenceCategory": "PACKAGE-MANAGER",
                 "referenceType": "purl",
                 "referenceLocator": f"pkg:pypi/{normalized_name}@{distribution.version}",
+            }
+        ],
+    }
+
+
+def _root_package(version: str) -> dict[str, object]:
+    return {
+        "name": "LinguaRelay",
+        "SPDXID": "SPDXRef-Package-LinguaRelay",
+        "versionInfo": version,
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": False,
+        "licenseConcluded": "NOASSERTION",
+        "licenseDeclared": "MIT",
+        "copyrightText": "NOASSERTION",
+        "externalRefs": [
+            {
+                "referenceCategory": "PACKAGE-MANAGER",
+                "referenceType": "purl",
+                "referenceLocator": ("pkg:github/MuzeAnisichael/LinguaRelay@v" + version),
             }
         ],
     }

@@ -20,6 +20,8 @@ datas = [
     (str(project_root / "docs/PRIVACY.zh-CN.md"), "docs"),
     (str(project_root / "docs/THREAT_MODEL.md"), "docs"),
     (str(project_root / "packaging/model-manifest.json"), "packaging"),
+    (str(project_root / "assets/linguarelay.ico"), "assets"),
+    (str(project_root / "assets/linguarelay.png"), "assets"),
 ]
 binaries = []
 hiddenimports = []
@@ -122,7 +124,7 @@ exe = EXE(
     target_arch="x86_64",
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,
+    icon=str(project_root / "assets/linguarelay.ico"),
     version=str(project_root / "packaging/version_info.txt"),
 )
 collection = COLLECT(

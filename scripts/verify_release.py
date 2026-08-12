@@ -8,9 +8,11 @@ from pathlib import Path
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Verify final LinguaRelay v0.1.0 assets")
+    parser = argparse.ArgumentParser(description="Verify final LinguaRelay release assets")
     parser.add_argument("--release", type=Path, default=Path("release"))
     parser.add_argument("--manifest", type=Path, default=Path("packaging/model-manifest.json"))
+    parser.add_argument("--version", default="0.1.1")
+    parser.add_argument("--skip-models", action="store_true")
     args = parser.parse_args()
     expected_checksums = _read_checksums(args.release / "SHA256SUMS.txt")
     for name, expected in expected_checksums.items():
@@ -19,12 +21,13 @@ def main() -> int:
             raise ValueError(f"release checksum mismatch: {name}")
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     model_zip = args.release / manifest["download"]["archive_name"]
-    if model_zip.stat().st_size > manifest["download"]["max_archive_bytes"]:
-        raise ValueError("model archive exceeds the app safety limit")
-    _verify_models(model_zip, manifest)
-    _verify_portable(args.release / "LinguaRelay-0.1.0-Windows-x64-portable.zip")
-    _verify_sbom(args.release / "LinguaRelay-0.1.0.spdx.json")
-    installer = args.release / "LinguaRelay-0.1.0-Setup-x64.exe"
+    if not args.skip_models:
+        if model_zip.stat().st_size > manifest["download"]["max_archive_bytes"]:
+            raise ValueError("model archive exceeds the app safety limit")
+        _verify_models(model_zip, manifest)
+    _verify_portable(args.release / f"LinguaRelay-{args.version}-Windows-x64-portable.zip")
+    _verify_sbom(args.release / f"LinguaRelay-{args.version}.spdx.json")
+    installer = args.release / f"LinguaRelay-{args.version}-Setup-x64.exe"
     with installer.open("rb") as stream:
         signature = stream.read(2)
     if signature != b"MZ":
@@ -33,8 +36,8 @@ def main() -> int:
         json.dumps(
             {
                 "verified_assets": sorted(expected_checksums),
-                "model_files": len(manifest["files"]),
-                "model_archive_bytes": model_zip.stat().st_size,
+                "model_files": 0 if args.skip_models else len(manifest["files"]),
+                "model_archive_bytes": 0 if args.skip_models else model_zip.stat().st_size,
                 "status": "passed",
             },
             indent=2,

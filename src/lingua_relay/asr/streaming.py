@@ -122,6 +122,15 @@ class StreamingSegmenter:
             return None
         return self._finish()
 
+    def finish_segment(self, segment_id: str) -> InferenceRequest | None:
+        """Finish the active segment when ASR has confirmed a sentence boundary."""
+        active = self._active
+        if active is None or active.segment_id != segment_id:
+            return None
+        if active.sample_count < self._min_speech_samples:
+            return None
+        return self._finish()
+
     def _finish(self) -> InferenceRequest:
         request = self._request("final")
         self._active = None
@@ -161,8 +170,9 @@ class StreamingAsrEngine:
         self._thread: threading.Thread | None = None
         self._running = threading.Event()
         self._lock = threading.Lock()
-        self._latest_revision: dict[str, int] = {}
         self._stabilizers: dict[str, StablePrefix] = {}
+        self._sentence_boundaries: queue.SimpleQueue[str] = queue.SimpleQueue()
+        self._boundary_segments: set[str] = set()
         self._events_emitted = 0
         self._stale_results_dropped = 0
         self._inference_errors = 0
@@ -178,10 +188,12 @@ class StreamingAsrEngine:
     def submit_chunk(self, chunk: AudioChunk, *, language: str) -> None:
         if not self._running.is_set():
             raise RuntimeError("streaming ASR is not running")
+        self._finish_sentence_boundaries()
         for request in self.segmenter.push(chunk, language=language):
             self._submit(request)
 
     def flush(self) -> None:
+        self._finish_sentence_boundaries()
         request = self.segmenter.flush()
         if request is not None:
             self._submit(request)
@@ -230,9 +242,16 @@ class StreamingAsrEngine:
         )
         if not accepted and request.state == "final":
             raise TimeoutError("bounded ASR queue could not accept a final request")
-        if accepted:
-            with self._lock:
-                self._latest_revision[request.segment_id] = request.revision
+
+    def _finish_sentence_boundaries(self) -> None:
+        while True:
+            try:
+                segment_id = self._sentence_boundaries.get_nowait()
+            except queue.Empty:
+                return
+            request = self.segmenter.finish_segment(segment_id)
+            if request is not None:
+                self._submit(request)
 
     def _work(self) -> None:
         while True:
@@ -255,17 +274,11 @@ class StreamingAsrEngine:
                     self._inference_errors += 1
                     self._last_error = f"{type(error).__name__}: {error}"
                     if request.state == "final":
-                        self._latest_revision.pop(request.segment_id, None)
                         self._stabilizers.pop(request.segment_id, None)
+                        self._boundary_segments.discard(request.segment_id)
                 continue
 
             completed_ns = time.monotonic_ns()
-            with self._lock:
-                latest = self._latest_revision.get(request.segment_id, request.revision)
-            if request.state == "partial" and request.revision < latest:
-                with self._lock:
-                    self._stale_results_dropped += 1
-                continue
             if request.state == "partial" and not result.text.strip():
                 continue
 
@@ -276,9 +289,19 @@ class StreamingAsrEngine:
                 stabilized = stabilizer.finalize_state(result.text)
                 self._stabilizers.pop(request.segment_id, None)
                 with self._lock:
-                    self._latest_revision.pop(request.segment_id, None)
+                    self._boundary_segments.discard(request.segment_id)
             else:
                 stabilized = stabilizer.update_state(result.text)
+                duration_seconds = len(request.samples) / self.segmenter.sample_rate
+                if (
+                    self.settings.punctuation_boundary_enabled
+                    and duration_seconds >= self.settings.punctuation_boundary_min_seconds
+                    and _has_sentence_boundary(stabilized.stable_text)
+                ):
+                    with self._lock:
+                        if request.segment_id not in self._boundary_segments:
+                            self._boundary_segments.add(request.segment_id)
+                            self._sentence_boundaries.put(request.segment_id)
 
             event = AsrEvent(
                 text=stabilized.text,
@@ -311,3 +334,7 @@ def _validate_language(language: str) -> str:
     if normalized not in SUPPORTED_LANGUAGES:
         raise ValueError(f"unsupported ASR language: {language}")
     return normalized
+
+
+def _has_sentence_boundary(text: str) -> bool:
+    return text.rstrip().endswith(("。", "！", "？", ".", "!", "?", "…"))

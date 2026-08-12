@@ -191,7 +191,7 @@ def download_model_pack(
     partial = target.with_suffix(target.suffix + ".part")
     request = urllib.request.Request(
         manifest.download_url,
-        headers={"Accept": "application/octet-stream", "User-Agent": "LinguaRelay/0.1.0"},
+        headers={"Accept": "application/octet-stream", "User-Agent": "LinguaRelay/0.1.1"},
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310

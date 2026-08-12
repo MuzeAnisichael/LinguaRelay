@@ -8,7 +8,8 @@ from pathlib import Path
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Assemble LinguaRelay v0.1.0 assets")
+    parser = argparse.ArgumentParser(description="Assemble LinguaRelay release assets")
+    parser.add_argument("--version", default="0.1.1")
     parser.add_argument("--dist", type=Path, default=Path("dist/LinguaRelay"))
     parser.add_argument("--models", type=Path, default=Path("models"))
     parser.add_argument("--manifest", type=Path, default=Path("packaging/model-manifest.json"))
@@ -16,10 +17,14 @@ def main() -> int:
     parser.add_argument("--skip-models", action="store_true")
     args = parser.parse_args()
     args.release.mkdir(parents=True, exist_ok=True)
-    portable = args.release / "LinguaRelay-0.1.0-Windows-x64-portable.zip"
+    portable = args.release / f"LinguaRelay-{args.version}-Windows-x64-portable.zip"
     _zip_directory(args.dist, portable, prefix="LinguaRelay")
     if not args.skip_models:
-        _zip_models(args.models, args.manifest, args.release / "LinguaRelay-0.1.0-models.zip")
+        _zip_models(
+            args.models,
+            args.manifest,
+            args.release / f"LinguaRelay-{args.version}-models.zip",
+        )
     checksum_targets = sorted(
         path for path in args.release.iterdir() if path.is_file() and path.name != "SHA256SUMS.txt"
     )

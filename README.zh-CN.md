@@ -2,15 +2,13 @@
 
 面向 Windows 的低延迟桌面实时翻译字幕工具，并预留本地大模型或 API 修正层。
 
-> 当前状态：v0.1.0 是首个公开的 Windows x64 Alpha 发行版，已包含中、日、英、韩实时识别、全部 12 个互译方向、托盘悬浮窗、可选异步大模型修正，以及带完整性校验的首启模型安装。
+> 当前状态：v0.1.1 是 Windows x64 Alpha 维护版，改进了模型就绪反馈、增量字幕、标点断句、可拖放缩放悬浮窗、模型复用、历史浏览和应用图标。
 
-[English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md) · [v0.1.0 发布说明](docs/releases/v0.1.0.md) · [隐私说明](docs/PRIVACY.zh-CN.md)
+[English](README.md) · [架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.zh-CN.md) · [v0.1.1 发布说明](docs/releases/v0.1.1.md) · [隐私说明](docs/PRIVACY.zh-CN.md)
 
-## 安装 v0.1.0
+## 安装 v0.1.1
 
-从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.0) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。v0.1.0 首次启动会展示两个上游模型的许可证，并对下载的独立模型包逐文件校验 SHA-256。
-
-当前未发布的 `main` 分支还会在安装时预检 LocalAppData；首次启动会扫描程序旁、当前目录、`LINGUA_RELAY_MODEL_DIR` 指定目录和上次选择的目录，也可手动选择模型目录。任何现有模型在使用前都会按固定清单校验 SHA-256，没有可用模型时才需下载。
+从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.1) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。安装器会预检 LocalAppData；首次启动还会扫描程序旁、当前目录、`LINGUA_RELAY_MODEL_DIR` 指定目录和上次选择的目录，也可手动选择模型目录。任何现有模型在使用前都会按固定清单校验 SHA-256。模型文件与 v0.1.0 相同，升级用户不需要重复下载。
 
 首版尚未进行 Authenticode 代码签名，Windows 可能显示“未知发布者”或 SmartScreen 提示。继续前请阅读发布说明、隐私说明和威胁模型。
 
@@ -44,6 +42,7 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 - 复用并预热一个多语言 `faster-whisper-small` 模型；
 - 每次识别显式传入 `zh / ja / en / ko`，不允许自动语言检测回退；
 - 每 320 ms 生成重叠窗口，在线能量端点检测，final 使用 Silero VAD；连续语音优先在 6 秒后的短停顿切段，并以 10 秒为单条字幕硬上限；
+- 稳定识别结果出现明确的句号、问号或感叹号后立即结束当前段；识别文本会先显示，译文完成后原位替换；
 - partial 区分稳定与未稳定文本，连续假设提交稳定前缀；
 - 推理和事件队列均有固定上限，过载时替换旧 partial，保留 final；
 - 提供 CPU/CUDA 诊断、音频文件识别、WASAPI 实时识别和可复现的 FLEURS 四语基准。
@@ -55,6 +54,7 @@ LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，
 - 悬浮窗支持整面拖动、四边/四角缩放并持久化布局，也支持“仅显示译文”和“双语同时显示”、partial 淡化、透明度、字号与点击穿透；
 - 托盘支持暂停/继续、手动源/目标语言、音频设备、显示模式、历史、导出和退出；
 - JSONL 历史可导出为 JSONL、CSV 或 SRT；
+- 历史窗口支持搜索、语言方向与快译/LLM 修正筛选、详情查看和复制译文；
 - 已准备 PyInstaller 应用目录、独立模型包、Inno Setup 安装器定义和 GitHub 打包工作流。
 
 ## 已完成的 M4 异步大模型修正

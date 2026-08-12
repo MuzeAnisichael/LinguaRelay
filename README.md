@@ -3,19 +3,17 @@
 Low-latency desktop translation captions for Windows, with an optional LLM
 revision layer.
 
-> Status: v0.1.0 is the first public Windows x64 alpha release. It includes
-> real-time four-language ASR, all 12 translation routes, the tray/overlay app,
-> optional asynchronous local/cloud LLM revision, and verified model setup.
+> Status: v0.1.1 is a Windows x64 alpha maintenance release with clearer model
+> readiness, faster incremental captions, punctuation endpointing, movable and
+> resizable overlays, model reuse, a history browser, and refreshed icons.
 
 [简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Roadmap](docs/ROADMAP.zh-CN.md) · [v0.1.0 release](docs/releases/v0.1.0.md) ·
+[Roadmap](docs/ROADMAP.zh-CN.md) · [v0.1.1 release](docs/releases/v0.1.1.md) ·
 [Privacy](docs/PRIVACY.zh-CN.md)
 
-## Install v0.1.0
+## Install v0.1.1
 
-Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.0), verify `SHA256SUMS.txt`, and run it. v0.1.0 shows the upstream model licenses on first launch and SHA-256 verifies every file in the separately downloaded model pack.
-
-The unreleased `main` branch also checks LocalAppData during installation. First launch discovers models beside the executable, in the working directory, at `LINGUA_RELAY_MODEL_DIR`, or at the last manually selected directory. Existing files are SHA-256 verified against the pinned manifest, so a download is needed only when no valid local copy is selected.
+Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.1), verify `SHA256SUMS.txt`, and run it. Setup checks LocalAppData; first launch also discovers models beside the executable, in the working directory, at `LINGUA_RELAY_MODEL_DIR`, or at the last manually selected directory. Existing files are SHA-256 verified. The model files are unchanged from v0.1.0, so upgrades do not download them again.
 
 The first binaries are not Authenticode-signed, so Windows may show an unknown-publisher warning. See the release notes and threat model before proceeding.
 
@@ -62,6 +60,8 @@ The current capture path provides:
 - 320 ms overlapping updates, online energy endpointing, Silero VAD on final
   segments, and stable/unstable partial text; after six seconds a short pause
   ends the caption, while ten seconds is the hard caption limit;
+- stable sentence punctuation ends the current segment immediately; recognized
+  source text is displayed before its newest translation finishes;
 - bounded inference and event queues that replace stale partials while
   preserving final results;
 - CPU/CUDA diagnostics, file transcription, live WASAPI transcription, and a
@@ -78,6 +78,8 @@ The current capture path provides:
   opacity/fonts/click-through, and a global show/hide shortcut;
 - tray controls for pause/resume, manual languages, audio device, display mode,
   local history, CSV/JSONL/SRT export, and exit;
+- a searchable and filterable latest-revision history browser with detail and
+  copy controls;
 - a PyInstaller onedir build, separate model pack, Inno Setup definition, and
   tag/manual GitHub packaging workflow for the first release.
 

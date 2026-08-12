@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from lingua_relay.asr.types import AsrEvent
@@ -20,10 +21,10 @@ class BrokenTranslator:
         raise RuntimeError("offline")
 
 
-def _asr_event(*, state: str = "final", revision: int = 1) -> AsrEvent:
+def _asr_event(*, state: str = "final", revision: int = 1, text: str = "hello") -> AsrEvent:
     return AsrEvent(
-        text="hello",
-        stable_text="hello",
+        text=text,
+        stable_text=text,
         unstable_text="",
         newly_stable_text="hello",
         language="en",
@@ -71,3 +72,33 @@ def test_translation_failure_keeps_source_for_overlay_fallback() -> None:
     assert caption.translated_text == ""
     assert caption.error == "RuntimeError: offline"
     assert engine.snapshot().translation_errors == 1
+
+
+class BlockingTranslator:
+    def __init__(self) -> None:
+        self.started = threading.Event()
+        self.release = threading.Event()
+        self.calls = 0
+
+    def translate(self, text: str, *, source: str, target: str) -> TranslationResult:
+        self.calls += 1
+        if self.calls == 1:
+            self.started.set()
+            assert self.release.wait(2)
+        return TranslationResult(f"{target}:{text}", source, target, 1.0)
+
+
+def test_completed_partial_translation_is_shown_while_newer_text_waits() -> None:
+    translator = BlockingTranslator()
+    engine = StreamingTranslationEngine(_registry(translator), TranslationSettings())
+    engine.start()
+    engine.submit(_asr_event(state="partial", revision=1, text="first"), target="zh")
+    assert translator.started.wait(2)
+    engine.submit(_asr_event(state="partial", revision=2, text="second"), target="zh")
+    translator.release.set()
+
+    first = engine.get_event(timeout=2)
+    engine.stop()
+
+    assert first.revision == 1
+    assert first.translated_text == "zh:first"

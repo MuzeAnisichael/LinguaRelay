@@ -15,6 +15,7 @@ def test_defaults_match_first_language_route() -> None:
     assert settings.asr.device == "auto"
     assert settings.asr.preferred_segment_seconds == 6.0
     assert settings.asr.max_caption_seconds == 10.0
+    assert settings.asr.punctuation_boundary_enabled is True
     assert settings.asr.max_segment_seconds == 10.0
     assert settings.overlay.display_mode == "bilingual"
     assert settings.overlay.height == 180

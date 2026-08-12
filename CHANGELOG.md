@@ -1,10 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 - 2026-08-12
 
 - Added drag, edge/corner resize, geometry persistence, and tray reset for the overlay.
 - Added installer-time model detection plus first-launch discovery and SHA-256 verification of existing local model directories.
 - Split long speech at a short pause after six seconds and enforce a ten-second caption cap, including for existing v0.1.0 configuration files.
+- Added explicit model-ready feedback in the overlay and Windows notification area.
+- Show recognition before translation completes, preserve useful in-flight partials, and finalize captions on stable sentence punctuation.
+- Replaced the plain history text box with a searchable, filterable latest-revision browser and improved SRT revision handling.
+- Added a simpler speech-relay application, taskbar, shortcut, and installer icon.
 
 ## 0.1.0 - 2026-08-11
 

@@ -8,15 +8,12 @@ from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
-    QColor,
     QDesktopServices,
     QIcon,
-    QPainter,
-    QPixmap,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -24,7 +21,6 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QSystemTrayIcon,
-    QTextEdit,
 )
 
 from lingua_relay import __version__
@@ -42,6 +38,7 @@ from lingua_relay.settings_io import (
     persist_route,
     persist_setting,
 )
+from lingua_relay.ui.history_view import HistoryWindow
 from lingua_relay.ui.model_setup import ensure_model_pack
 from lingua_relay.ui.overlay import CaptionOverlay
 from lingua_relay.updates import UpdateInfo, check_for_update
@@ -49,6 +46,7 @@ from lingua_relay.updates import UpdateInfo, check_for_update
 
 class _Bridge(QObject):
     caption = Signal(object)
+    transcript = Signal(object, str)
     status = Signal(str, str)
     correction_status = Signal(str, str)
     update = Signal(object, bool)
@@ -113,6 +111,7 @@ class DesktopController:
         )
         self.recovered = recovered
         self.latest_release_url: str | None = None
+        self._models_ready_notified = False
         self.config_path = config_path or self.paths.config_path
         self.template_path = self.paths.resource_dir / "config.example.toml"
         self.settings = self._load_settings()
@@ -120,18 +119,19 @@ class DesktopController:
         self.overlay = CaptionOverlay(self.settings.overlay)
         self.overlay.geometry_changed.connect(self._persist_overlay_geometry)
         self.bridge.caption.connect(self.overlay.publish)
+        self.bridge.transcript.connect(self.overlay.publish_transcript)
         self.bridge.status.connect(self.overlay.set_status)
-        self.bridge.correction_status.connect(self.overlay.set_status)
         self.bridge.update.connect(self._on_update)
         self.bridge.update_error.connect(self._on_update_error)
         self.service = RealtimeCaptionService(
             self.settings,
             on_caption=self.bridge.caption.emit,
+            on_transcript=self.bridge.transcript.emit,
             on_status=self.bridge.status.emit,
             on_correction_status=self.bridge.correction_status.emit,
             model_root=self.model_root,
         )
-        self.icon = _make_icon()
+        self.icon = _make_icon(self.paths.resource_dir)
         self.tray = QSystemTrayIcon(self.icon, self.app)
         self.tray.setToolTip("LinguaRelay")
         self.menu = QMenu()
@@ -373,23 +373,16 @@ class DesktopController:
         self.service.set_audio_device(device)
 
     def show_history(self) -> None:
-        rows = tuple(JsonlHistory(self.paths.history_path).read_all())[-100:]
-        text = (
-            "\n\n".join(
-                f"[{row.get('source_language')}→{row.get('target_language')}] "
-                f"{row.get('source_text')}\n{row.get('translated_text') or row.get('source_text')}"
-                for row in rows
-            )
-            or "暂无记录"
-        )
-        viewer = QTextEdit()
-        viewer.setReadOnly(True)
-        viewer.setPlainText(text)
-        viewer.setWindowTitle("LinguaRelay 历史记录")
-        viewer.resize(760, 520)
-        viewer.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        viewer = getattr(self, "_history_viewer", None)
+        if viewer is None:
+            viewer = HistoryWindow(self.paths.history_path, self.icon)
+            viewer.export_requested.connect(self.export_history)
+            self._history_viewer = viewer
+        else:
+            viewer.refresh()
         viewer.show()
-        self._history_viewer = viewer
+        viewer.raise_()
+        viewer.activateWindow()
 
     def export_history(self) -> None:
         path, _ = QFileDialog.getSaveFileName(
@@ -411,6 +404,13 @@ class DesktopController:
         if state == "error":
             self.pause_action.setText("重试启动")
             self.tray.showMessage("LinguaRelay", message, QSystemTrayIcon.MessageIcon.Critical)
+        elif state == "running" and not self._models_ready_notified:
+            self._models_ready_notified = True
+            self.tray.showMessage(
+                "LinguaRelay 已就绪",
+                "语音识别与翻译模型加载完成，正在监听系统音频。",
+                QSystemTrayIcon.MessageIcon.Information,
+            )
 
     def _update_correction_status(self, state: str, message: str) -> None:
         self.correction_status_action.setText(f"修正：{message}")
@@ -477,8 +477,8 @@ def run_app(config_path: Path | None = None) -> int:
     app = QApplication.instance() or QApplication(sys.argv)
     app.setApplicationName("LinguaRelay")
     app.setApplicationDisplayName("LinguaRelay")
-    app.setWindowIcon(_make_icon())
     paths = AppPaths.discover()
+    app.setWindowIcon(_make_icon(paths.resource_dir))
     journal = RuntimeJournal(paths.data_dir, version=__version__)
     recovery = journal.begin()
     journal.install_exception_hooks()
@@ -512,22 +512,8 @@ def run_app(config_path: Path | None = None) -> int:
         journal.close_cleanly()
 
 
-def _make_icon() -> QIcon:
-    pixmap = QPixmap(64, 64)
-    pixmap.fill(Qt.GlobalColor.transparent)
-    painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    painter.setBrush(QColor("#59d395"))
-    painter.setPen(Qt.PenStyle.NoPen)
-    painter.drawRoundedRect(4, 4, 56, 56, 15, 15)
-    painter.setPen(QColor("#101218"))
-    font = painter.font()
-    font.setBold(True)
-    font.setPixelSize(28)
-    painter.setFont(font)
-    painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "译")
-    painter.end()
-    return QIcon(pixmap)
+def _make_icon(resource_dir: Path) -> QIcon:
+    return QIcon(str(resource_dir / "assets" / "linguarelay.ico"))
 
 
 def _other_language(code: str) -> str:

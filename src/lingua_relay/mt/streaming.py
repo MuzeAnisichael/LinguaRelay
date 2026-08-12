@@ -31,7 +31,6 @@ class StreamingTranslationEngine:
         self._thread: threading.Thread | None = None
         self._running = threading.Event()
         self._lock = threading.Lock()
-        self._latest_revision: dict[str, int] = {}
         self._events_emitted = 0
         self._stale_results_dropped = 0
         self._translation_errors = 0
@@ -67,9 +66,6 @@ class StreamingTranslationEngine:
         )
         if not accepted and event.state == "final":
             raise TimeoutError("bounded translation queue could not accept a final request")
-        if accepted:
-            with self._lock:
-                self._latest_revision[event.segment_id] = event.revision
         return accepted
 
     def stop(self, timeout: float = 30.0) -> None:
@@ -131,15 +127,6 @@ class StreamingTranslationEngine:
                     self._last_error = error_text
 
             completed_ns = time.monotonic_ns()
-            with self._lock:
-                latest = self._latest_revision.get(request.segment_id, request.revision)
-            if request.state == "partial" and request.revision < latest:
-                with self._lock:
-                    self._stale_results_dropped += 1
-                continue
-            if request.state == "final":
-                with self._lock:
-                    self._latest_revision.pop(request.segment_id, None)
 
             caption = CaptionEvent(
                 source_text=request.event.text,

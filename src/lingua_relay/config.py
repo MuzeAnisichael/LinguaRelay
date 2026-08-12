@@ -63,6 +63,8 @@ class AsrSettings:
     min_silence_ms: int = 640
     preferred_silence_ms: int = 320
     partial_interval_ms: int = 320
+    punctuation_boundary_enabled: bool = True
+    punctuation_boundary_min_seconds: float = 1.2
     preferred_segment_seconds: float = 6.0
     max_caption_seconds: float = 10.0
     max_window_seconds: float = 10.0
@@ -247,6 +249,8 @@ class Settings:
             raise ValueError("asr.partial_interval_ms must be at least audio.chunk_ms")
         if self.asr.partial_interval_ms % self.audio.chunk_ms:
             raise ValueError("asr.partial_interval_ms must be a multiple of audio.chunk_ms")
+        if self.asr.punctuation_boundary_min_seconds < self.asr.partial_interval_ms / 1000:
+            raise ValueError("asr.punctuation_boundary_min_seconds is too short")
         if self.asr.max_window_seconds < self.asr.partial_interval_ms / 1000:
             raise ValueError("asr.max_window_seconds is too short")
         if self.asr.max_segment_seconds < self.asr.max_window_seconds:

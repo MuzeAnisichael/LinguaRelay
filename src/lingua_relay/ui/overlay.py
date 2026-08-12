@@ -7,6 +7,7 @@ from PySide6.QtCore import QEvent, QPoint, QRect, Qt, QTimer, Signal
 from PySide6.QtGui import QFont, QMouseEvent, QShowEvent
 from PySide6.QtWidgets import QApplication, QFrame, QLabel, QVBoxLayout, QWidget
 
+from lingua_relay.asr.types import AsrEvent
 from lingua_relay.config import OverlaySettings, Settings
 from lingua_relay.events import CaptionEvent
 
@@ -26,6 +27,7 @@ class CaptionOverlay(QWidget):
         super().__init__()
         self.settings = settings
         self._last_event: CaptionEvent | None = None
+        self._active_segment_id: str | None = None
         self._press_global: QPoint | None = None
         self._press_geometry: QRect | None = None
         self._resize_edges = 0
@@ -127,9 +129,33 @@ class CaptionOverlay(QWidget):
         }
         self.status.setStyleSheet(f"color: {colors.get(state, '#b8c1d1')};")
         self.status.setText(f"LINGUARELAY · {message}")
+        if self._last_event is None:
+            if state == "loading":
+                self.translation.setText(message)
+                self.translation.setStyleSheet("color: rgba(255, 255, 255, 175);")
+            elif state in {"ready", "running"}:
+                self.translation.setText("模型已就绪，等待系统音频…")
+                self.translation.setStyleSheet("color: rgba(255, 255, 255, 190);")
+
+    def publish_transcript(self, event: AsrEvent, target_language: str) -> None:
+        """Show recognition immediately while the newest translation is still running."""
+        source = event.text.strip()
+        if not source:
+            return
+        new_segment = event.segment_id != self._active_segment_id
+        self._active_segment_id = event.segment_id
+        self.source.setText(source)
+        self.source.setVisible(self.settings.display_mode == "bilingual")
+        self.source.setStyleSheet("color: rgba(255, 255, 255, 145);")
+        if new_segment:
+            self.translation.setText("正在翻译…")
+            self.translation.setStyleSheet("color: rgba(255, 255, 255, 150);")
+        route = f"{event.language.upper()} → {target_language.upper()}"
+        self.set_status("processing", route + " · 正在识别并翻译")
 
     def publish(self, event: CaptionEvent) -> None:
         self._last_event = event
+        self._active_segment_id = event.segment_id
         translated = event.translated_text.strip()
         source = event.source_text.strip()
         fallback = not translated
