@@ -26,4 +26,6 @@ jobs:
       - run: python -m pip check
       - run: lingua-relay languages
       - run: lingua-relay doctor --config config.example.toml
-      - run: lingua-relay correction-benchmark --report m4-ci.json
+      # A larger sample keeps the 10 ms P95 gate meaningful on shared runners;
+      # with six samples, one scheduler pause becomes the maximum rather than P95.
+      - run: lingua-relay correction-benchmark --events 64 --report m4-ci.json
