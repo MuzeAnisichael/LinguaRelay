@@ -1,91 +1,105 @@
-# LinguaRelay
+<div align="center">
+  <img src="assets/linguarelay.png" width="104" alt="LinguaRelay 图标">
+  <h1>LinguaRelay</h1>
+  <p><strong>把电脑里的声音，实时变成你能读懂的翻译字幕。</strong></p>
+  <p>本地优先、低延迟，并可选用大模型在后台修正译文。</p>
+  <p>
+    <a href="README.md">English</a> ·
+    <a href="docs/ARCHITECTURE.md">架构</a> ·
+    <a href="docs/ROADMAP.zh-CN.md">路线图</a> ·
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/issues/new/choose">反馈问题</a>
+  </p>
+  <p>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/latest"><img alt="GitHub Release" src="https://img.shields.io/github/v/release/MuzeAnisichael/LinguaRelay?display_name=tag&sort=semver&style=flat-square&color=70b7ff"></a>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/actions/workflows/ci.yml"><img alt="持续集成" src="https://github.com/MuzeAnisichael/LinguaRelay/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="LICENSE"><img alt="MIT 许可证" src="https://img.shields.io/github/license/MuzeAnisichael/LinguaRelay?style=flat-square&color=77d6a5"></a>
+    <img alt="Windows 10 和 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
+  </p>
+  <p>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5"><strong>下载 v0.1.5</strong></a>
+    · <a href="#快速开始">快速开始</a>
+    · <a href="docs/releases/v0.1.5.md">发布说明</a>
+  </p>
+</div>
 
-面向 Windows 的低延迟桌面实时翻译字幕工具，并预留本地大模型或 API 修正层。
+![LinguaRelay 双语字幕悬浮窗](docs/images/caption-overlay.png)
 
-> 当前状态：v0.1.5 是 Windows x64 Alpha 优化版，带来更短、更稳定的实时字幕、大模型图形化配置、悬浮窗快捷控制，以及 Small/Base 两档模型安装方案。
+LinguaRelay 在后台监听你选择的 Windows 扬声器输出，识别其中的语音，再把译文显示在简洁的置顶悬浮窗中。支持中文、日语、英语、韩语全部 12 个互译方向。源语言由用户手动选择，以避免自动检测带来的等待和语言方向误切换。
 
-[English](README.md) · [架构](docs/ARCHITECTURE.md) · [v0.1.5 优化设计](docs/OPTIMIZATION-v0.1.5.zh-CN.md) · [v0.1.5 发布说明](docs/releases/v0.1.5.md) · [隐私说明](docs/PRIVACY.zh-CN.md)
+> [!IMPORTANT]
+> v0.1.5 是尚未签名的 Windows x64 Alpha 版本。请只从本仓库下载，使用
+> `SHA256SUMS.txt` 校验文件；Windows 显示“未知发布者”属于当前版本的已知情况。
 
-## 安装 v0.1.5
+## 为什么使用 LinguaRelay？
 
-从 [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5) 下载 Windows x64 安装包，使用 `SHA256SUMS.txt` 校验后运行。首次启动会扫描 LocalAppData、程序旁、当前目录、`LINGUA_RELAY_MODEL_DIR` 和上次选择的位置；完整模型会被校验并复用。未找到时可选择均衡 Small（推荐，约 1.36 GiB）、轻量 Base（约 1.05 GiB）、已有目录或离线 ZIP。两档都支持中、日、英、韩互译。
-
-首版尚未进行 Authenticode 代码签名，Windows 可能显示“未知发布者”或 SmartScreen 提示。继续前请阅读发布说明、隐私说明和威胁模型。
-
-## 产品目标
-
-LinguaRelay 在后台运行，通过 WASAPI 回环捕获指定扬声器输出，在屏幕上显示一个轻量置顶字幕窗。首条字幕使用低延迟链路；可选的大模型在不阻塞实时字幕的前提下修正已完成字幕或历史记录。
-
-初版范围调整为：
-
-- Windows 10/11；
-- 支持简体中文 `zh`、日语 `ja`、英语 `en`、韩语 `ko`；
-- 源语言和目标语言均由用户手动选择，支持四种语言之间全部 12 个互译方向；
-- 暂不启用自动语言检测；
-- M2 使用多语言 `faster-whisper` 实现实时识别；
-- M3 使用按语言方向选择模型的翻译路由，不再固定英中模型；
-- 大模型修正默认关闭，支持本地和 HTTPS OpenAI-compatible 异步 provider；
-- 默认不保存原始音频，字幕历史仅保存在本地且可关闭。
-
-## 已完成的 M1 音频能力
-
-- 枚举 WASAPI 回环设备，使用稳定的设备名称选择器，并可将选择保存到 `config.toml`；
-- 可跟随系统默认输出设备切换，也可在指定设备中断后自动重连；
-- 回调式捕获 16-bit PCM，流式降为单声道，并通过 SoXR 重采样到 16 kHz `float32`；
-- 输出固定 320 ms 音频块和单调时间戳；
-- 使用有界“新数据优先”队列，过载时不会无限积累延迟；
-- 没有系统声音时连续生成静音块；
-- 提供 RMS/峰值音量计、丢包计数、重连计数、回环测试音和持续运行压力测试。
-
-## 已完成的 M2 四语识别能力
-
-- 复用并预热一个多语言 `faster-whisper-small` 模型；
-- 每次识别显式传入 `zh / ja / en / ko`，不允许自动语言检测回退；
-- 开头保持 320 ms 更新，长语音自动降为 640/960 ms，减少不断重跑增长窗口造成的积压；final 使用 Silero VAD；
-- 连续语音优先在 3.2 秒后的短停顿切段，以 6 秒为默认硬上限；稳定的句末标点或分号会立即结束当前段；
-- 可填写会议主题、人名、产品名和专业术语作为 Whisper 初始提示与热词；识别文本会先显示，译文完成后原位替换；
-- partial 区分稳定与未稳定文本，连续假设提交稳定前缀；
-- 推理和事件队列均有固定上限，过载时替换旧 partial，保留 final；
-- 提供 CPU/CUDA 诊断、音频文件识别、WASAPI 实时识别和可复现的 FLEURS 四语基准。
-
-## 已完成的 M3 即时翻译与桌面能力
-
-- 固定版本的 M2M100 418M/CTranslate2 通过一个预热实例直接覆盖四语全部 12 个方向；
-- 翻译队列有界，旧 partial 可替换而 final 不丢失，翻译失败时继续显示原文；
-- 悬浮窗支持整面拖动、四边/四角缩放并持久化布局，也支持“仅显示译文”和“双语同时显示”、partial 淡化、透明度、字号与点击穿透；顶栏可直接暂停、切换显示、打开历史/设置或隐藏；
-- 托盘支持暂停/继续、手动源/目标语言、音频设备、显示模式、历史、导出和退出；
-- JSONL 历史可导出为 JSONL、CSV 或 SRT；
-- 历史窗口支持搜索、语言方向与快译/LLM 修正筛选、详情查看和复制译文；
-- 托盘“用户设置…”可调整字幕保留时间、显示模式、原文/译文字体和颜色、背景颜色、透明度、状态栏、点击穿透、语言方向、历史开关和实时识别节奏；
-- 默认过滤噪声或音乐上容易出现的短模板化署名幻觉，例如“字幕制作人 Zither Harp”；可在实时性设置中关闭；
-- 托盘“模型与卸载”及设置页可单独卸载本地模型或启动应用卸载器；卸载应用时可选择一并删除当前模型，配置和字幕历史默认保留；
-- 已准备 PyInstaller 应用目录、独立模型包、Inno Setup 安装器定义和 GitHub 打包工作流。
-
-## 已完成的 M4 异步大模型修正
-
-- “用户设置 → 大模型”可选择关闭、完整句异步修正或实验性的 partial/final 实时异步修正，并配置 Ollama、LM Studio 或其他 OpenAI-compatible 服务；
-- 本地 provider 只能连接回环地址，云端 OpenAI-compatible provider 必须使用 HTTPS；
-- API 密钥只从环境变量读取，不写入配置、日志或字幕历史；
-- 修正请求固定携带手动选择的源/目标语言、最近上下文和按方向过滤的 JSON 术语表；
-- 修正队列有界，并具备超时、速率限制和熔断；断线或超时不会阻塞本地快译；
-- 每条修正以追加式 `revised` 事件保存父版本、原快译、provider/model 和本地/云端范围；
-- `history-revise` 可把历史修正写入一个新 JSONL 文件，原记录完整保留。
-
-本地 OpenAI-compatible 服务的最小配置示例：
-
-```toml
-[correction]
-mode = "asynchronous"
-provider = "local"
-endpoint = "http://127.0.0.1:8080/v1"
-model = "your-local-model"
-```
-
-云端 provider 使用 `provider = "openai_compatible"` 和 HTTPS 地址，并在启动前设置
-`LINGUA_RELAY_API_KEY`（或 `api_key_env` 指定的其他环境变量）。可用
-`lingua-relay correction-doctor --probe` 检查配置，但不要把密钥写入 TOML。
+| | |
+|---|---|
+| **先快后精** | 识别结果尽早出现，本地快译不会等待大模型。 |
+| **四语全部互译** | 手动选择 `zh`、`ja`、`en`、`ko`，覆盖全部 12 个源语言/目标语言组合。 |
+| **默认本地处理** | 音频只在内存中流转，识别与快译使用本地模型，字幕历史可以关闭。 |
+| **按需接入 LLM** | 本地大模型或用户主动启用的 HTTPS API 可以异步修正完整字幕，不阻塞实时链路。 |
 
 ## 快速开始
+
+1. 打开 [GitHub Releases 的 v0.1.5 页面](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5)，下载 `LinguaRelay-0.1.5-Setup-x64.exe`。
+2. 首次启动时，让 LinguaRelay 校验已有模型目录，或选择一种模型方案。安装程序不会在没有提示的情况下静默下载模型。
+3. 在托盘菜单中选择源语言、目标语言和扬声器输出。播放音频，再把悬浮窗拖动、缩放到合适位置。
+
+不想安装也可以使用 `LinguaRelay-0.1.5-Windows-x64-portable.zip`。安装版和便携版都能使用同一发布页中的离线模型 ZIP。
+
+### 如何选择模型
+
+| 方案 | 安装后体积 | 适合场景 |
+|---|---:|---|
+| **均衡版 / Small**（推荐） | 约 1.36 GiB | 16 GB 内存、较新的六核 CPU 或 NVIDIA GPU；更重视识别质量 |
+| **轻量版 / Base** | 约 1.05 GiB | 8 GB 内存、纯 CPU 或低功耗笔记本；更重视资源占用 |
+
+两个方案使用相同的本地翻译模型，都支持全部 12 个语言方向。已有模型和离线模型包只有通过完整哈希校验后才会被采用。模型版本、许可证和测试数据见[模型选择说明](docs/MODELS.md)。
+
+## 主要功能
+
+- 通过 WASAPI 回环捕获默认或指定的 Windows 输出设备，设备中断后自动重连；有界新数据优先队列避免延迟无限累积。
+- 使用多语言 `faster-whisper` 流式输出 partial；先显示识别原文，在最新译文尚未完成时不让界面空等；遇到稳定句末标点、短停顿或六秒硬上限时断句。
+- 使用一个预热的 M2M100/CTranslate2 本地模型，直接覆盖四种语言全部 12 个互译方向。
+- 悬浮窗支持拖动、四边/四角缩放、仅译文/双语切换、字幕保留时间、字体、颜色、透明度和点击穿透。
+- 可直接在悬浮窗上暂停、切换显示方式、打开历史/设置或隐藏窗口。
+- 本地历史支持搜索、语言与版本筛选、详情查看、复制，并可导出 JSONL、CSV 或 SRT。
+- 可过滤音乐或静音中常见的“字幕制作人……”一类短署名幻觉；需要时也能在设置中关闭过滤。
+- 可以只卸载经过校验的本地模型，也可以从应用中启动 Windows 卸载程序；配置和字幕历史默认保留。
+
+## 可选的大模型修正
+
+![LinguaRelay 大模型设置页](docs/images/llm-settings.png)
+
+打开“**用户设置 → 大模型**”，可选择推荐的“完整句异步修正”，或实验性的实时异步修正。支持 Ollama、LM Studio 等本地 OpenAI-compatible 服务，也支持用户主动配置的 HTTPS OpenAI-compatible API。
+
+本地快译始终优先显示。即使大模型超时、限流、断线或不可用，实时字幕也会继续工作。API 密钥只从指定环境变量读取，不写入 TOML 配置或字幕历史。图形化设置步骤见 [v0.1.5 发布说明](docs/releases/v0.1.5.md#大模型接入)。
+
+## 工作方式
+
+```mermaid
+flowchart LR
+    A["Windows 系统音频"] --> B["WASAPI 回环捕获"]
+    B --> C["faster-whisper 识别"]
+    C --> D["M2M100 / CTranslate2 快译"]
+    D --> E["悬浮窗 + 本地历史"]
+    D -. "可选：完整字幕" .-> F["本地 LLM 或 HTTPS API"]
+    F -. "修正版字幕" .-> E
+```
+
+实线链路负责实时性；可选修正链路负责上下文、术语、标点与后期整理。两条链路分离后，大模型速度较慢或离线时，字幕窗仍然可用。
+
+## 隐私与当前限制
+
+- 回环捕获可能包含会议、通知、媒体和所选设备播放的其他声音。
+- 原始音频默认只在内存中处理，不写入磁盘；本地字幕历史可以关闭。
+- 只有用户主动开启云端修正后，字幕文本、少量文本上下文和命中的术语表内容才会发送给所选服务。
+- 当前正式支持 Windows 10/11 x64；本版本有意不提供自动语言检测。
+- 识别和翻译质量会受到音质、口音、术语和硬件影响；仓库中的基准结果是工程门槛，不代表所有场景下的准确率。
+
+在敏感场景使用前，请阅读完整的[隐私说明](docs/PRIVACY.zh-CN.md)、[威胁模型](docs/THREAT_MODEL.md)和[安全策略](SECURITY.md)。
+
+## 本地开发
 
 建议使用 Python 3.11：
 
@@ -93,69 +107,35 @@ model = "your-local-model"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev,audio,asr,translation]"
-# NVIDIA Windows 机器还需要 CUDA 12 用户态运行库：
-python -m pip install -e ".[gpu]"
 lingua-relay doctor
-lingua-relay asr-doctor --load
-lingua-relay languages
-lingua-relay audio-devices
-lingua-relay audio-monitor --seconds 10
-lingua-relay mt-prepare
-lingua-relay mt-doctor --load
 lingua-relay app
 ```
 
-保存一个非默认音频端点：
+提交 Pull Request 前运行：
 
 ```powershell
-lingua-relay audio-select "wasapi:设备名称"
+ruff check .
+ruff format --check .
+pytest
 ```
 
-低音量回环自检会通过默认输出播放约一秒测试音：
+使用 `python scripts/capture_readme_screenshots.py` 可以重新生成 README 中的产品截图。Windows 打包与发布流程见 [docs/RELEASE.md](docs/RELEASE.md)。
 
-```powershell
-lingua-relay audio-self-test
-```
+## 文档导航
 
-执行完整 M1 稳定性测试：
+| 文档 | 内容 |
+|---|---|
+| [系统架构](docs/ARCHITECTURE.md) | 快速链路、队列边界、桌面运行时和修正链路 |
+| [模型选择](docs/MODELS.md) | 安装方案、固定版本、许可证和性能说明 |
+| [v0.1.5 优化设计](docs/OPTIMIZATION-v0.1.5.zh-CN.md) | 第一版综合优化方案与产品取舍 |
+| [基准与验证](docs/benchmarks/README.md) | 可复现的延迟、质量和发布门槛证据 |
+| [发布流程](docs/RELEASE.md) | Windows 构建、安装包、校验值、SBOM 与发布 |
+| [项目路线图](docs/ROADMAP.zh-CN.md) | 首个公开版本后的计划 |
 
-```powershell
-lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
-```
+## 参与贡献
 
-`lingua-relay demo` 仍可运行悬浮窗演示。修改语言和音频参数前，可以把 `config.example.toml` 复制为 `config.toml`。`asr-doctor --load` 会下载并预热配置的语音模型。
-
-实时识别必须手动指定源语言：
-
-```powershell
-lingua-relay asr-stream --language ja
-lingua-relay asr-transcribe sample.wav --language ko
-```
-
-复现 M2 本机基准：
-
-```powershell
-python -m pip install -e ".[benchmark]"
-python scripts/fetch_fleurs_samples.py --samples-per-language 5
-lingua-relay asr-benchmark data/fleurs-m2/manifest.json `
-  --device cuda --compute-type float16 `
-  --sustain-audio-minutes 30 --report data/m2.json
-```
-
-## 实时链路与修正链路
-
-```text
-系统音频 -> 语音识别 -> 快速机器翻译 -> 悬浮窗
-                            |
-                            +-> 可选大模型修正 -> 更新悬浮窗/历史
-```
-
-实时翻译不等待大模型。即使本地模型速度不足、API 超时或网络中断，第一版字幕仍然继续工作；大模型主要处理上下文、专有名词、标点和歧义。
-
-## 隐私提示
-
-系统回环音频可能包含会议、消息通知或其他敏感内容。项目默认只在内存中处理音频，不落盘；若启用云端修正，字幕文本会发送给所选服务商，界面必须明确显示这一状态。API 密钥不得写入仓库。
+欢迎提交缺陷报告、翻译质量样本、性能数据和边界清晰的 Pull Request。请优先使用结构化的 [Issue 表单](https://github.com/MuzeAnisichael/LinguaRelay/issues/new/choose)，并阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。不要上传私人录音、API 密钥或未脱敏的字幕历史。
 
 ## 开源许可
 
-项目代码使用 [MIT License](LICENSE)。用户自行下载的模型权重继续受各自许可证约束，详见[模型选择](docs/MODELS.md)和[第三方组件](THIRD_PARTY.md)。
+LinguaRelay 源代码使用 [MIT License](LICENSE)。下载的模型权重继续遵守各自的上游许可证，详见 [THIRD_PARTY.md](THIRD_PARTY.md)。项目作者及版权所有者：**Leeleelee**。

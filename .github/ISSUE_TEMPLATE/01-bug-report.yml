@@ -1,0 +1,111 @@
+name: Bug report / 缺陷报告
+description: Report a reproducible crash, UI problem, capture failure, or incorrect behavior.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve LinguaRelay. Do not attach private recordings, API keys, unredacted caption history, or sensitive device names.
+
+  - type: dropdown
+    id: version
+    attributes:
+      label: LinguaRelay version
+      options:
+        - v0.1.5
+        - Current main branch
+        - Older release
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation type
+      options:
+        - Windows installer
+        - Portable ZIP
+        - Python source checkout
+    validations:
+      required: true
+
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: For example, Windows 11 24H2 x64.
+      placeholder: Windows 11 24H2 x64
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: Relevant hardware
+      description: CPU, RAM, GPU, and whether LinguaRelay selected CPU or CUDA.
+      placeholder: Ryzen 7, 16 GB RAM, RTX 4060, CUDA
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Problem area
+      options:
+        - Startup or model installation
+        - System-audio capture
+        - Speech recognition
+        - Fast translation
+        - LLM revision
+        - Overlay or tray controls
+        - History or export
+        - Uninstall or model removal
+        - Packaging or update check
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: route
+    attributes:
+      label: Language route and model profile
+      description: If relevant, include the manual source/target languages and Small/Base profile.
+      placeholder: Japanese → Chinese, Small
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior, expected behavior, and frequency.
+      placeholder: Tell us what you saw and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Start LinguaRelay...
+        2. Select...
+        3. Play...
+        4. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Paste only relevant, redacted output from the doctor command or error dialog.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checklist
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed private audio, secrets, personal data, and sensitive device/history details.
+          required: true

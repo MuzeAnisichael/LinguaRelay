@@ -1,0 +1,76 @@
+name: Translation quality or performance / 质量与性能
+description: Report recognition, translation, latency, stability, or resource-use regressions.
+title: "[Quality]: "
+labels:
+  - performance
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Measurements are most useful when the language route, hardware, model profile, and test conditions are included. Use a short synthetic or consented excerpt; never upload a private conversation.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Recognition accuracy
+        - Fast-translation quality
+        - LLM-revision quality
+        - First-caption latency
+        - Sustained latency or backlog
+        - CPU, GPU, or memory use
+        - Audio/device stability
+    validations:
+      required: true
+
+  - type: input
+    id: route
+    attributes:
+      label: Language route
+      placeholder: Korean → English
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Version, profile, and hardware
+      placeholder: v0.1.5, Small, Core i7, 16 GB RAM, CPU INT8
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: Minimal sanitized example
+      description: Include the expected source text, recognized text, fast translation, and revised translation when available.
+      placeholder: |
+        Expected source:
+        Recognized source:
+        Fast translation:
+        LLM revision:
+    validations:
+      required: true
+
+  - type: textarea
+    id: measurements
+    attributes:
+      label: Measurements and test conditions
+      description: Include latency percentiles, duration, audio type, background noise, thermals, or task-manager readings when relevant.
+      placeholder: First visible caption approximately 1.1 s; backlog started after 18 min...
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+
+  - type: checkboxes
+    id: consent
+    attributes:
+      label: Data checklist
+      options:
+        - label: This report contains only synthetic, public, or consented content.
+          required: true
+        - label: I removed names, secrets, private recordings, and unredacted history.
+          required: true

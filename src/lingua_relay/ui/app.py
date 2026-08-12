@@ -589,9 +589,7 @@ class DesktopController:
             removed: list[Path] = []
             for profile in profiles:
                 removed.extend(uninstall_model_pack(self.model_root, profile.manifest))
-                removed.extend(
-                    self._remove_model_download_cache(profile.manifest.archive_name)
-                )
+                removed.extend(self._remove_model_download_cache(profile.manifest.archive_name))
         except Exception as error:
             QMessageBox.critical(
                 None,

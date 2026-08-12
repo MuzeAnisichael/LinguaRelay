@@ -1,25 +1,41 @@
 # Security Policy
 
-Please report security or privacy issues privately through GitHub's security
-advisory feature once it is enabled for the repository. Do not include API keys,
-private recordings, or unredacted translation history in a public issue.
+## Supported versions
 
-The current alpha version is not supported for sensitive or regulated audio.
-Raw audio persistence is intentionally disabled by default.
+| Version | Security updates |
+|---|---|
+| `0.1.5` | Best-effort support |
+| `< 0.1.5` | Upgrade before reporting unless the issue is version-specific |
 
-The first v0.1.0 Windows binaries are not Authenticode-signed. Verify assets
-against the SHA-256 list attached to the GitHub release and review
-`docs/THREAT_MODEL.md`. A future release may introduce signed binaries after the
-project obtains an appropriately protected code-signing certificate.
+LinguaRelay is alpha software and is not supported for regulated or high-risk
+audio workflows.
 
-M4 correction is also disabled by default. Local provider URLs are limited to
-loopback addresses and are re-checked after name resolution; cloud providers
-must use HTTPS. Redirects are not followed. API keys are read from the named
-environment variable, never from the TOML file or caption history. Enabling a
-cloud provider transmits source text, fast translation, recent text context,
-and matching glossary entries to that endpoint; the tray and overlay label
-that state as cloud transmission.
+## Report a vulnerability privately
 
-M1 diagnostics keep PCM in memory. Stress reports may contain the local audio
-device name and performance counters but never audio samples. Review a report
-before sharing it if device names are considered sensitive in your environment.
+Use GitHub's [private security advisory form](https://github.com/MuzeAnisichael/LinguaRelay/security/advisories/new).
+Do not include API keys, private recordings, unredacted caption history, or other
+personal data in a public issue. Include the affected version, impact, minimal
+reproduction, and any safe mitigation you already tested.
+
+Reports are handled on a best-effort basis. The maintainer will validate the
+issue, coordinate a fix and disclosure when appropriate, and credit reporters who
+want attribution. Please do not publish an unresolved vulnerability before there
+has been a reasonable opportunity to investigate it.
+
+## Current security boundaries
+
+- v0.1.5 Windows binaries are not Authenticode-signed. Download only from the
+  project's GitHub Releases page and verify the attached `SHA256SUMS.txt`.
+- Raw audio persistence is disabled by default. Diagnostic stress reports contain
+  performance metrics, not audio samples, but may include a local device name.
+- LLM correction is disabled by default. Local providers are restricted to
+  loopback addresses; cloud OpenAI-compatible providers require HTTPS and do not
+  follow redirects.
+- API keys are read from a named environment variable and are not written to TOML
+  configuration, logs, or caption history.
+- Enabling cloud correction transmits source text, fast translation, recent text
+  context, and matching glossary entries to the configured endpoint.
+- Model packs are accepted only after manifest and file-hash verification.
+
+Review [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md) and the
+[privacy note](docs/PRIVACY.zh-CN.md) for the complete trust model.

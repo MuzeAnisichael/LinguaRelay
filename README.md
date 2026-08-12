@@ -1,246 +1,184 @@
-# LinguaRelay
+<div align="center">
+  <img src="assets/linguarelay.png" width="104" alt="LinguaRelay logo">
+  <h1>LinguaRelay</h1>
+  <p><strong>Real-time translation captions for Windows system audio.</strong></p>
+  <p>Local-first, low-latency, and ready for optional LLM revision.</p>
+  <p>
+    <a href="README.zh-CN.md">简体中文</a> ·
+    <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+    <a href="docs/ROADMAP.zh-CN.md">Roadmap</a> ·
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/issues/new/choose">Feedback</a>
+  </p>
+  <p>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/latest"><img alt="GitHub release" src="https://img.shields.io/github/v/release/MuzeAnisichael/LinguaRelay?display_name=tag&sort=semver&style=flat-square&color=70b7ff"></a>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/MuzeAnisichael/LinguaRelay/actions/workflows/ci.yml/badge.svg"></a>
+    <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/MuzeAnisichael/LinguaRelay?style=flat-square&color=77d6a5"></a>
+    <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
+  </p>
+  <p>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5"><strong>Download v0.1.5</strong></a>
+    · <a href="#quick-start">Quick start</a>
+    · <a href="docs/releases/v0.1.5.md">Release notes</a>
+  </p>
+</div>
 
-Low-latency desktop translation captions for Windows, with an optional LLM
-revision layer.
+![LinguaRelay bilingual caption overlay](docs/images/caption-overlay.png)
 
-> Status: v0.1.5 is a Windows x64 alpha optimization release with shorter,
-> steadier live captions, graphical LLM setup, compact overlay controls, and
-> selectable Small or Base local model packs.
+LinguaRelay listens to a selected Windows speaker output, recognizes speech, and
+shows the translation in a compact always-on-top overlay. Chinese, Japanese,
+English, and Korean are supported in every direction. The source language stays
+manual by design, avoiding language-detection delay and accidental route changes.
 
-[简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[v0.1.5 design](docs/OPTIMIZATION-v0.1.5.zh-CN.md) · [v0.1.5 release](docs/releases/v0.1.5.md) ·
-[Privacy](docs/PRIVACY.zh-CN.md)
+> [!IMPORTANT]
+> v0.1.5 is an unsigned Windows x64 alpha. Download it only from this repository,
+> verify `SHA256SUMS.txt`, and expect Windows to show an unknown-publisher warning.
 
-## Install v0.1.5
+## Why LinguaRelay?
 
-Download the Windows x64 installer from [GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5), verify `SHA256SUMS.txt`, and run it. First launch verifies and reuses existing models, or offers a recommended Small pack (about 1.36 GiB), a lighter Base pack (about 1.05 GiB), an existing directory, or an offline ZIP. Both packs support Chinese, Japanese, English, and Korean.
-
-The first binaries are not Authenticode-signed, so Windows may show an unknown-publisher warning. See the release notes and threat model before proceeding.
-
-## Product goal
-
-LinguaRelay runs quietly in the background, captures the selected Windows
-speaker output, and displays translated speech in a small always-on-top overlay.
-The real-time path stays fast and deterministic. An optional local model or API
-can revise completed captions without delaying the first translation.
-
-The initial product scope is:
-
-- Platform: Windows 10/11
-- Audio: default or explicitly selected WASAPI loopback output
-- Languages: Simplified Chinese (`zh`), Japanese (`ja`), English (`en`), and
-  Korean (`ko`), selected manually
-- Routes: all 12 source/target combinations among those four languages
-- Automatic language detection: intentionally disabled
-- Real-time ASR: multilingual `faster-whisper` with explicit language selection
-- Fast translation: pinned M2M100/CTranslate2 direct routes for all 12 pairs
-- LLM correction: disabled by default; local and HTTPS OpenAI-compatible
-  asynchronous providers are available
-- Storage: local JSONL history; raw audio is not saved by default
-
-## M1 audio capture
-
-The current capture path provides:
-
-- WASAPI loopback device discovery, a stable name-based selector, and a command
-  that persists the selected device in `config.toml`;
-- automatic following of the default output device, or reconnection to an
-  explicitly selected device after interruption;
-- callback-based 16-bit PCM capture, streaming stereo-to-mono conversion, and
-  SoXR resampling to 16 kHz `float32`;
-- fixed 320 ms chunks, monotonic timestamps, a bounded fresh-first queue, silence
-  continuity, an RMS/peak meter, and drop/reconnect counters;
-- quiet-tone loopback self-test and a sustained memory/continuity stress command.
-
-## M2 real-time ASR
-
-- one warmed, reusable multilingual `faster-whisper-small` model;
-- explicit `zh`, `ja`, `en`, or `ko` on every request, with no automatic
-  language-detection fallback;
-- 320 ms onset updates that adapt to 640/960 ms on long speech, online energy
-  endpointing, Silero VAD on final segments, and stable/unstable partial text;
-- short pauses after 3.2 seconds and a six-second default hard limit keep captions
-  readable; stable sentence punctuation or semicolons end the segment immediately;
-- optional meeting-topic, participant-name, product, and terminology hints;
-- stable sentence punctuation ends the current segment immediately; recognized
-  source text is displayed before its newest translation finishes;
-- bounded inference and event queues that replace stale partials while
-  preserving final results;
-- CPU/CUDA diagnostics, file transcription, live WASAPI transcription, and a
-  reproducible CC-BY-4.0 FLEURS benchmark.
-
-## M3 instant translation and desktop UI
-
-- one warmed M2M100 418M CTranslate2 model, pinned to an MIT-licensed revision;
-- direct translation for every ordered pair among `zh`, `ja`, `en`, and `ko`;
-- bounded MT queues, stale-partial replacement, final preservation, and a
-  source-text fallback when translation fails;
-- translated-only and bilingual overlay modes, partial fading, whole-window
-  dragging, edge/corner resizing with persisted geometry, configurable
-  opacity/fonts/click-through, and a global show/hide shortcut;
-- compact overlay buttons for pause/resume, display mode, history, settings, and hide;
-- tray controls for pause/resume, manual languages, audio device, display mode,
-  local history, CSV/JSONL/SRT export, and exit;
-- a searchable and filterable latest-revision history browser with detail and
-  copy controls;
-- a tray-accessible settings dialog for retention, fonts, colors, background,
-  opacity, status visibility, languages, history, and live recognition cadence;
-- optional filtering of short template-like credit hallucinations over music or silence;
-- tray and settings actions to remove the verified local model pack independently
-  or launch the Windows uninstaller while retaining settings and history by default;
-- a PyInstaller onedir build, separate model pack, Inno Setup definition, and
-  tag/manual GitHub packaging workflow for the first release.
-
-## M4 asynchronous LLM revision
-
-- `off`, completed-sentence `asynchronous`, and experimental partial+final
-  `live` modes, selectable from the tray and disabled by default;
-- a loopback-only local OpenAI-compatible provider and an HTTPS-only cloud
-  OpenAI-compatible provider, with API keys read only from an environment
-  variable;
-- fixed source/target languages in every correction prompt, recent context, a
-  route-filtered JSON glossary, bounded queues, timeouts, rate limiting, and a
-  circuit breaker;
-- fast captions are emitted before correction submission and survive provider
-  timeout, disconnect, rate limiting, or an open circuit;
-- each changed result is an append-only `revised` event carrying the parent
-  revision, original fast translation, model/provider, and local/cloud scope;
-- offline history correction writes to a separate JSONL file and retains all
-  original events.
-- the complete provider, endpoint, model ID, mode, context, timeout, rate, token,
-  and temperature configuration is now available under **Settings → LLM**;
+| | |
+|---|---|
+| **Fast first result** | Partial recognition appears early; local machine translation does not wait for an LLM. |
+| **Four languages, 12 routes** | Manually selected `zh`, `ja`, `en`, and `ko`, with every ordered source/target pair supported. |
+| **Local by default** | Audio stays in memory, model inference runs locally, and caption history can be disabled. |
+| **LLM when useful** | A local model or opt-in HTTPS API can revise completed captions without blocking the live path. |
 
 ## Quick start
 
-Python 3.11 is recommended.
+1. Open [v0.1.5 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5)
+   and download `LinguaRelay-0.1.5-Setup-x64.exe`.
+2. On first launch, let LinguaRelay verify an existing model directory or choose
+   a model profile. The installer does not silently download model weights.
+3. Select the source language, target language, and speaker output from the tray
+   menu. Play audio and position the overlay where you want it.
+
+Prefer not to install? The release also includes
+`LinguaRelay-0.1.5-Windows-x64-portable.zip`. Both editions can use an offline
+model ZIP from the same release.
+
+### Choose a model profile
+
+| Profile | Installed size | Best for |
+|---|---:|---|
+| **Balanced / Small** (recommended) | about 1.36 GiB | 16 GB RAM, a recent six-core CPU, or an NVIDIA GPU; better recognition quality |
+| **Lightweight / Base** | about 1.05 GiB | 8 GB RAM, CPU-only use, or lower-power laptops; lower resource use |
+
+Both profiles use the same local translation model and support all 12 language
+routes. Existing and offline model packs are fully hash-verified before use.
+See [model choices and licenses](docs/MODELS.md) for revisions and benchmarks.
+
+## What it can do
+
+- Capture the default or a selected Windows output device through WASAPI loopback,
+  with automatic reconnect and bounded fresh-first queues.
+- Stream multilingual `faster-whisper` partials, show recognized text before the
+  newest translation finishes, and end captions at stable punctuation, short
+  pauses, or a six-second hard limit.
+- Translate all 12 routes locally with one warmed M2M100/CTranslate2 model.
+- Drag and resize the overlay; switch between translated-only and bilingual
+  modes; customize retention time, fonts, colors, opacity, and click-through.
+- Pause, switch display mode, open history/settings, or hide the window directly
+  from the compact overlay controls.
+- Search and filter local history, inspect revisions, copy captions, and export
+  JSONL, CSV, or SRT.
+- Filter short credit-like hallucinations over music or silence, including the
+  common “subtitle by …” pattern.
+- Remove the verified local model pack independently, or launch the Windows
+  uninstaller while keeping settings and history by default.
+
+## Optional LLM revision
+
+![LinguaRelay LLM settings](docs/images/llm-settings.png)
+
+Open **Settings → LLM** to choose completed-caption revision (recommended) or
+experimental live revision. LinguaRelay supports local OpenAI-compatible servers
+such as Ollama and LM Studio, plus opt-in HTTPS OpenAI-compatible APIs.
+
+The fast local translation is always displayed first. Timeouts, rate limits,
+disconnects, or an unavailable correction model do not stop live captions. API
+keys are read from a named environment variable and are never written to the
+TOML configuration or caption history. See the
+[v0.1.5 setup guide](docs/releases/v0.1.5.md#大模型接入) for the UI steps.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["Windows system audio"] --> B["WASAPI loopback"]
+    B --> C["faster-whisper ASR"]
+    C --> D["M2M100 / CTranslate2"]
+    D --> E["Overlay + local history"]
+    D -. "optional completed caption" .-> F["Local LLM or HTTPS API"]
+    F -. "revised caption" .-> E
+```
+
+The solid path owns responsiveness. The optional revision path owns context,
+terminology, punctuation, and retrospective cleanup. This separation keeps the
+caption window useful when the LLM is slow or offline.
+
+## Privacy and current limits
+
+- Loopback capture can include meetings, notifications, media, and any other
+  sound played through the selected output device.
+- Raw audio is processed in memory and is not saved by default. Caption history
+  is local and can be disabled.
+- A cloud correction provider receives caption text, recent text context, and
+  matching glossary entries only after the user enables it.
+- Windows 10/11 x64 is the current supported platform. Automatic language
+  detection is intentionally unavailable in this release.
+- Speech and translation quality varies with audio, accents, terminology, and
+  hardware. The bundled benchmark results are engineering gates, not universal
+  accuracy claims.
+
+Read the full [privacy note](docs/PRIVACY.zh-CN.md),
+[threat model](docs/THREAT_MODEL.md), and [security policy](SECURITY.md) before
+using LinguaRelay with sensitive audio.
+
+## Development
+
+Python 3.11 is recommended:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e ".[dev,audio,asr,translation]"
-# NVIDIA Windows machines additionally need the CUDA 12 runtime DLL wheels:
-python -m pip install -e ".[gpu]"
 lingua-relay doctor
-lingua-relay asr-doctor --load
-lingua-relay languages
-lingua-relay audio-devices
-lingua-relay audio-monitor --seconds 10
-lingua-relay mt-prepare
-lingua-relay mt-doctor --load
 lingua-relay app
 ```
 
-### Configure optional M4 correction
-
-For a local OpenAI-compatible server such as llama.cpp, copy the example
-configuration and set:
-
-```toml
-[correction]
-mode = "asynchronous"
-provider = "local"
-endpoint = "http://127.0.0.1:8080/v1"
-model = "your-local-model"
-```
-
-`local` endpoints are restricted to the loopback interface. For a remote
-OpenAI-compatible API, use `provider = "openai_compatible"`, an `https://`
-endpoint, and put the key in the configured environment variable:
+Before opening a pull request:
 
 ```powershell
-$env:LINGUA_RELAY_API_KEY = "..."
-lingua-relay correction-doctor --probe
-```
-
-Do not write the key into TOML. The tray and overlay explicitly distinguish
-local processing from cloud transmission. Useful M4 commands are:
-
-```powershell
-lingua-relay correction-revise "source" "fast translation" --source en --target zh
-lingua-relay history-revise data/history.jsonl data/history-revised.jsonl
-lingua-relay correction-benchmark --report data/m4-fault-gates.json
-```
-
-To remember a non-default endpoint:
-
-```powershell
-lingua-relay audio-select "wasapi:Your device name"
-```
-
-The self-test plays a quiet one-second tone through the default output:
-
-```powershell
-lingua-relay audio-self-test
-```
-
-For the full M1 stability gate:
-
-```powershell
-lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
-```
-
-The UI-only scaffold remains available with `lingua-relay demo`. Copy
-`config.example.toml` to `config.toml` before changing languages or audio
-settings. `asr-doctor --load` downloads and warms the configured model.
-
-The tray app provides both **translated-only** and **bilingual** display modes.
-Source and target languages remain manual; automatic detection is intentionally
-disabled. `mt-prepare` downloads a pinned source checkpoint and creates the
-local CTranslate2 model used by all 12 routes.
-
-Live recognition always requires a manual source language:
-
-```powershell
-lingua-relay asr-stream --language ja
-lingua-relay asr-transcribe sample.wav --language ko
-```
-
-To reproduce the M2 host benchmark, install `.[benchmark]`, fetch the pinned
-public fixtures, and run:
-
-```powershell
-python scripts/fetch_fleurs_samples.py --samples-per-language 5
-lingua-relay asr-benchmark data/fleurs-m2/manifest.json `
-  --device cuda --compute-type float16 `
-  --sustain-audio-minutes 30 --report data/m2.json
-```
-
-## Why two translation passes?
-
-```text
-system audio -> ASR -> fast machine translation -> overlay
-                                  |
-                                  +-> optional LLM revision -> overlay/history
-```
-
-The fast path owns latency. The LLM path owns context, terminology, punctuation,
-and retrospective cleanup. If a local model or API is slow or unavailable, live
-captions keep working.
-
-## Development
-
-```powershell
-python -m pip install -e ".[dev,audio,asr,translation]"
 ruff check .
+ruff format --check .
 pytest
 ```
 
-Build the CPU application directory with `scripts/build_windows.ps1`; add
-`-Runtime cuda` for bundled NVIDIA runtime DLLs and `-Installer` when Inno Setup
-6 is installed. See [release packaging](docs/RELEASE.md).
+Product screenshots can be refreshed with
+`python scripts/capture_readme_screenshots.py`. Packaging instructions live in
+[docs/RELEASE.md](docs/RELEASE.md).
 
-## Privacy and security
+## Documentation
 
-- Loopback capture can include notifications, calls, and any other sound played
-  through the selected output device.
-- Audio is processed in memory and is not persisted by default.
-- Caption history is local and can be disabled.
-- Enabling an API correction provider will transmit caption text to that
-  provider; the UI must show this state clearly.
-- Never commit API keys. Use environment variables or the OS credential store.
+| Document | Purpose |
+|---|---|
+| [Architecture](docs/ARCHITECTURE.md) | Fast path, queue boundaries, desktop runtime, and revision path |
+| [Model choices](docs/MODELS.md) | Install profiles, exact revisions, licenses, and performance notes |
+| [v0.1.5 design](docs/OPTIMIZATION-v0.1.5.zh-CN.md) | First optimization plan and its product trade-offs |
+| [Benchmarks](docs/benchmarks/README.md) | Reproducible release and latency evidence |
+| [Release process](docs/RELEASE.md) | Windows build, installer, checksums, SBOM, and publishing |
+| [Roadmap](docs/ROADMAP.zh-CN.md) | Planned work after the first public releases |
+
+## Contributing
+
+Bug reports, translation-quality samples, performance measurements, and focused
+pull requests are welcome. Please use the structured
+[issue forms](https://github.com/MuzeAnisichael/LinguaRelay/issues/new/choose)
+and read [CONTRIBUTING.md](CONTRIBUTING.md). Never attach private recordings,
+API keys, or unredacted caption history.
 
 ## License
 
-Application source is released under the [MIT License](LICENSE). Downloaded
-model weights keep their own licenses; see [model choices](docs/MODELS.md) and
-[third-party components](THIRD_PARTY.md).
+LinguaRelay source code is available under the [MIT License](LICENSE).
+Downloaded model weights retain their upstream licenses; see
+[THIRD_PARTY.md](THIRD_PARTY.md). Project author and copyright holder:
+**Leeleelee**.

@@ -284,9 +284,7 @@ def ensure_model_pack(
 ) -> Path | None:
     """Backward-compatible single-pack installer used by tests and older integrations."""
     manifest = load_model_pack_manifest(manifest_path)
-    asr_license = next(
-        (item for item in manifest.licenses if item.get("component") == "asr"), {}
-    )
+    asr_license = next((item for item in manifest.licenses if item.get("component") == "asr"), {})
     model_name = str(asr_license.get("name", "small")).rsplit("-", 1)[-1]
     profile = ModelProfile(
         profile_id="standard",
@@ -298,9 +296,7 @@ def ensure_model_pack(
         manifest_path=Path(manifest_path),
         manifest=manifest,
     )
-    installation = _ensure_profiles(
-        model_root, (profile,), download_dir, candidate_roots
-    )
+    installation = _ensure_profiles(model_root, (profile,), download_dir, candidate_roots)
     return None if installation is None else installation.root
 
 
@@ -326,9 +322,10 @@ def _ensure_profiles(
         if model_pack_status(model_root, profile.manifest).ready:
             return ModelInstallation(model_root, profile)
     for profile in ordered:
-        if model_files_status(model_root, profile.manifest).ready and adopt_existing_models(
-            model_root, profile.manifest
-        ).ready:
+        if (
+            model_files_status(model_root, profile.manifest).ready
+            and adopt_existing_models(model_root, profile.manifest).ready
+        ):
             return ModelInstallation(model_root, profile)
 
     remembered_path = download_dir.parent / "model-location.json"
@@ -346,8 +343,7 @@ def _ensure_profiles(
             remembered_root = None
 
     candidates = _deduplicate_roots(
-        ((remembered_root,) if remembered_root is not None else ())
-        + tuple(candidate_roots)
+        ((remembered_root,) if remembered_root is not None else ()) + tuple(candidate_roots)
     )
     if remembered_profile:
         ordered = tuple(

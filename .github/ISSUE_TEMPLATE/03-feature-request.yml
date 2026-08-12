@@ -1,0 +1,54 @@
+name: Feature request / 功能建议
+description: Propose a focused improvement to the user experience or translation pipeline.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the user problem before describing a solution.
+      placeholder: When I use LinguaRelay for..., I need... because...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed experience
+      description: Explain the smallest useful behavior, including where it belongs in the overlay, tray, settings, or pipeline.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Main benefit
+      options:
+        - Translation quality
+        - Lower latency
+        - Stability
+        - Lower resource use
+        - Accessibility or usability
+        - Privacy or security
+        - Packaging or installation
+        - Developer experience
+    validations:
+      required: true
+
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Alternatives and trade-offs
+      description: Note any effect on latency, local/cloud processing, model size, privacy, or UI complexity.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and the roadmap for similar work.
+          required: true
+        - label: This request does not include secrets or private recordings.
+          required: true

@@ -293,9 +293,7 @@ class SettingsDialog(QDialog):
         preset_layout = QHBoxLayout(presets)
         preset_layout.setContentsMargins(0, 0, 0, 0)
         ollama = QPushButton("Ollama 本地")
-        ollama.clicked.connect(
-            lambda: self._apply_llm_preset("local", "http://127.0.0.1:11434/v1")
-        )
+        ollama.clicked.connect(lambda: self._apply_llm_preset("local", "http://127.0.0.1:11434/v1"))
         lm_studio = QPushButton("LM Studio 本地")
         lm_studio.clicked.connect(
             lambda: self._apply_llm_preset("local", "http://127.0.0.1:1234/v1")

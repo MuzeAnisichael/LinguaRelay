@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security or privacy vulnerability / 安全与隐私漏洞
+    url: https://github.com/MuzeAnisichael/LinguaRelay/security/advisories/new
+    about: Report vulnerabilities privately; never put secrets or private recordings in a public issue.
+  - name: Questions and ideas / 使用交流
+    url: https://github.com/MuzeAnisichael/LinguaRelay/discussions
+    about: Ask setup questions or discuss ideas that are not yet actionable bug reports.
