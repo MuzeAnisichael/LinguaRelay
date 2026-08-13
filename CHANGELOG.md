@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 - 2026-08-13
+
+- Added native Windows per-process audio capture, including the selected process tree, automatic PID recovery after app restarts, and runtime tray/settings switching.
+- Added independent WASAPI microphone capture with default/explicit input selection and automatic reconnect.
+- Added Base, Small, Medium, and Large-v3 Turbo recognition choices plus fast, balanced, and accurate decoding profiles with explicit CPU/GPU precision controls.
+- Added M2M100 418M/1.2B translation choices and three beam-search quality profiles; advanced downloads are explicit, resumable, and preceded by size/hardware guidance.
+- Improved recognition stability with repetition suppression, no-repeat n-grams, Whisper confidence filters, and endpoint-aligned Silero VAD parameters.
+- Bundled a self-contained NAudio process-capture helper and extended packaging, installer detection, model removal, documentation, and release validation for the new runtime.
+
 ## 0.1.5 - 2026-08-12
 
 - Added balanced, real-time, and resource-saving caption profiles; long speech now adapts partial inference cadence from 320 ms to 640/960 ms and defaults to a six-second caption cap.

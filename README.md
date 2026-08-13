@@ -1,7 +1,7 @@
 <div align="center">
   <img src="assets/linguarelay.png" width="104" alt="LinguaRelay logo">
   <h1>LinguaRelay</h1>
-  <p><strong>Real-time translation captions for Windows system audio.</strong></p>
+  <p><strong>Real-time translation captions for Windows audio.</strong></p>
   <p>Local-first, low-latency, and ready for optional LLM revision.</p>
   <p>
     <a href="README.zh-CN.md">简体中文</a> ·
@@ -16,21 +16,21 @@
     <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
   </p>
   <p>
-    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5"><strong>Download v0.1.5</strong></a>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.2.0"><strong>Download v0.2.0</strong></a>
     · <a href="#quick-start">Quick start</a>
-    · <a href="docs/releases/v0.1.5.md">Release notes</a>
+    · <a href="docs/releases/v0.2.0.md">Release notes</a>
   </p>
 </div>
 
 ![LinguaRelay bilingual caption overlay](docs/images/caption-overlay.png)
 
-LinguaRelay listens to a selected Windows speaker output, recognizes speech, and
+LinguaRelay listens to Windows system output, a selected process, or a microphone, recognizes speech, and
 shows the translation in a compact always-on-top overlay. Chinese, Japanese,
 English, and Korean are supported in every direction. The source language stays
 manual by design, avoiding language-detection delay and accidental route changes.
 
 > [!IMPORTANT]
-> v0.1.5 is an unsigned Windows x64 alpha. Download it only from this repository,
+> v0.2.0 is an unsigned Windows x64 alpha. Download it only from this repository,
 > verify `SHA256SUMS.txt`, and expect Windows to show an unknown-publisher warning.
 
 ## Why LinguaRelay?
@@ -38,21 +38,22 @@ manual by design, avoiding language-detection delay and accidental route changes
 | | |
 |---|---|
 | **Fast first result** | Partial recognition appears early; local machine translation does not wait for an LLM. |
+| **Three audio sources** | Capture all system output, one process and its children, or a selected microphone. |
 | **Four languages, 12 routes** | Manually selected `zh`, `ja`, `en`, and `ko`, with every ordered source/target pair supported. |
 | **Local by default** | Audio stays in memory, model inference runs locally, and caption history can be disabled. |
 | **LLM when useful** | A local model or opt-in HTTPS API can revise completed captions without blocking the live path. |
 
 ## Quick start
 
-1. Open [v0.1.5 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.1.5)
-   and download `LinguaRelay-0.1.5-Setup-x64.exe`.
+1. Open [v0.2.0 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.2.0)
+   and download `LinguaRelay-0.2.0-Setup-x64.exe`.
 2. On first launch, let LinguaRelay verify an existing model directory or choose
    a model profile. The installer does not silently download model weights.
-3. Select the source language, target language, and speaker output from the tray
+3. Select the source language, target language, and system/process/microphone source from the tray
    menu. Play audio and position the overlay where you want it.
 
 Prefer not to install? The release also includes
-`LinguaRelay-0.1.5-Windows-x64-portable.zip`. Both editions can use an offline
+`LinguaRelay-0.2.0-Windows-x64-portable.zip`. Both editions can use an offline
 model ZIP from the same release.
 
 ### Choose a model profile
@@ -66,10 +67,16 @@ Both profiles use the same local translation model and support all 12 language
 routes. Existing and offline model packs are fully hash-verified before use.
 See [model choices and licenses](docs/MODELS.md) for revisions and benchmarks.
 
+After first launch, **Settings → Recognition & translation** also offers
+multilingual Medium and Large-v3 Turbo ASR, plus M2M100 1.2B translation. Missing
+advanced weights are identified before save, with download size and hardware
+guidance; downloads are explicit and resumable.
+
 ## What it can do
 
-- Capture the default or a selected Windows output device through WASAPI loopback,
-  with automatic reconnect and bounded fresh-first queues.
+- Capture the default or a selected Windows output device, one process and its
+  child processes through native process loopback, or a microphone; all sources
+  reconnect automatically and use bounded fresh-first queues.
 - Stream multilingual `faster-whisper` partials, show recognized text before the
   newest translation finishes, and end captions at stable punctuation, short
   pauses, or a six-second hard limit.
@@ -97,13 +104,13 @@ The fast local translation is always displayed first. Timeouts, rate limits,
 disconnects, or an unavailable correction model do not stop live captions. API
 keys are read from a named environment variable and are never written to the
 TOML configuration or caption history. See the
-[v0.1.5 setup guide](docs/releases/v0.1.5.md#大模型接入) for the UI steps.
+[v0.2.0 setup guide](docs/releases/v0.2.0.md#大模型接入) for the UI steps.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A["Windows system audio"] --> B["WASAPI loopback"]
+    A["System / process / microphone audio"] --> B["WASAPI capture"]
     B --> C["faster-whisper ASR"]
     C --> D["M2M100 / CTranslate2"]
     D --> E["Overlay + local history"]
@@ -125,6 +132,8 @@ caption window useful when the LLM is slow or offline.
   matching glossary entries only after the user enables it.
 - Windows 10/11 x64 is the current supported platform. Automatic language
   detection is intentionally unavailable in this release.
+- Per-process capture requires Windows 10 version 2004 or newer. Protected/DRM
+  audio and applications that bypass the Windows audio engine may be silent.
 - Speech and translation quality varies with audio, accents, terminology, and
   hardware. The bundled benchmark results are engineering gates, not universal
   accuracy claims.

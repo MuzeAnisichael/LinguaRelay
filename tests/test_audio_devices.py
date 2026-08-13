@@ -1,4 +1,5 @@
 from lingua_relay.audio.devices import WasapiDeviceManager
+from lingua_relay.audio.types import AudioSourceType
 
 
 class FakePyAudio:
@@ -30,6 +31,13 @@ class FakePyAudio:
             "defaultSampleRate": 44_100.0,
             "maxInputChannels": 0,
             "maxOutputChannels": 2,
+        },
+        {
+            "index": 4,
+            "name": "Conference Microphone",
+            "defaultSampleRate": 48_000.0,
+            "maxInputChannels": 1,
+            "maxOutputChannels": 0,
         },
     ]
 
@@ -72,3 +80,12 @@ def test_lists_default_loopback_and_stable_name_selector() -> None:
     assert devices[1].output_index == 3
     assert manager.resolve("wasapi:Speakers").index == 7
     assert manager.resolve("index:8").device_id == "wasapi:Headphones"
+
+
+def test_lists_microphone_inputs_separately_from_loopback() -> None:
+    microphones = FakeManager().list_microphones()
+
+    assert len(microphones) == 1
+    assert microphones[0].device_id == "wasapi-input:Conference Microphone"
+    assert microphones[0].source_type is AudioSourceType.MICROPHONE
+    assert FakeManager().resolve_microphone("index:4") == microphones[0]

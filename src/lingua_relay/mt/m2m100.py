@@ -108,6 +108,8 @@ class M2M100Translator:
             [source_tokens],
             target_prefix=[[target_token]],
             beam_size=self.settings.beam_size,
+            repetition_penalty=self.settings.repetition_penalty,
+            no_repeat_ngram_size=self.settings.no_repeat_ngram_size,
             max_decoding_length=self.settings.max_decoding_length,
             return_scores=False,
         )[0]

@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from lingua_relay.audio import AudioProcessManager, WasapiDeviceManager
 from lingua_relay.config import OverlaySettings, Settings
 from lingua_relay.languages import SUPPORTED_LANGUAGES
 
@@ -86,8 +87,9 @@ class SettingsDialog(QDialog):
 
         tabs = QTabWidget()
         tabs.addTab(self._build_general_tab(), "常规")
+        tabs.addTab(self._build_audio_tab(), "音频源")
         tabs.addTab(self._build_appearance_tab(), "字幕外观")
-        tabs.addTab(self._build_realtime_tab(), "实时性")
+        tabs.addTab(self._build_realtime_tab(), "识别与翻译")
         tabs.addTab(self._build_llm_tab(), "大模型")
         tabs.addTab(self._build_storage_tab(), "存储与卸载")
         root.addWidget(tabs, 1)
@@ -109,6 +111,13 @@ class SettingsDialog(QDialog):
 
     def correction_changed(self) -> bool:
         return self._result.correction != self._initial.correction
+
+    def model_changed(self) -> bool:
+        return (
+            self._result.asr.model != self._initial.asr.model
+            or self._result.translation.model != self._initial.translation.model
+            or self._result.translation.model_path != self._initial.translation.model_path
+        )
 
     def _build_general_tab(self) -> QWidget:
         page = QWidget()
@@ -148,6 +157,70 @@ class SettingsDialog(QDialog):
         self.click_through = QCheckBox("让鼠标点击穿过悬浮窗")
         self.click_through.setChecked(self._initial.overlay.click_through)
         form.addRow("交互", self.click_through)
+        return page
+
+    def _build_audio_tab(self) -> QWidget:
+        page = QWidget()
+        root = QVBoxLayout(page)
+        note = QLabel(
+            "系统输出适合整台电脑；指定进程只捕获该进程及其子进程；麦克风适合会议发言。"
+            "进程音频需要 Windows 10 2004 或更高版本，受 DRM 保护的音频可能无法捕获。"
+        )
+        note.setWordWrap(True)
+        note.setStyleSheet("color: #175CD3; background: #EFF8FF; padding: 9px;")
+        root.addWidget(note)
+        form = QFormLayout()
+
+        self.audio_source = QComboBox()
+        self.audio_source.addItem("系统输出（所有应用）", "system")
+        self.audio_source.addItem("指定进程及其子进程", "process")
+        self.audio_source.addItem("麦克风", "microphone")
+        self._select_data(self.audio_source, self._initial.audio.source)
+        self.audio_source.currentIndexChanged.connect(self._update_audio_controls)
+        form.addRow("捕获来源", self.audio_source)
+
+        self.output_device = QComboBox()
+        self.output_device.addItem("跟随系统默认输出设备", "default")
+        self.microphone_device = QComboBox()
+        self.microphone_device.addItem("跟随系统默认麦克风", "default")
+        try:
+            manager = WasapiDeviceManager()
+            for device in manager.list_devices():
+                self.output_device.addItem(device.name, device.device_id)
+            for device in manager.list_microphones():
+                self.microphone_device.addItem(device.name, device.device_id)
+        except Exception as error:
+            self.output_device.setToolTip(f"设备枚举失败：{error}")
+            self.microphone_device.setToolTip(f"设备枚举失败：{error}")
+        if self.output_device.findData(self._initial.audio.device) < 0:
+            self.output_device.addItem(self._initial.audio.device, self._initial.audio.device)
+        if self.microphone_device.findData(self._initial.audio.microphone_device) < 0:
+            self.microphone_device.addItem(
+                self._initial.audio.microphone_device,
+                self._initial.audio.microphone_device,
+            )
+        self._select_data(self.output_device, self._initial.audio.device)
+        self._select_data(self.microphone_device, self._initial.audio.microphone_device)
+        form.addRow("系统输出设备", self.output_device)
+        form.addRow("麦克风设备", self.microphone_device)
+
+        process_row = QWidget()
+        process_layout = QHBoxLayout(process_row)
+        process_layout.setContentsMargins(0, 0, 0, 0)
+        self.audio_process = QComboBox()
+        refresh = QPushButton("刷新")
+        refresh.clicked.connect(self._refresh_processes)
+        process_layout.addWidget(self.audio_process, 1)
+        process_layout.addWidget(refresh)
+        form.addRow("目标进程", process_row)
+        root.addLayout(form)
+        self.audio_help = QLabel()
+        self.audio_help.setWordWrap(True)
+        self.audio_help.setStyleSheet("color: #667085;")
+        root.addWidget(self.audio_help)
+        root.addStretch(1)
+        self._refresh_processes()
+        self._update_audio_controls()
         return page
 
     def _build_appearance_tab(self) -> QWidget:
@@ -194,6 +267,86 @@ class SettingsDialog(QDialog):
         note.setStyleSheet("color: #9A6700; background: #FFF8C5; padding: 8px;")
         root.addWidget(note)
         form = QFormLayout()
+
+        self.asr_model = QComboBox()
+        self.asr_model.addItem("Base · 最低占用（约 140 MiB）", "base")
+        self.asr_model.addItem("Small · 均衡推荐（约 460 MiB）", "small")
+        self.asr_model.addItem("Medium · 更高准确率（约 1.5 GiB）", "medium")
+        self.asr_model.addItem("Large-v3 Turbo · 高质量低延迟（约 1.6 GiB）", "large-v3-turbo")
+        if self.asr_model.findData(self._initial.asr.model) < 0:
+            self.asr_model.addItem(f"自定义：{self._initial.asr.model}", self._initial.asr.model)
+        self._select_data(self.asr_model, self._initial.asr.model)
+        self.asr_model.currentIndexChanged.connect(self._update_model_guidance)
+        form.addRow("识别模型", self.asr_model)
+
+        self.asr_quality = QComboBox()
+        self.asr_quality.addItem("极速 · 贪心解码", "fast")
+        self.asr_quality.addItem("均衡 · 抑制重复（推荐）", "balanced")
+        self.asr_quality.addItem("精确 · Beam 5", "accurate")
+        self._select_data(
+            self.asr_quality,
+            "accurate"
+            if self._initial.asr.beam_size >= 5
+            else "balanced"
+            if self._initial.asr.repetition_penalty > 1
+            else "fast",
+        )
+        form.addRow("识别解码", self.asr_quality)
+
+        runtime = QWidget()
+        runtime_layout = QHBoxLayout(runtime)
+        runtime_layout.setContentsMargins(0, 0, 0, 0)
+        self.asr_device = QComboBox()
+        for label, value in (("自动", "auto"), ("CPU", "cpu"), ("NVIDIA GPU", "cuda")):
+            self.asr_device.addItem(label, value)
+        self._select_data(self.asr_device, self._initial.asr.device)
+        self.asr_compute = QComboBox()
+        for label, value in (
+            ("自动精度", "auto"),
+            ("INT8", "int8"),
+            ("FP16", "float16"),
+            ("INT8 + FP16", "int8_float16"),
+            ("FP32", "float32"),
+        ):
+            self.asr_compute.addItem(label, value)
+        self._select_data(self.asr_compute, self._initial.asr.compute_type)
+        runtime_layout.addWidget(self.asr_device)
+        runtime_layout.addWidget(self.asr_compute)
+        form.addRow("识别硬件", runtime)
+
+        self.translation_model = QComboBox()
+        self.translation_model.addItem(
+            "M2M100 418M · 快速本地翻译（约 910 MiB）", "facebook/m2m100_418M"
+        )
+        self.translation_model.addItem(
+            "M2M100 1.2B · 高质量本地翻译（约 2.5 GiB）", "facebook/m2m100_1.2B"
+        )
+        if self.translation_model.findData(self._initial.translation.model) < 0:
+            self.translation_model.addItem(
+                f"自定义：{self._initial.translation.model}", self._initial.translation.model
+            )
+        self._select_data(self.translation_model, self._initial.translation.model)
+        self.translation_model.currentIndexChanged.connect(self._update_model_guidance)
+        form.addRow("翻译模型", self.translation_model)
+
+        self.translation_quality = QComboBox()
+        self.translation_quality.addItem("极速 · Beam 1", "fast")
+        self.translation_quality.addItem("均衡 · Beam 2（推荐）", "balanced")
+        self.translation_quality.addItem("精确 · Beam 4", "accurate")
+        self._select_data(
+            self.translation_quality,
+            "accurate"
+            if self._initial.translation.beam_size >= 4
+            else "balanced"
+            if self._initial.translation.beam_size >= 2
+            else "fast",
+        )
+        form.addRow("翻译解码", self.translation_quality)
+
+        self.model_guidance = QLabel()
+        self.model_guidance.setWordWrap(True)
+        self.model_guidance.setStyleSheet("color: #667085;")
+        form.addRow("选择建议", self.model_guidance)
 
         self.latency_profile = QComboBox()
         self.latency_profile.addItem("平衡（推荐）", "balanced")
@@ -260,6 +413,7 @@ class SettingsDialog(QDialog):
         root.addLayout(form)
         root.addStretch(1)
         self._select_latency_profile()
+        self._update_model_guidance()
         return page
 
     def _build_llm_tab(self) -> QWidget:
@@ -416,8 +570,20 @@ class SettingsDialog(QDialog):
             background_opacity=self.background_opacity.value() / 100,
             opacity=self.window_opacity.value() / 100,
         )
+        asr_quality = {
+            "fast": (1, 1.0, 0),
+            "balanced": (1, 1.05, 3),
+            "accurate": (5, 1.08, 3),
+        }[str(self.asr_quality.currentData())]
         asr = replace(
             self._initial.asr,
+            model=str(self.asr_model.currentData()),
+            revision="",
+            device=str(self.asr_device.currentData()),
+            compute_type=str(self.asr_compute.currentData()),
+            beam_size=asr_quality[0],
+            repetition_penalty=asr_quality[1],
+            no_repeat_ngram_size=asr_quality[2],
             partial_interval_ms=int(self.partial_interval.currentData()),
             adaptive_partial_enabled=self.adaptive_partial.isChecked(),
             punctuation_boundary_enabled=self.punctuation_enabled.isChecked(),
@@ -428,6 +594,42 @@ class SettingsDialog(QDialog):
             max_segment_seconds=self.max_caption.value(),
             suppress_credit_hallucinations=self.suppress_credits.isChecked(),
             context_hint=self.context_hint.toPlainText().strip(),
+        )
+        process_data = self.audio_process.currentData()
+        process_id, process_name = (
+            (int(process_data[0]), str(process_data[1]))
+            if isinstance(process_data, tuple) and len(process_data) == 2
+            else (self._initial.audio.process_id, self._initial.audio.process_name)
+        )
+        audio = replace(
+            self._initial.audio,
+            source=str(self.audio_source.currentData()),
+            device=str(self.output_device.currentData()),
+            microphone_device=str(self.microphone_device.currentData()),
+            process_id=process_id,
+            process_name=process_name,
+        )
+        translation_model = str(self.translation_model.currentData())
+        translation_quality = {"fast": 1, "balanced": 2, "accurate": 4}[
+            str(self.translation_quality.currentData())
+        ]
+        if translation_model == "facebook/m2m100_1.2B":
+            translation_path = self._initial.translation.model_path.parent / "m2m100_1.2b_ct2"
+            translation_revision = "59ab27e0af8c91c3e31de75be965167ce09e0038"
+        elif translation_model == "facebook/m2m100_418M":
+            translation_path = self._initial.translation.model_path.parent / "m2m100_418m_ct2"
+            translation_revision = "55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636"
+        else:
+            translation_path = self._initial.translation.model_path
+            translation_revision = self._initial.translation.revision
+        translation = replace(
+            self._initial.translation,
+            model=translation_model,
+            revision=translation_revision,
+            model_path=translation_path,
+            beam_size=translation_quality,
+            repetition_penalty=1.05 if translation_quality > 1 else 1.0,
+            no_repeat_ngram_size=3 if translation_quality > 1 else 0,
         )
         app = replace(
             self._initial.app,
@@ -449,7 +651,71 @@ class SettingsDialog(QDialog):
             max_tokens=self.llm_max_tokens.value(),
             temperature=self.llm_temperature.value(),
         )
-        return replace(self._initial, app=app, overlay=overlay, asr=asr, correction=correction)
+        return replace(
+            self._initial,
+            app=app,
+            overlay=overlay,
+            audio=audio,
+            asr=asr,
+            translation=translation,
+            correction=correction,
+        )
+
+    def _refresh_processes(self) -> None:
+        if not hasattr(self, "audio_process"):
+            return
+        current = self.audio_process.currentData()
+        wanted_id = self._initial.audio.process_id
+        self.audio_process.clear()
+        try:
+            processes = AudioProcessManager().list_processes()
+        except Exception as error:
+            self.audio_process.addItem(f"无法读取进程：{error}", None)
+            return
+        for process in processes:
+            self.audio_process.addItem(
+                f"{process.name}  ·  PID {process.process_id}",
+                (process.process_id, process.name),
+            )
+        selected = current if current is not None else (wanted_id, self._initial.audio.process_name)
+        index = self.audio_process.findData(selected)
+        if index < 0 and wanted_id:
+            self.audio_process.addItem(
+                f"{self._initial.audio.process_name or '未运行'}  ·  PID {wanted_id}",
+                (wanted_id, self._initial.audio.process_name),
+            )
+            index = self.audio_process.count() - 1
+        if index >= 0:
+            self.audio_process.setCurrentIndex(index)
+
+    def _update_audio_controls(self) -> None:
+        source = str(self.audio_source.currentData())
+        self.output_device.setEnabled(source == "system")
+        self.microphone_device.setEnabled(source == "microphone")
+        self.audio_process.setEnabled(source == "process")
+        help_text = {
+            "system": "捕获电脑当前播放的所有声音；切换默认输出设备后会自动重连。",
+            "microphone": (
+                "使用独立 WASAPI 输入，适合现场发言；建议在 Windows 声音设置中启用降噪与回声消除。"
+            ),
+            "process": "只捕获所选进程及其子进程。应用重启后会按进程名自动寻找新 PID。",
+        }[source]
+        self.audio_help.setText(help_text)
+
+    def _update_model_guidance(self) -> None:
+        if not hasattr(self, "model_guidance"):
+            return
+        asr_model = str(self.asr_model.currentData())
+        translation_model = str(self.translation_model.currentData())
+        if asr_model in {"medium", "large-v3-turbo"}:
+            asr_text = "高级识别模型建议使用 NVIDIA GPU；纯 CPU 也能运行，但延迟和占用会明显提高。"
+        else:
+            asr_text = "Base 速度优先，Small 在中/日/英/韩四语上通常更稳。"
+        if translation_model.endswith("1.2B"):
+            mt_text = "1.2B 翻译模型需额外下载约 2.5 GiB，并建议至少 16 GB 内存。"
+        else:
+            mt_text = "418M 翻译模型延迟最低，适合实时字幕。"
+        self.model_guidance.setText(asr_text + " " + mt_text)
 
     def _select_latency_profile(self) -> None:
         current = (

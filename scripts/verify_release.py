@@ -11,7 +11,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Verify final LinguaRelay release assets")
     parser.add_argument("--release", type=Path, default=Path("release"))
     parser.add_argument("--catalog", type=Path, default=Path("packaging/model-catalog.json"))
-    parser.add_argument("--version", default="0.1.5")
+    parser.add_argument("--version", default="0.2.0")
     parser.add_argument("--skip-models", action="store_true")
     args = parser.parse_args()
     expected_checksums = _read_checksums(args.release / "SHA256SUMS.txt")
@@ -78,6 +78,7 @@ def _verify_portable(path: Path) -> None:
             "LinguaRelay/_internal/packaging/model-manifest.json",
             "LinguaRelay/_internal/packaging/model-manifest-base.json",
             "LinguaRelay/_internal/packaging/model-catalog.json",
+            "LinguaRelay/_internal/native/LinguaRelay.AudioCapture.exe",
             "LinguaRelay/_internal/docs/PRIVACY.zh-CN.md",
             "LinguaRelay/_internal/docs/THREAT_MODEL.md",
         }

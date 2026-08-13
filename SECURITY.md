@@ -4,8 +4,8 @@
 
 | Version | Security updates |
 |---|---|
-| `0.1.5` | Best-effort support |
-| `< 0.1.5` | Upgrade before reporting unless the issue is version-specific |
+| `0.2.0` | Best-effort support |
+| `< 0.2.0` | Upgrade before reporting unless the issue is version-specific |
 
 LinguaRelay is alpha software and is not supported for regulated or high-risk
 audio workflows.
@@ -24,7 +24,7 @@ has been a reasonable opportunity to investigate it.
 
 ## Current security boundaries
 
-- v0.1.5 Windows binaries are not Authenticode-signed. Download only from the
+- v0.2.0 Windows binaries are not Authenticode-signed. Download only from the
   project's GitHub Releases page and verify the attached `SHA256SUMS.txt`.
 - Raw audio persistence is disabled by default. Diagnostic stress reports contain
   performance metrics, not audio samples, but may include a local device name.

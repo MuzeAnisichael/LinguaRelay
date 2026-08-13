@@ -19,6 +19,7 @@ _DLL_HANDLES: list[Any] = []
 PINNED_MODEL_REVISIONS = {
     "base": "ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66",
     "small": "536b0662742c02347bc0e980a01041f333bce120",
+    "medium": "08e178d48790749d25932bbc082711ddcfdfbc4f",
 }
 
 
@@ -180,8 +181,18 @@ class FasterWhisperRecognizer:
             language=SUPPORTED_LANGUAGES[normalized].whisper_code,
             task="transcribe",
             beam_size=self.settings.beam_size,
+            repetition_penalty=self.settings.repetition_penalty,
+            no_repeat_ngram_size=self.settings.no_repeat_ngram_size,
+            compression_ratio_threshold=self.settings.compression_ratio_threshold,
+            log_prob_threshold=self.settings.log_prob_threshold,
+            no_speech_threshold=self.settings.no_speech_threshold,
             vad_filter=self.settings.vad_enabled if vad_filter is None else vad_filter,
-            vad_parameters={"threshold": self.settings.vad_threshold},
+            vad_parameters={
+                "threshold": self.settings.vad_threshold,
+                "min_speech_duration_ms": self.settings.min_speech_ms,
+                "min_silence_duration_ms": self.settings.preferred_silence_ms,
+                "speech_pad_ms": min(160, self.settings.preferred_silence_ms // 2),
+            },
             condition_on_previous_text=False,
             word_timestamps=False,
             initial_prompt=self.settings.context_hint.strip() or None,

@@ -46,7 +46,11 @@ class OverlaySettings:
 @dataclass(frozen=True, slots=True)
 class AudioSettings:
     backend: str = "wasapi"
+    source: str = "system"
     device: str = "default"
+    microphone_device: str = "default"
+    process_id: int = 0
+    process_name: str = ""
     sample_rate: int = 16_000
     chunk_ms: int = 320
     raw_frame_ms: int = 20
@@ -66,6 +70,11 @@ class AsrSettings:
     device: str = "auto"
     compute_type: str = "auto"
     beam_size: int = 1
+    repetition_penalty: float = 1.05
+    no_repeat_ngram_size: int = 3
+    compression_ratio_threshold: float = 2.4
+    log_prob_threshold: float = -1.0
+    no_speech_threshold: float = 0.6
     vad_enabled: bool = True
     vad_threshold: float = 0.5
     min_speech_ms: int = 320
@@ -94,6 +103,8 @@ class TranslationSettings:
     device: str = "auto"
     compute_type: str = "auto"
     beam_size: int = 1
+    repetition_penalty: float = 1.05
+    no_repeat_ngram_size: int = 3
     max_input_tokens: int = 256
     max_decoding_length: int = 256
     cache_size: int = 512
@@ -209,6 +220,12 @@ class Settings:
             raise ValueError("correction.temperature must be between 0 and 2")
         if self.audio.sample_rate <= 0 or self.audio.chunk_ms <= 0 or self.audio.raw_frame_ms <= 0:
             raise ValueError("audio sample_rate, chunk_ms, and raw_frame_ms must be positive")
+        if self.audio.source not in {"system", "process", "microphone"}:
+            raise ValueError("audio.source must be system, process, or microphone")
+        if self.audio.source == "process" and (
+            self.audio.process_id < 1 and not self.audio.process_name.strip()
+        ):
+            raise ValueError("process audio requires a process id or process name")
         if self.audio.buffer_seconds < self.audio.chunk_ms / 1000:
             raise ValueError("audio.buffer_seconds must hold at least one output chunk")
         if self.audio.device_poll_seconds <= 0:
@@ -263,6 +280,16 @@ class Settings:
             raise ValueError("unsupported asr.compute_type")
         if self.asr.beam_size < 1:
             raise ValueError("asr.beam_size must be positive")
+        if self.asr.repetition_penalty < 1:
+            raise ValueError("asr.repetition_penalty must be at least one")
+        if self.asr.no_repeat_ngram_size < 0:
+            raise ValueError("asr.no_repeat_ngram_size must not be negative")
+        if self.asr.compression_ratio_threshold <= 0:
+            raise ValueError("asr.compression_ratio_threshold must be positive")
+        if not -20 <= self.asr.log_prob_threshold <= 0:
+            raise ValueError("asr.log_prob_threshold must be between -20 and 0")
+        if not 0 <= self.asr.no_speech_threshold <= 1:
+            raise ValueError("asr.no_speech_threshold must be between 0 and 1")
         if not 0 < self.asr.vad_threshold < 1:
             raise ValueError("asr.vad_threshold must be between 0 and 1")
         if (
@@ -309,6 +336,10 @@ class Settings:
             raise ValueError("unsupported translation.compute_type")
         if self.translation.beam_size < 1:
             raise ValueError("translation.beam_size must be positive")
+        if self.translation.repetition_penalty < 1:
+            raise ValueError("translation.repetition_penalty must be at least one")
+        if self.translation.no_repeat_ngram_size < 0:
+            raise ValueError("translation.no_repeat_ngram_size must not be negative")
         if self.translation.max_input_tokens < 8 or self.translation.max_decoding_length < 8:
             raise ValueError("translation token limits must be at least eight")
         if self.translation.cache_size < 0:

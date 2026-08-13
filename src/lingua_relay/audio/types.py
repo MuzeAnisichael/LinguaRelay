@@ -14,6 +14,12 @@ class CaptureState(StrEnum):
     FAILED = "failed"
 
 
+class AudioSourceType(StrEnum):
+    SYSTEM = "system"
+    PROCESS = "process"
+    MICROPHONE = "microphone"
+
+
 @dataclass(frozen=True, slots=True)
 class AudioDevice:
     device_id: str
@@ -23,6 +29,17 @@ class AudioDevice:
     channels: int
     output_index: int | None = None
     is_default: bool = False
+    source_type: AudioSourceType = AudioSourceType.SYSTEM
+
+
+@dataclass(frozen=True, slots=True)
+class AudioProcess:
+    process_id: int
+    name: str
+
+    @property
+    def selector(self) -> str:
+        return f"process:{self.process_id}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,3 +83,7 @@ def device_id_from_name(name: str) -> str:
     suffix = " [Loopback]"
     base = name[: -len(suffix)] if name.endswith(suffix) else name
     return f"wasapi:{base.strip()}"
+
+
+def microphone_id_from_name(name: str) -> str:
+    return f"wasapi-input:{name.strip()}"

@@ -1,5 +1,8 @@
 .venv/
 .release-venv/
+.tools/
+native/**/bin/
+native/**/obj/
 __pycache__/
 *.py[cod]
 *.egg-info/

@@ -3,6 +3,7 @@ from __future__ import annotations
 import ctypes
 import gc
 import os
+import shutil
 import sys
 import threading
 from contextlib import suppress
@@ -25,8 +26,8 @@ from PySide6.QtWidgets import (
 )
 
 from lingua_relay import __version__
-from lingua_relay.audio import WasapiDeviceManager
-from lingua_relay.config import Settings, migrate_legacy_realtime_defaults
+from lingua_relay.audio import AudioProcessManager, WasapiDeviceManager
+from lingua_relay.config import AudioSettings, Settings, migrate_legacy_realtime_defaults
 from lingua_relay.history import JsonlHistory
 from lingua_relay.languages import SUPPORTED_LANGUAGES
 from lingua_relay.model_pack import load_model_catalog, uninstall_model_pack
@@ -34,12 +35,15 @@ from lingua_relay.paths import AppPaths
 from lingua_relay.runtime_state import RuntimeJournal
 from lingua_relay.service import RealtimeCaptionService
 from lingua_relay.settings_io import (
-    persist_audio_device,
     persist_display_mode,
     persist_overlay_geometry,
     persist_route,
     persist_setting,
     persist_settings,
+)
+from lingua_relay.ui.advanced_models import (
+    advanced_model_directories,
+    ensure_advanced_models,
 )
 from lingua_relay.ui.history_view import HistoryWindow
 from lingua_relay.ui.model_setup import ensure_model_installation
@@ -139,6 +143,7 @@ class DesktopController:
             on_status=self.bridge.status.emit,
             on_correction_status=self.bridge.correction_status.emit,
             model_root=self.model_root,
+            resource_dir=self.paths.resource_dir,
         )
         self.icon = _make_icon(self.paths.resource_dir)
         self.tray = QSystemTrayIcon(self.icon, self.app)
@@ -254,7 +259,7 @@ class DesktopController:
         self.correction_scope_action = correction_menu.addAction(scope)
         self.correction_scope_action.setEnabled(False)
 
-        self.device_menu = self.menu.addMenu("音频设备")
+        self.device_menu = self.menu.addMenu("音频源")
         self.device_menu.aboutToShow.connect(self._refresh_devices)
         history_menu = self.menu.addMenu("历史记录")
         history_menu.addAction("查看最近记录", self.show_history)
@@ -340,8 +345,14 @@ class DesktopController:
         dialog.uninstall_requested.connect(lambda: QTimer.singleShot(0, self.uninstall_application))
         if dialog.exec() != SettingsDialog.DialogCode.Accepted:
             return
-        previous = self.settings
         updated = dialog.result_settings()
+        if dialog.model_changed() and not ensure_advanced_models(
+            updated,
+            self.model_root,
+            dialog,
+        ):
+            return
+        previous = self.settings
         self.settings = updated
 
         persist_route(
@@ -378,8 +389,27 @@ class DesktopController:
             self.template_path,
         )
         persist_settings(
+            "audio",
+            {
+                "source": updated.audio.source,
+                "device": updated.audio.device,
+                "microphone_device": updated.audio.microphone_device,
+                "process_id": updated.audio.process_id,
+                "process_name": updated.audio.process_name,
+            },
+            self.config_path,
+            self.template_path,
+        )
+        persist_settings(
             "asr",
             {
+                "model": updated.asr.model,
+                "revision": updated.asr.revision,
+                "device": updated.asr.device,
+                "compute_type": updated.asr.compute_type,
+                "beam_size": updated.asr.beam_size,
+                "repetition_penalty": updated.asr.repetition_penalty,
+                "no_repeat_ngram_size": updated.asr.no_repeat_ngram_size,
                 "partial_interval_ms": updated.asr.partial_interval_ms,
                 "adaptive_partial_enabled": updated.asr.adaptive_partial_enabled,
                 "punctuation_boundary_enabled": updated.asr.punctuation_boundary_enabled,
@@ -390,6 +420,19 @@ class DesktopController:
                 "max_segment_seconds": updated.asr.max_segment_seconds,
                 "suppress_credit_hallucinations": (updated.asr.suppress_credit_hallucinations),
                 "context_hint": updated.asr.context_hint,
+            },
+            self.config_path,
+            self.template_path,
+        )
+        persist_settings(
+            "translation",
+            {
+                "model": updated.translation.model,
+                "revision": updated.translation.revision,
+                "model_path": str(Path("models") / updated.translation.model_path.name),
+                "beam_size": updated.translation.beam_size,
+                "repetition_penalty": updated.translation.repetition_penalty,
+                "no_repeat_ngram_size": updated.translation.no_repeat_ngram_size,
             },
             self.config_path,
             self.template_path,
@@ -432,8 +475,15 @@ class DesktopController:
             self._populate_languages(self.target_menu, source=False)
 
         restart_reasons = []
+        if previous.audio != updated.audio:
+            try:
+                self.service.set_audio_source(updated.audio)
+            except Exception as error:
+                restart_reasons.append(f"音频源（切换失败：{error}）")
         if previous.asr != updated.asr:
             restart_reasons.append("实时识别参数")
+        if previous.translation != updated.translation:
+            restart_reasons.append("翻译模型参数")
         if previous.app.history_enabled != updated.app.history_enabled:
             restart_reasons.append("历史记录开关")
         previous_provider = replace(previous.correction, mode=updated.correction.mode)
@@ -512,28 +562,109 @@ class DesktopController:
 
     def _refresh_devices(self) -> None:
         self.device_menu.clear()
+        output_menu = self.device_menu.addMenu("系统输出")
+        microphone_menu = self.device_menu.addMenu("麦克风")
+        process_menu = self.device_menu.addMenu("指定进程")
         try:
-            devices = WasapiDeviceManager().list_devices()
+            manager = WasapiDeviceManager()
+            devices = manager.list_devices()
+            microphones = manager.list_microphones()
         except Exception as error:
             action = self.device_menu.addAction(f"无法读取设备：{error}")
             action.setEnabled(False)
             return
-        default = self.device_menu.addAction("跟随系统默认设备")
+        default = output_menu.addAction("跟随系统默认输出")
         default.setCheckable(True)
-        default.setChecked(self.settings.audio.device == "default")
+        default.setChecked(
+            self.settings.audio.source == "system" and self.settings.audio.device == "default"
+        )
         default.triggered.connect(lambda: self.set_device("default"))
         for device in devices:
-            action = self.device_menu.addAction(device.name)
+            action = output_menu.addAction(device.name)
             action.setCheckable(True)
-            action.setChecked(self.settings.audio.device == device.device_id)
+            action.setChecked(
+                self.settings.audio.source == "system"
+                and self.settings.audio.device == device.device_id
+            )
             action.triggered.connect(
                 lambda _checked=False, value=device.device_id: self.set_device(value)
             )
 
+        default_mic = microphone_menu.addAction("跟随系统默认麦克风")
+        default_mic.setCheckable(True)
+        default_mic.setChecked(
+            self.settings.audio.source == "microphone"
+            and self.settings.audio.microphone_device == "default"
+        )
+        default_mic.triggered.connect(lambda: self.set_microphone("default"))
+        for device in microphones:
+            action = microphone_menu.addAction(device.name)
+            action.setCheckable(True)
+            action.setChecked(
+                self.settings.audio.source == "microphone"
+                and self.settings.audio.microphone_device == device.device_id
+            )
+            action.triggered.connect(
+                lambda _checked=False, value=device.device_id: self.set_microphone(value)
+            )
+
+        try:
+            processes = AudioProcessManager().list_processes()
+        except Exception as error:
+            action = process_menu.addAction(f"无法读取进程：{error}")
+            action.setEnabled(False)
+        else:
+            for process in processes:
+                action = process_menu.addAction(f"{process.name} · PID {process.process_id}")
+                action.setCheckable(True)
+                action.setChecked(
+                    self.settings.audio.source == "process"
+                    and self.settings.audio.process_id == process.process_id
+                )
+                action.triggered.connect(
+                    lambda _checked=False, pid=process.process_id, name=process.name: (
+                        self.set_process(pid, name)
+                    )
+                )
+
     def set_device(self, device: str) -> None:
-        self.settings = replace(self.settings, audio=replace(self.settings.audio, device=device))
-        persist_audio_device(device, self.config_path, self.template_path)
-        self.service.set_audio_device(device)
+        self._apply_audio_source(replace(self.settings.audio, source="system", device=device))
+
+    def set_microphone(self, device: str) -> None:
+        self._apply_audio_source(
+            replace(self.settings.audio, source="microphone", microphone_device=device)
+        )
+
+    def set_process(self, process_id: int, process_name: str) -> None:
+        self._apply_audio_source(
+            replace(
+                self.settings.audio,
+                source="process",
+                process_id=process_id,
+                process_name=process_name,
+            )
+        )
+
+    def _apply_audio_source(self, audio: AudioSettings) -> None:
+        updated_audio = audio
+        try:
+            self.service.set_audio_source(updated_audio)
+        except Exception as error:
+            QMessageBox.warning(None, "无法切换音频源", str(error))
+            return
+        self.settings = replace(self.settings, audio=updated_audio)
+        persist_settings(
+            "audio",
+            {
+                "source": updated_audio.source,
+                "device": updated_audio.device,
+                "microphone_device": updated_audio.microphone_device,
+                "process_id": updated_audio.process_id,
+                "process_name": updated_audio.process_name,
+            },
+            self.config_path,
+            self.template_path,
+        )
 
     def show_history(self) -> None:
         viewer = getattr(self, "_history_viewer", None)
@@ -590,6 +721,7 @@ class DesktopController:
             for profile in profiles:
                 removed.extend(uninstall_model_pack(self.model_root, profile.manifest))
                 removed.extend(self._remove_model_download_cache(profile.manifest.archive_name))
+            removed.extend(self._remove_advanced_model_directories())
         except Exception as error:
             QMessageBox.critical(
                 None,
@@ -605,6 +737,18 @@ class DesktopController:
             result + "\n配置与字幕历史已保留；下次启动时可重新安装模型。",
         )
         self.app.quit()
+
+    def _remove_advanced_model_directories(self) -> tuple[Path, ...]:
+        root = self.model_root.resolve(strict=False)
+        removed: list[Path] = []
+        for candidate in advanced_model_directories(root):
+            resolved = candidate.resolve(strict=False)
+            if resolved.parent != root:
+                raise ValueError(f"refusing to remove unsafe model path: {candidate}")
+            if resolved.is_dir() and not resolved.is_symlink():
+                shutil.rmtree(resolved)
+                removed.append(resolved)
+        return tuple(removed)
 
     def _remove_model_download_cache(self, archive_name: str) -> tuple[Path, ...]:
         download_root = (self.paths.data_dir / "downloads").resolve(strict=False)
@@ -756,6 +900,8 @@ def run_app(config_path: Path | None = None) -> int:
     )
     catalog_path = paths.resource_dir / "packaging" / "model-catalog.json"
     try:
+        active_config = config_path or paths.config_path
+        config_existed = active_config.exists()
         installation = ensure_model_installation(
             target_model_root,
             catalog_path,
@@ -764,14 +910,24 @@ def run_app(config_path: Path | None = None) -> int:
         )
         if installation is None:
             return 0
-        active_config = config_path or paths.config_path
-        persist_setting(
-            "asr",
-            "model",
-            installation.profile.asr_model,
-            active_config,
-            paths.resource_dir / "config.example.toml",
+        if not config_existed:
+            persist_setting(
+                "asr",
+                "model",
+                installation.profile.asr_model,
+                active_config,
+                paths.resource_dir / "config.example.toml",
+            )
+        startup_settings = Settings.load(active_config)
+        startup_settings = replace(
+            startup_settings,
+            translation=replace(
+                startup_settings.translation,
+                model_path=installation.root / startup_settings.translation.model_path.name,
+            ),
         )
+        if not ensure_advanced_models(startup_settings, installation.root):
+            return 0
         controller = DesktopController(
             app,
             active_config,

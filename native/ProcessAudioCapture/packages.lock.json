@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0-windows10.0.19041": {
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[10.0.11, )",
+        "resolved": "10.0.11",
+        "contentHash": "IBf7lbovvjGWVWXZX5cJ/cO0WXbId0Zq4BuSeT94mGZuOAP66oMeH9PTBZ9Jpp3Jb6jtK0qm/NyUbPRo1gC/wQ=="
+      },
+      "NAudio.Wasapi": {
+        "type": "Direct",
+        "requested": "[3.0.0-preview.17, )",
+        "resolved": "3.0.0-preview.17",
+        "contentHash": "8hvXV5d7o3ZcPQhn6wtwF18rgZA7kqo/pYfoGnbnq+CgZ8x9k2JKNXlDZjZthaZFIa7hTyRCLUKUd/xkU7rwHA==",
+        "dependencies": {
+          "NAudio.Core": "3.0.0-preview.17"
+        }
+      },
+      "NAudio.Core": {
+        "type": "Transitive",
+        "resolved": "3.0.0-preview.17",
+        "contentHash": "c+7JdldJ/R9tNEfVpgrpUbvvjrnov9Zjh2bOm15eQzz6/7xpXBn6gbbfkp/VQT8RkJUdRoJwQr3udsdJH4RqQg==",
+        "dependencies": {
+          "System.Numerics.Tensors": "9.0.0"
+        }
+      },
+      "System.Numerics.Tensors": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "hyJB4UlpAi19Xr9AXzu2NuagKC4lPfHObNMEAA0HmqFz2rX7wKgzeYzO/jM/eBHDhnUGFFEjk5cOoJaxqg5J4A=="
+      }
+    },
+    "net10.0-windows10.0.19041/win-x64": {}
+  }
+}

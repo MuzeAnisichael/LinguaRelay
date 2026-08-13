@@ -1,17 +1,28 @@
 from __future__ import annotations
 
 import math
+import os
 import queue
+import subprocess
 import threading
 import time
+from contextlib import suppress
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
 from lingua_relay.audio.buffer import LatestAudioBuffer
 from lingua_relay.audio.devices import WasapiDeviceManager
+from lingua_relay.audio.processes import AudioProcessManager
 from lingua_relay.audio.processing import FixedSampleChunker, Pcm16MonoResampler, measure_level
-from lingua_relay.audio.types import AudioChunk, AudioDevice, CaptureSnapshot, CaptureState
+from lingua_relay.audio.types import (
+    AudioChunk,
+    AudioDevice,
+    AudioSourceType,
+    CaptureSnapshot,
+    CaptureState,
+)
 from lingua_relay.config import AudioSettings
 
 
@@ -67,7 +78,7 @@ class WasapiLoopbackCapture:
         self._set_state(CaptureState.STARTING)
         self._thread = threading.Thread(
             target=self._supervise,
-            name="lingua-relay-wasapi",
+            name=self._thread_name(),
             daemon=True,
         )
         self._thread.start()
@@ -141,7 +152,7 @@ class WasapiLoopbackCapture:
             self._set_state(CaptureState.FAILED)
             raise RuntimeError("PyAudioWPatch is not installed") from error
 
-        device = self.devices.resolve(self.settings.device)
+        device = self._resolve_device()
         source_frames = max(1, round(device.sample_rate * self.settings.raw_frame_ms / 1000))
         raw_duration = source_frames / device.sample_rate
         raw_queue: queue.Queue[_RawPacket] = queue.Queue(
@@ -254,7 +265,7 @@ class WasapiLoopbackCapture:
                 raise _RestartCapture("WASAPI stream became inactive")
 
     def _verify_device(self, active: AudioDevice) -> None:
-        current = self.devices.resolve(self.settings.device)
+        current = self._resolve_device()
         identity = (
             current.device_id,
             current.index,
@@ -273,6 +284,13 @@ class WasapiLoopbackCapture:
             raise _RestartCapture(
                 f"audio device changed from {active.device_id} to {current.device_id}"
             )
+
+    def _resolve_device(self) -> AudioDevice:
+        return self.devices.resolve(self.settings.device)
+
+    @staticmethod
+    def _thread_name() -> str:
+        return "lingua-relay-system-audio"
 
     def _emit(self, samples: np.ndarray, device: AudioDevice, captured_at_ns: int) -> None:
         level = measure_level(samples, self.settings.silence_dbfs)
@@ -309,3 +327,178 @@ class WasapiLoopbackCapture:
     def _increment_raw_drops(self) -> None:
         with self._lock:
             self._counters.raw_packets_dropped += 1
+
+
+class WasapiMicrophoneCapture(WasapiLoopbackCapture):
+    """WASAPI input capture using the same bounded normalization path as loopback."""
+
+    def _resolve_device(self) -> AudioDevice:
+        return self.devices.resolve_microphone(self.settings.microphone_device)
+
+    @staticmethod
+    def _thread_name() -> str:
+        return "lingua-relay-microphone"
+
+
+class _ProcessStream:
+    def __init__(self, process: subprocess.Popen[bytes]) -> None:
+        self.process = process
+
+    def is_active(self) -> bool:
+        return self.process.poll() is None
+
+
+class ProcessLoopbackCapture(WasapiLoopbackCapture):
+    """True per-process WASAPI loopback backed by the bundled native helper."""
+
+    _SOURCE_RATE = 48_000
+    _SOURCE_CHANNELS = 2
+
+    def __init__(
+        self,
+        settings: AudioSettings,
+        *,
+        helper_path: Path,
+        process_manager: AudioProcessManager | None = None,
+    ) -> None:
+        super().__init__(settings)
+        self.helper_path = helper_path
+        self.processes = process_manager or AudioProcessManager()
+
+    @staticmethod
+    def _thread_name() -> str:
+        return "lingua-relay-process-audio"
+
+    def _run_session(self) -> None:
+        if not self.helper_path.is_file():
+            self._set_state(CaptureState.FAILED)
+            raise RuntimeError(
+                "process audio helper is missing; reinstall LinguaRelay or rebuild the helper"
+            )
+        target = self.processes.resolve(self.settings.process_id, self.settings.process_name)
+        device = AudioDevice(
+            device_id=target.selector,
+            index=target.process_id,
+            name=target.name,
+            sample_rate=self._SOURCE_RATE,
+            channels=self._SOURCE_CHANNELS,
+            source_type=AudioSourceType.PROCESS,
+        )
+        source_frames = max(1, round(self._SOURCE_RATE * self.settings.raw_frame_ms / 1000))
+        raw_duration = source_frames / self._SOURCE_RATE
+        raw_queue: queue.Queue[_RawPacket] = queue.Queue(
+            maxsize=max(8, math.ceil(2 / raw_duration))
+        )
+        startupinfo = None
+        if os.name == "nt":
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        process = subprocess.Popen(
+            [str(self.helper_path), "--process-id", str(target.process_id)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            startupinfo=startupinfo,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
+        assert process.stdout is not None
+        reader = threading.Thread(
+            target=self._read_helper,
+            args=(process.stdout, raw_queue, source_frames),
+            name="lingua-relay-process-audio-reader",
+            daemon=True,
+        )
+        reader.start()
+        try:
+            self._set_state(CaptureState.RUNNING, device=device, clear_error=True)
+            self._running.set()
+            self._process_session(_ProcessStream(process), raw_queue, device, source_frames)
+        except _RestartCapture as error:
+            detail = self._helper_error(process)
+            raise _RestartCapture(detail or str(error)) from error
+        finally:
+            self._running.clear()
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=2)
+            reader.join(timeout=2)
+            process.stdout.close()
+            if process.stderr is not None:
+                process.stderr.close()
+
+    def _read_helper(
+        self,
+        stream: object,
+        raw_queue: queue.Queue[_RawPacket],
+        source_frames: int,
+    ) -> None:
+        frame_bytes = source_frames * self._SOURCE_CHANNELS * 2
+        pending = bytearray()
+        while not self._stop.is_set():
+            chunk = stream.read(frame_bytes - len(pending))  # type: ignore[attr-defined]
+            if not chunk:
+                return
+            pending.extend(chunk)
+            if len(pending) < frame_bytes:
+                continue
+            packet = _RawPacket(bytes(pending), time.monotonic_ns())
+            pending.clear()
+            try:
+                raw_queue.put_nowait(packet)
+            except queue.Full:
+                with suppress(queue.Empty):
+                    raw_queue.get_nowait()
+                self._increment_raw_drops()
+                try:
+                    raw_queue.put_nowait(packet)
+                except queue.Full:
+                    self._increment_raw_drops()
+
+    def _verify_device(self, active: AudioDevice) -> None:
+        current = self.processes.resolve(active.index, self.settings.process_name)
+        if current.process_id != active.index:
+            raise _RestartCapture(
+                f"audio target process restarted from {active.index} to {current.process_id}"
+            )
+
+    @staticmethod
+    def _helper_error(process: subprocess.Popen[bytes]) -> str:
+        if process.poll() is None or process.stderr is None:
+            return ""
+        try:
+            return process.stderr.read().decode("utf-8", errors="replace").strip()
+        except OSError:
+            return ""
+
+
+def resolve_process_capture_helper(resource_dir: Path) -> Path:
+    candidates = (
+        resource_dir / "native" / "LinguaRelay.AudioCapture.exe",
+        resource_dir
+        / "native"
+        / "ProcessAudioCapture"
+        / "bin"
+        / "Release"
+        / "net10.0-windows10.0.19041.0"
+        / "win-x64"
+        / "publish"
+        / "LinguaRelay.AudioCapture.exe",
+    )
+    return next((candidate for candidate in candidates if candidate.is_file()), candidates[0])
+
+
+def create_audio_capture(settings: AudioSettings, *, resource_dir: Path) -> WasapiLoopbackCapture:
+    if settings.source == "system":
+        return WasapiLoopbackCapture(settings)
+    if settings.source == "microphone":
+        return WasapiMicrophoneCapture(settings)
+    if settings.source == "process":
+        return ProcessLoopbackCapture(
+            settings,
+            helper_path=resolve_process_capture_helper(resource_dir),
+        )
+    raise ValueError(f"unsupported audio source: {settings.source}")

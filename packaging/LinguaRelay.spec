@@ -28,6 +28,17 @@ datas = [
 binaries = []
 hiddenimports = []
 
+audio_helper = (
+    project_root
+    / "native/ProcessAudioCapture/bin/Release/net10.0-windows10.0.19041.0/win-x64/publish"
+    / "LinguaRelay.AudioCapture.exe"
+)
+if not audio_helper.is_file():
+    raise FileNotFoundError(
+        f"process audio helper not found at {audio_helper}; run scripts/build_audio_helper.ps1"
+    )
+binaries.append((str(audio_helper), "native"))
+
 for package in (
     "faster_whisper",
     "opencc",
@@ -59,6 +70,7 @@ if os.environ.get("LINGUA_RELAY_PACKAGE_CUDA") == "1":
 for distribution in (
     "ctranslate2",
     "faster-whisper",
+    "huggingface-hub",
     "opencc-python-reimplemented",
     "PyAudioWPatch",
     "PySide6",

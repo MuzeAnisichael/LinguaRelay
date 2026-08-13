@@ -8,8 +8,8 @@ from pathlib import Path
 
 from lingua_relay.asr import FasterWhisperRecognizer, StreamingAsrEngine
 from lingua_relay.asr.types import AsrEvent
-from lingua_relay.audio import WasapiLoopbackCapture
-from lingua_relay.config import Settings
+from lingua_relay.audio import WasapiLoopbackCapture, create_audio_capture
+from lingua_relay.config import AudioSettings, Settings
 from lingua_relay.correction import (
     AsynchronousRevisionEngine,
     OpenAICompatibleProvider,
@@ -46,6 +46,7 @@ class RealtimeCaptionService:
         on_status: Callable[[str, str], None] | None = None,
         on_correction_status: Callable[[str, str], None] | None = None,
         model_root: str | Path = "models",
+        resource_dir: str | Path = ".",
     ) -> None:
         self.settings = settings
         self.on_caption = on_caption
@@ -53,9 +54,10 @@ class RealtimeCaptionService:
         self.on_status = on_status or (lambda _state, _message: None)
         self.on_correction_status = on_correction_status or (lambda _state, _message: None)
         self.model_root = Path(model_root)
+        self.resource_dir = Path(resource_dir)
         self._source = settings.app.source_language
         self._target = settings.app.target_language
-        self._device = settings.audio.device
+        self._device = _audio_selector(settings.audio)
         self._state = "stopped"
         self._last_error: str | None = None
         self._correction_mode = settings.correction.mode
@@ -71,6 +73,7 @@ class RealtimeCaptionService:
         self._correction: AsynchronousRevisionEngine | None = None
         self._displayed_segment_id: str | None = None
         self._displayed_revision = 0
+        self._capture_error_reported: str | None = None
 
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
@@ -95,7 +98,7 @@ class RealtimeCaptionService:
         capture = self._capture
         if capture is not None:
             capture.start()
-        self._set_state("running", "正在监听系统音频")
+        self._set_state("running", self._audio_status_message())
 
     def set_route(self, source: str, target: str) -> None:
         if source == target:
@@ -125,15 +128,27 @@ class RealtimeCaptionService:
             self._set_correction_state("ready", f"{scope} · {label}")
 
     def set_audio_device(self, device: str) -> None:
+        self.set_audio_source(replace(self.settings.audio, source="system", device=device))
+
+    def set_audio_source(self, audio: AudioSettings) -> None:
+        candidate = replace(self.settings, audio=audio)
+        candidate.validate()
+        replacement = create_audio_capture(audio, resource_dir=self.resource_dir)
         with self._lock:
-            self._device = device
             old_capture = self._capture
             if old_capture is not None:
                 old_capture.stop()
-            self._capture = WasapiLoopbackCapture(replace(self.settings.audio, device=device))
-            if not self._paused.is_set():
-                self._capture.start()
-        self._notify("音频设备已切换")
+            self.settings = candidate
+            self._device = _audio_selector(audio)
+            self._capture = replacement
+            if (
+                self._asr is not None
+                and self._mt is not None
+                and self._state in {"ready", "running", "paused"}
+                and not self._paused.is_set()
+            ):
+                replacement.start()
+        self._notify(self._audio_status_message(prefix="音频源已切换："))
 
     def stop(self, timeout: float = 40.0) -> None:
         self._stop.set()
@@ -190,7 +205,10 @@ class RealtimeCaptionService:
                 build_m2m100_registry(translator), translation_settings, history=history
             )
             self._prepare_correction(history)
-            self._capture = WasapiLoopbackCapture(replace(self.settings.audio, device=self._device))
+            self._capture = create_audio_capture(
+                self.settings.audio,
+                resource_dir=self.resource_dir,
+            )
             self._asr.start()
             self._mt.start()
             if self._correction is not None:
@@ -199,7 +217,7 @@ class RealtimeCaptionService:
                 self._set_state("paused", "已暂停")
             else:
                 self._capture.start()
-                self._set_state("running", "正在监听系统音频")
+                self._set_state("running", self._audio_status_message())
             while not self._stop.is_set():
                 if not self._paused.is_set():
                     self._pump_audio()
@@ -244,10 +262,25 @@ class RealtimeCaptionService:
         try:
             chunk = self._capture.get_chunk(timeout=0.05)
         except queue.Empty:
+            self._report_capture_state()
             return
+        self._report_capture_state()
         with self._lock:
             source = self._source
         self._asr.submit_chunk(chunk, language=source)
+
+    def _report_capture_state(self) -> None:
+        capture = self._capture
+        if capture is None:
+            return
+        snapshot = capture.snapshot()
+        if snapshot.last_error and snapshot.state in {"reconnecting", "failed"}:
+            if snapshot.last_error != self._capture_error_reported:
+                self._capture_error_reported = snapshot.last_error
+                self._notify(f"音频重连中：{snapshot.last_error}")
+        elif snapshot.state == "running" and self._capture_error_reported is not None:
+            self._capture_error_reported = None
+            self._notify(self._audio_status_message(prefix="音频已恢复："))
 
     def _pump_asr(self) -> None:
         assert self._asr is not None and self._mt is not None
@@ -348,3 +381,22 @@ class RealtimeCaptionService:
         if self.settings.correction.provider == "openai_compatible":
             return "cloud"
         return None
+
+    def _audio_status_message(self, *, prefix: str = "") -> str:
+        audio = self.settings.audio
+        if audio.source == "microphone":
+            label = "正在监听麦克风"
+        elif audio.source == "process":
+            name = audio.process_name.strip() or f"PID {audio.process_id}"
+            label = f"正在监听进程 {name}"
+        else:
+            label = "正在监听系统音频"
+        return prefix + label
+
+
+def _audio_selector(audio: AudioSettings) -> str:
+    if audio.source == "microphone":
+        return audio.microphone_device
+    if audio.source == "process":
+        return f"process:{audio.process_id}" if audio.process_id else audio.process_name
+    return audio.device

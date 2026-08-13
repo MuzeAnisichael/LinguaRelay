@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.1.5"
+  #define AppVersion "0.2.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\LinguaRelay"
@@ -94,7 +94,7 @@ begin
         '已检测到本地模型。首次启动会校验并直接复用，不会重复下载。')
     else
       WizardForm.ReadyMemo.Lines.Add(
-        '未检测到完整模型。首次启动时可选择“均衡 Small”或“轻量 Base”，也可使用现有目录或离线 ZIP。');
+        '未检测到完整模型。首次启动可安装 Small/Base 基础包；之后可在设置中选择 Medium、Large-v3 Turbo 或 M2M100 1.2B。');
     ModelCheckReported := True;
   end;
 end;

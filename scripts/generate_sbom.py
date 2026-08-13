@@ -12,7 +12,7 @@ from pathlib import Path
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate an SPDX 2.3 JSON SBOM")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--version", default="0.1.5")
+    parser.add_argument("--version", default="0.2.0")
     args = parser.parse_args()
     distributions = sorted(
         importlib.metadata.distributions(),
@@ -24,6 +24,8 @@ def main() -> int:
         package = _package(distribution)
         if package["name"].casefold() == "linguarelay":
             continue
+        packages_by_id.setdefault(str(package["SPDXID"]), package)
+    for package in _native_packages():
         packages_by_id.setdefault(str(package["SPDXID"]), package)
     packages = [_root_package(args.version), *packages_by_id.values()]
     namespace_seed = "|".join(f"{item['name']}@{item['versionInfo']}" for item in packages).encode()
@@ -97,6 +99,42 @@ def _root_package(version: str) -> dict[str, object]:
                 "referenceCategory": "PACKAGE-MANAGER",
                 "referenceType": "purl",
                 "referenceLocator": ("pkg:github/MuzeAnisichael/LinguaRelay@v" + version),
+            }
+        ],
+    }
+
+
+def _native_packages() -> tuple[dict[str, object], ...]:
+    lock_path = Path("native/ProcessAudioCapture/packages.lock.json")
+    dependencies: dict[str, str] = {}
+    if lock_path.is_file():
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+        for target in lock.get("dependencies", {}).values():
+            for name, detail in target.items():
+                if isinstance(detail, dict) and detail.get("resolved"):
+                    dependencies[name] = str(detail["resolved"])
+        runtime_version = dependencies.get("Microsoft.NET.ILLink.Tasks")
+        if runtime_version:
+            dependencies["Microsoft.NETCore.App.Runtime.win-x64"] = runtime_version
+        dependencies.pop("Microsoft.NET.ILLink.Tasks", None)
+    return tuple(_nuget_package(name, version) for name, version in dependencies.items())
+
+
+def _nuget_package(name: str, version: str) -> dict[str, object]:
+    return {
+        "name": name,
+        "SPDXID": f"SPDXRef-Package-{_identifier(name)}-{_identifier(version)}",
+        "versionInfo": version,
+        "downloadLocation": "NOASSERTION",
+        "filesAnalyzed": False,
+        "licenseConcluded": "NOASSERTION",
+        "licenseDeclared": "MIT",
+        "copyrightText": "NOASSERTION",
+        "externalRefs": [
+            {
+                "referenceCategory": "PACKAGE-MANAGER",
+                "referenceType": "purl",
+                "referenceLocator": f"pkg:nuget/{name}@{version}",
             }
         ],
     }

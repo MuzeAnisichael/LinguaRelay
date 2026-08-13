@@ -2,8 +2,9 @@
 param(
     [ValidateSet("cpu", "cuda")]
     [string]$Runtime = "cpu",
-    [string]$Version = "0.1.5",
+    [string]$Version = "0.2.0",
     [switch]$Installer,
+    [switch]$SkipInstall,
     [string]$ModelPackDir = ""
 )
 
@@ -11,17 +12,45 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Push-Location $projectRoot
 try {
-    python -m pip install -e ".[dev,runtime,packaging]"
+    $venvPython = Join-Path $projectRoot ".venv\Scripts\python.exe"
+    $python = if (Test-Path -LiteralPath $venvPython) {
+        $venvPython
+    }
+    else {
+        (Get-Command python.exe -ErrorAction Stop).Source
+    }
+    if (-not $SkipInstall) {
+        & $python -m pip install -e ".[dev,runtime,packaging]"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Dependency installation failed with exit code $LASTEXITCODE"
+        }
+    }
     if ($Runtime -eq "cuda") {
-        python -m pip install -e ".[gpu]"
+        & $python -m pip install -e ".[gpu]"
+        if ($LASTEXITCODE -ne 0) {
+            throw "GPU dependency installation failed with exit code $LASTEXITCODE"
+        }
         $env:LINGUA_RELAY_PACKAGE_CUDA = "1"
     }
     else {
         $env:LINGUA_RELAY_PACKAGE_CUDA = "0"
     }
-    python -m pytest
-    python -m ruff check .
-    python -m PyInstaller --noconfirm --clean packaging\LinguaRelay.spec
+    & $python -m pytest
+    if ($LASTEXITCODE -ne 0) {
+        throw "Tests failed with exit code $LASTEXITCODE"
+    }
+    & $python -m ruff check .
+    if ($LASTEXITCODE -ne 0) {
+        throw "Ruff failed with exit code $LASTEXITCODE"
+    }
+    & (Join-Path $projectRoot "scripts\build_audio_helper.ps1")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Audio helper build failed with exit code $LASTEXITCODE"
+    }
+    & $python -m PyInstaller --noconfirm --clean packaging\LinguaRelay.spec
+    if ($LASTEXITCODE -ne 0) {
+        throw "PyInstaller failed with exit code $LASTEXITCODE"
+    }
 
     $application = Join-Path $projectRoot "dist\LinguaRelay\LinguaRelay.exe"
     if (-not (Test-Path -LiteralPath $application)) {

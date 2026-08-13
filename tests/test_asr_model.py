@@ -49,6 +49,9 @@ def test_recognizer_passes_explicit_language_and_silero_vad() -> None:
     assert created[0].calls[0]["task"] == "transcribe"
     assert created[0].calls[0]["vad_filter"] is True
     assert created[0].calls[0]["condition_on_previous_text"] is False
+    assert created[0].calls[0]["repetition_penalty"] == 1.05
+    assert created[0].calls[0]["no_repeat_ngram_size"] == 3
+    assert created[0].calls[0]["vad_parameters"]["min_silence_duration_ms"] == 320
 
     recognizer.transcribe(np.zeros(16_000, dtype=np.float32), language="ja", vad_filter=False)
     assert created[0].calls[1]["vad_filter"] is False

@@ -59,6 +59,18 @@ def test_rejects_invalid_silence_threshold() -> None:
         settings.validate()
 
 
+def test_process_audio_requires_a_target_identity() -> None:
+    settings = Settings.from_mapping({"audio": {"source": "process"}})
+
+    with pytest.raises(ValueError, match="process audio"):
+        settings.validate()
+
+    configured = Settings.from_mapping(
+        {"audio": {"source": "process", "process_name": "meeting.exe"}}
+    )
+    configured.validate()
+
+
 def test_rejects_english_only_asr_model() -> None:
     settings = Settings.from_mapping({"asr": {"model": "small.en"}})
 

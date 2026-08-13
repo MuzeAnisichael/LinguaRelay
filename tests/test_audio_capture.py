@@ -1,6 +1,12 @@
 import pytest
 
-from lingua_relay.audio.capture import WasapiLoopbackCapture, _RestartCapture
+from lingua_relay.audio.capture import (
+    ProcessLoopbackCapture,
+    WasapiLoopbackCapture,
+    WasapiMicrophoneCapture,
+    _RestartCapture,
+    create_audio_capture,
+)
 from lingua_relay.audio.types import AudioDevice
 from lingua_relay.config import AudioSettings
 
@@ -67,3 +73,20 @@ def test_supervisor_retries_after_capture_failure() -> None:
     assert capture.attempts == 2
     assert snapshot.reconnects == 1
     assert snapshot.last_error == "OSError: device disconnected"
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    (
+        ("system", WasapiLoopbackCapture),
+        ("microphone", WasapiMicrophoneCapture),
+        ("process", ProcessLoopbackCapture),
+    ),
+)
+def test_capture_factory_selects_requested_source(tmp_path, source: str, expected: type) -> None:
+    capture = create_audio_capture(
+        AudioSettings(source=source, process_id=123, process_name="player.exe"),
+        resource_dir=tmp_path,
+    )
+
+    assert type(capture) is expected

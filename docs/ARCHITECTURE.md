@@ -12,7 +12,7 @@
 ## 2. 组件与数据流
 
 ```text
-WASAPI loopback
+WASAPI system / process / microphone capture
       |
       v
 AudioCapture --PCM--> Resampler/RingBuffer --> VAD/Segmenter
@@ -42,7 +42,7 @@ AudioCapture --PCM--> Resampler/RingBuffer --> VAD/Segmenter
 | 层 | 首选 | 理由 | 替换条件 |
 |---|---|---|---|
 | 桌面框架 | Python 3.11 + PySide6 | AI 生态完整，能快速验证透明置顶窗 | 启动体积、内存或分发成为主要问题时评估 .NET/Rust |
-| 系统音频 | PyAudioWPatch / WASAPI loopback | 已实现默认/指定设备、切换检测和自动重连 | 需要按进程捕获或更低抖动时使用原生 WASAPI/NAudio sidecar |
+| 音频输入 | PyAudioWPatch + NAudio/WASAPI | 系统输出、麦克风、指定进程树都可热切换和自动重连 | 需要跨平台时增加平台专用捕获适配器 |
 | 重采样 | 流式 SoXR | 已实现双声道 PCM 到 16 kHz 单声道 float32，保留跨块滤波状态 | 原生音频进程落地时重新评估 |
 | 音频缓冲 | 固定 320 ms 块 + 有界新鲜优先队列 | 已实现背压、静音连续性、时间戳和丢弃计数 | ASR 基准后调整块大小 |
 | 语音识别 | 多语言 faster-whisper small | `zh/ja/en/ko` 显式语言；本机 CUDA float16 达到 M2 延迟门槛 | 无 CUDA 时回退 CPU INT8；后续按更多硬件档位重新基准 |
@@ -55,6 +55,8 @@ Windows 官方文档说明 WASAPI 回环可从渲染端点捕获正在播放的�
 https://learn.microsoft.com/windows/win32/coreaudio/loopback-recording
 
 M1 捕获线程只把回调 PCM 放入有界原始包队列；工作线程负责流式降混、SoXR 重采样、固定块切分和音量计算。默认设备每隔固定时间重新解析，身份或格式变化时重建流；异常采用有上限的指数退避。消费者落后时淘汰最旧输出块，以保证延迟有界。
+
+v0.2.0 的按进程路径由自包含的 .NET/NAudio 辅助程序调用 Windows `AUDIOCLIENT_ACTIVATION_TYPE_PROCESS_LOOPBACK`，以 48 kHz/16-bit/双声道 PCM 通过标准输出送回同一归一化管线。目标包含所选 PID 及其子进程；目标退出后，Python 监督器按进程名寻找新 PID 并重新建立捕获。辅助程序不保存音频，也不读取命令行或窗口内容。
 
 ## 4. 语言与翻译路由
 

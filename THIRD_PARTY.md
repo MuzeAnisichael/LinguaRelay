@@ -10,6 +10,8 @@ the Python standard library):
 | Component | Purpose | Declared license | Project |
 |---|---|---|---|
 | PyAudioWPatch | PortAudio bindings with WASAPI loopback | Apache-2.0 | https://github.com/s0d3s/PyAudioWPatch |
+| NAudio.Wasapi | Native Windows per-process loopback helper | MIT | https://github.com/naudio/NAudio |
+| Microsoft .NET Runtime | Self-contained process-capture helper runtime | MIT | https://github.com/dotnet/runtime |
 | python-soxr / libsoxr | Streaming sample-rate conversion | LGPL-2.1-or-later | https://github.com/dofuuz/python-soxr |
 | NumPy | PCM arrays and signal calculations | BSD-3-Clause | https://numpy.org |
 | psutil | Stress-test process memory metrics | BSD-3-Clause | https://github.com/giampaolo/psutil |
@@ -20,6 +22,7 @@ the Python standard library):
 | OpenCC Python reimplementation | Traditional-to-Simplified Chinese normalization | Apache-2.0 | https://github.com/yichen0831/opencc-python |
 | NVIDIA cuBLAS/cuDNN Python wheels | Optional Windows CUDA runtime libraries | NVIDIA SDK/component licenses | https://pypi.org/project/nvidia-cublas-cu12/ |
 | M2M100 418M | Direct four-language machine translation weights | MIT | https://huggingface.co/facebook/m2m100_418M |
+| M2M100 1.2B | Optional higher-quality local translation weights | MIT | https://huggingface.co/facebook/m2m100_1.2B |
 | SentencePiece | M2M100 runtime tokenization | Apache-2.0 | https://github.com/google/sentencepiece |
 | PyInstaller | Windows application bundling | GPL-2.0-or-later with bootloader exception | https://pyinstaller.org/ |
 | Inno Setup | Optional Windows installer compiler | Custom permissive license | https://jrsoftware.org/isinfo.php |
