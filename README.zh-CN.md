@@ -16,9 +16,9 @@
     <img alt="Windows 10 和 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
   </p>
   <p>
-    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.1"><strong>下载 v0.3.1</strong></a>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2"><strong>下载 v0.3.2</strong></a>
     · <a href="#快速开始">快速开始</a>
-    · <a href="docs/releases/v0.3.1.md">发布说明</a>
+    · <a href="docs/releases/v0.3.2.md">发布说明</a>
   </p>
 </div>
 
@@ -27,7 +27,7 @@
 LinguaRelay 可在后台监听 Windows 系统输出、指定进程或麦克风，识别其中的语音，再把译文显示在简洁的置顶悬浮窗中。它也能录制当前音频源，或导入音频/视频生成带时间轴、可编辑、可导出的后期字幕。支持中文、日语、英语、韩语全部 12 个互译方向。源语言由用户手动选择，以避免自动检测带来的等待和语言方向误切换。
 
 > [!IMPORTANT]
-> v0.3.1 是尚未签名的 Windows x64 Alpha 版本。请只从本仓库下载，使用
+> v0.3.2 是尚未签名的 Windows x64 Alpha 版本。请只从本仓库下载，使用
 > `SHA256SUMS.txt` 校验文件；Windows 显示“未知发布者”属于当前版本的已知情况。
 
 ## 为什么使用 LinguaRelay？
@@ -43,11 +43,11 @@ LinguaRelay 可在后台监听 Windows 系统输出、指定进程或麦克风�
 
 ## 快速开始
 
-1. 打开 [GitHub Releases 的 v0.3.1 页面](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.1)，下载 `LinguaRelay-0.3.1-Setup-x64.exe`。
+1. 打开 [GitHub Releases 的 v0.3.2 页面](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2)，下载 `LinguaRelay-0.3.2-Setup-x64.exe`。
 2. 首次启动时，让 LinguaRelay 校验已有模型目录，或选择一种模型方案。安装程序不会在没有提示的情况下静默下载模型。
 3. 在托盘菜单中选择源语言、目标语言和系统输出/指定进程/麦克风。播放音频，再把悬浮窗拖动、缩放到合适位置。
 
-不想安装也可以使用 `LinguaRelay-0.3.1-Windows-x64-portable.zip`。安装版和便携版都能复用 v0.1.5 的基础离线模型 ZIP。
+不想安装也可以使用 `LinguaRelay-0.3.2-Windows-x64-portable.zip`。升级便携版时请解压到新的空文件夹，不要覆盖旧目录；安装版和便携版都能复用已有模型。
 
 ### 如何选择模型
 

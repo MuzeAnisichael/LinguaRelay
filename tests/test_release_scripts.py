@@ -67,6 +67,9 @@ def test_installer_exposes_uninstall_and_optional_model_removal() -> None:
     assert 'Filename: "{uninstallexe}"' in installer
     assert "RemoveModelsOnUninstall" in installer
     assert "RemoveUserDataOnUninstall" in installer
+    assert "[InstallDelete]" in installer
+    assert 'Name: "{app}\\_internal\\icuuc.dll"' in installer
+    assert 'Name: "{app}\\_internal\\icudt78.dll"' in installer
     assert "{localappdata}\\LinguaRelay\\models" in installer
     assert "{localappdata}\\LinguaRelay\\downloads" in installer
     assert "{localappdata}\\LinguaRelay\\projects" in installer

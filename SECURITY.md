@@ -4,8 +4,8 @@
 
 | Version | Security updates |
 |---|---|
-| `0.3.1` | Best-effort support |
-| `< 0.3.1` | Upgrade before reporting unless the issue is version-specific |
+| `0.3.2` | Best-effort support |
+| `< 0.3.2` | Upgrade before reporting unless the issue is version-specific |
 
 LinguaRelay is alpha software and is not supported for regulated or high-risk
 audio workflows.
@@ -24,7 +24,7 @@ has been a reasonable opportunity to investigate it.
 
 ## Current security boundaries
 
-- v0.3.1 Windows binaries are not Authenticode-signed. Download only from the
+- v0.3.2 Windows binaries are not Authenticode-signed. Download only from the
   project's GitHub Releases page and verify the attached `SHA256SUMS.txt`.
 - Raw audio persistence is disabled by default. An explicit recording or media import stores
   audio and transcript data under `%LOCALAPPDATA%\LinguaRelay\projects`; treat that directory

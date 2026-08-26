@@ -16,7 +16,7 @@ def main() -> int:
     parser.add_argument("--model-root", type=Path, default=Path("models"))
     parser.add_argument("--output", type=Path, default=Path("packaging/model-manifest.json"))
     parser.add_argument("--asr-model", choices=tuple(PINNED_ASR_REVISIONS), default="small")
-    parser.add_argument("--version", default="0.3.1")
+    parser.add_argument("--version", default="0.3.2")
     args = parser.parse_args()
     files = []
     model_directories = (

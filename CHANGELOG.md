@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 - 2026-08-27
+
+- Added installer migration cleanup for incompatible ICU/OpenSSL DLLs left by v0.3.0, so the QtCore startup fix also applies to in-place upgrades without touching models or user data.
+- Documented safe portable upgrades through a fresh extraction directory.
+
 ## 0.3.1 - 2026-08-27
 
 - Fixed a Windows startup failure where the release build could bundle a foreign ICU runtime and prevent `PySide6.QtCore` from loading with WinError 127.
