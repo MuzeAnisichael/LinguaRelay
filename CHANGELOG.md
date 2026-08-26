@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 - 2026-08-27
+
+- Fixed a Windows startup failure where the release build could bundle a foreign ICU runtime and prevent `PySide6.QtCore` from loading with WinError 127.
+- Isolated PyInstaller dependency discovery from workspace toolchains, added frozen QtCore load verification, and rejected contaminated ICU DLLs before an installer can be produced.
+
 ## 0.3.0 - 2026-08-26
 
 - Added start, pause, resume, and stop recording for the current system, process, or microphone source, with crash-recoverable WAV fragments and pause gaps removed from the media timeline.

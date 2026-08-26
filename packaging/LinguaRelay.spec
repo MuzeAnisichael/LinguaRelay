@@ -11,6 +11,18 @@ import sys
 
 project_root = Path(SPECPATH).parent
 
+# PyInstaller resolves transitive DLLs from PATH while this spec is executing.
+# Remove workspace-only toolchains inside the Python process as launchers may
+# inject them again after the parent PowerShell environment was sanitized.
+path_entries = os.environ.get("PATH", "").split(os.pathsep)
+path_entries = [
+    entry
+    for entry in path_entries
+    if "/.cache/codex-runtimes/" not in entry.replace("\\", "/").lower()
+    and "/.codex/tmp/" not in entry.replace("\\", "/").lower()
+]
+os.environ["PATH"] = os.pathsep.join(path_entries)
+
 datas = [
     (str(project_root / "config.example.toml"), "."),
     (str(project_root / "glossary.example.json"), "."),

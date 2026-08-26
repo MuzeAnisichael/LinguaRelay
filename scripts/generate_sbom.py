@@ -12,7 +12,7 @@ from pathlib import Path
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate an SPDX 2.3 JSON SBOM")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--version", default="0.3.0")
+    parser.add_argument("--version", default="0.3.1")
     args = parser.parse_args()
     distributions = sorted(
         importlib.metadata.distributions(),

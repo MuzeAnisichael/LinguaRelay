@@ -16,6 +16,15 @@ def _load_generate_sbom():
     return module
 
 
+def _load_bundle_verifier():
+    path = Path(__file__).resolve().parents[1] / "scripts" / "verify_windows_bundle.py"
+    spec = importlib.util.spec_from_file_location("linguarelay_bundle_verifier", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def test_sbom_has_one_explicit_root_and_deduplicates_packages(monkeypatch, tmp_path) -> None:
     generate_sbom = _load_generate_sbom()
     duplicate = SimpleNamespace(
@@ -61,3 +70,32 @@ def test_installer_exposes_uninstall_and_optional_model_removal() -> None:
     assert "{localappdata}\\LinguaRelay\\models" in installer
     assert "{localappdata}\\LinguaRelay\\downloads" in installer
     assert "{localappdata}\\LinguaRelay\\projects" in installer
+
+
+def test_bundle_verifier_rejects_foreign_icu_and_build_paths(tmp_path) -> None:
+    verifier = _load_bundle_verifier()
+    bundle = tmp_path / "LinguaRelay"
+    internal = bundle / "_internal"
+    internal.mkdir(parents=True)
+    (bundle / "LinguaRelay.exe").write_bytes(b"MZ")
+    (internal / "icuuc.dll").write_bytes(b"foreign")
+    analysis = tmp_path / "Analysis-00.toc"
+    analysis.write_text(
+        r"C:\Users\builder\.cache\codex-runtimes\dependencies\native\icuuc.dll",
+        encoding="utf-8",
+    )
+
+    issues = verifier.find_bundle_issues(bundle, analysis)
+
+    assert any("ICU" in issue for issue in issues)
+    assert any("contaminated" in issue for issue in issues)
+
+
+def test_pyinstaller_spec_sanitizes_workspace_toolchains() -> None:
+    spec = (Path(__file__).resolve().parents[1] / "packaging" / "LinguaRelay.spec").read_text(
+        encoding="utf-8"
+    )
+
+    assert "/.cache/codex-runtimes/" in spec
+    assert "/.codex/tmp/" in spec
+    assert 'os.environ["PATH"] =' in spec

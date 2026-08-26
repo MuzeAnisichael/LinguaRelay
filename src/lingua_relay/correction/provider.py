@@ -46,7 +46,7 @@ class OpenAICompatibleProvider:
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": "LinguaRelay/0.3.0",
+            "User-Agent": "LinguaRelay/0.3.1",
         }
         api_key = os.environ.get(self.settings.api_key_env, "").strip()
         if self.scope == "cloud" and not api_key:

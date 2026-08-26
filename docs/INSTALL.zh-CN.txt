@@ -1,4 +1,4 @@
-LinguaRelay v0.3.0 安装说明
+LinguaRelay v0.3.1 安装说明
 
 LinguaRelay 是后台运行的实时翻译与离线字幕工具，支持中文、日语、英语、韩语手动选择和互译。
 

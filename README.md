@@ -16,9 +16,9 @@
     <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
   </p>
   <p>
-    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.0"><strong>Download v0.3.0</strong></a>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.1"><strong>Download v0.3.1</strong></a>
     · <a href="#quick-start">Quick start</a>
-    · <a href="docs/releases/v0.3.0.md">Release notes</a>
+    · <a href="docs/releases/v0.3.1.md">Release notes</a>
   </p>
 </div>
 
@@ -30,7 +30,7 @@ English, and Korean are supported in every direction. The source language stays
 manual by design, avoiding language-detection delay and accidental route changes.
 
 > [!IMPORTANT]
-> v0.3.0 is an unsigned Windows x64 alpha. Download it only from this repository,
+> v0.3.1 is an unsigned Windows x64 alpha. Download it only from this repository,
 > verify `SHA256SUMS.txt`, and expect Windows to show an unknown-publisher warning.
 
 ## Why LinguaRelay?
@@ -46,15 +46,15 @@ manual by design, avoiding language-detection delay and accidental route changes
 
 ## Quick start
 
-1. Open [v0.3.0 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.0)
-   and download `LinguaRelay-0.3.0-Setup-x64.exe`.
+1. Open [v0.3.1 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.1)
+   and download `LinguaRelay-0.3.1-Setup-x64.exe`.
 2. On first launch, let LinguaRelay verify an existing model directory or choose
    a model profile. The installer does not silently download model weights.
 3. Select the source language, target language, and system/process/microphone source from the tray
    menu. Play audio and position the overlay where you want it.
 
 Prefer not to install? The release also includes
-`LinguaRelay-0.3.0-Windows-x64-portable.zip`. Both editions can use an offline
+`LinguaRelay-0.3.1-Windows-x64-portable.zip`. Both editions can use an offline
 model ZIP from the same release.
 
 ### Choose a model profile

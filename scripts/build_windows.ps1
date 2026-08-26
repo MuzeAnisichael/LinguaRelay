@@ -2,7 +2,7 @@
 param(
     [ValidateSet("cpu", "cuda")]
     [string]$Runtime = "cpu",
-    [string]$Version = "0.3.0",
+    [string]$Version = "0.3.1",
     [switch]$Installer,
     [switch]$SkipInstall,
     [string]$ModelPackDir = "",
@@ -48,9 +48,23 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Audio helper build failed with exit code $LASTEXITCODE"
     }
-    & $python -m PyInstaller --noconfirm --clean packaging\LinguaRelay.spec
-    if ($LASTEXITCODE -ne 0) {
-        throw "PyInstaller failed with exit code $LASTEXITCODE"
+    # Dependency scanners search PATH for transitive DLLs. Keep workspace toolchains
+    # (for example a bundled Poppler/ICU runtime) from contaminating the application.
+    $originalPath = $env:Path
+    $pathEntries = $originalPath -split ";" | Where-Object {
+        $_ -and
+        $_ -notmatch "(?i)[\\/]\.cache[\\/]codex-runtimes[\\/]" -and
+        $_ -notmatch "(?i)[\\/]\.codex[\\/]tmp[\\/]"
+    }
+    $env:Path = ($pathEntries | Select-Object -Unique) -join ";"
+    try {
+        & $python -m PyInstaller --noconfirm --clean packaging\LinguaRelay.spec
+        if ($LASTEXITCODE -ne 0) {
+            throw "PyInstaller failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        $env:Path = $originalPath
     }
 
     $application = Join-Path $projectRoot "dist\LinguaRelay\LinguaRelay.exe"
@@ -58,6 +72,12 @@ try {
         throw "PyInstaller did not produce $application"
     }
     Write-Host "Application bundle: $application"
+    & $python scripts\verify_windows_bundle.py `
+        --bundle (Join-Path $projectRoot "dist\LinguaRelay") `
+        --analysis (Join-Path $projectRoot "build\LinguaRelay\Analysis-00.toc")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Windows bundle verification failed with exit code $LASTEXITCODE"
+    }
 
     if ($Installer) {
         $releaseOutput = if ($ReleaseDir) {
