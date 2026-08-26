@@ -2,10 +2,11 @@
 param(
     [ValidateSet("cpu", "cuda")]
     [string]$Runtime = "cpu",
-    [string]$Version = "0.2.0",
+    [string]$Version = "0.3.0",
     [switch]$Installer,
     [switch]$SkipInstall,
-    [string]$ModelPackDir = ""
+    [string]$ModelPackDir = "",
+    [string]$ReleaseDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -59,6 +60,13 @@ try {
     Write-Host "Application bundle: $application"
 
     if ($Installer) {
+        $releaseOutput = if ($ReleaseDir) {
+            [System.IO.Path]::GetFullPath((Join-Path $projectRoot $ReleaseDir))
+        }
+        else {
+            Join-Path $projectRoot "release\v$Version"
+        }
+        New-Item -ItemType Directory -Path $releaseOutput -Force | Out-Null
         $compilerCandidates = @(
             (Get-Command ISCC.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source),
             "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
@@ -71,7 +79,7 @@ try {
         $arguments = @(
             "/DAppVersion=$Version",
             "/DSourceDir=$projectRoot\dist\LinguaRelay",
-            "/DOutputDir=$projectRoot\release"
+            "/DOutputDir=$releaseOutput"
         )
         if ($ModelPackDir) {
             $resolvedModelPack = Resolve-Path -LiteralPath $ModelPackDir

@@ -27,6 +27,9 @@ class CaptionOverlay(QWidget):
     pause_requested = Signal()
     display_mode_requested = Signal()
     history_requested = Signal()
+    record_requested = Signal()
+    recording_pause_requested = Signal()
+    workbench_requested = Signal()
     settings_requested = Signal()
     hide_requested = Signal()
 
@@ -68,8 +71,15 @@ class CaptionOverlay(QWidget):
         self.status.setStyleSheet("color: #77d6a5;")
         self.pause_button = self._tool_button("Ⅱ", "暂停 / 继续实时字幕")
         self.pause_button.clicked.connect(self.pause_requested.emit)
+        self.record_button = self._tool_button("●", "开始录制当前音频源")
+        self.record_button.clicked.connect(self.record_requested.emit)
+        self.record_pause_button = self._tool_button("Ⅱ", "暂停录制")
+        self.record_pause_button.clicked.connect(self.recording_pause_requested.emit)
+        self.record_pause_button.hide()
         self.display_button = self._tool_button("双", "切换仅译文 / 双语显示")
         self.display_button.clicked.connect(self.display_mode_requested.emit)
+        self.workbench_button = self._tool_button("辑", "打开录制与离线工作台")
+        self.workbench_button.clicked.connect(self.workbench_requested.emit)
         self.history_button = self._tool_button("历", "打开字幕历史")
         self.history_button.clicked.connect(self.history_requested.emit)
         self.settings_button = self._tool_button("设", "打开用户设置")
@@ -78,7 +88,10 @@ class CaptionOverlay(QWidget):
         self.hide_button.clicked.connect(self.hide_requested.emit)
         self.control_buttons = (
             self.pause_button,
+            self.record_button,
+            self.record_pause_button,
             self.display_button,
+            self.workbench_button,
             self.history_button,
             self.settings_button,
             self.hide_button,
@@ -135,6 +148,9 @@ class CaptionOverlay(QWidget):
         self.display_button.setText("双" if settings.display_mode == "bilingual" else "译")
         for button in self.control_buttons:
             button.setVisible(not settings.click_through)
+        self.record_pause_button.setVisible(
+            not settings.click_through and self.record_button.property("recording") is True
+        )
         self.source.setVisible(settings.display_mode == "bilingual")
         if self._last_event is not None:
             self.publish(self._last_event)
@@ -165,6 +181,19 @@ class CaptionOverlay(QWidget):
     def set_paused(self, paused: bool) -> None:
         self.pause_button.setText("▶" if paused else "Ⅱ")
         self.pause_button.setToolTip("继续实时字幕" if paused else "暂停实时字幕")
+
+    def set_recording_state(self, state: str) -> None:
+        active = state in {"recording", "paused"}
+        paused = state == "paused"
+        self.record_button.setProperty("recording", active)
+        self.record_button.setText("■" if active else "●")
+        self.record_button.setToolTip("结束录制并开始后期处理" if active else "开始录制当前音频源")
+        self.record_button.setStyleSheet(
+            self._button_style("#ff6577" if active else "rgba(255,255,255,190)")
+        )
+        self.record_pause_button.setVisible(active and not self.settings.click_through)
+        self.record_pause_button.setText("▶" if paused else "Ⅱ")
+        self.record_pause_button.setToolTip("继续录制" if paused else "暂停录制")
 
     def set_status(self, state: str, message: str) -> None:
         colors = {
@@ -201,13 +230,17 @@ class CaptionOverlay(QWidget):
         button.setToolTip(tooltip)
         button.setFixedSize(26, 24)
         button.setCursor(Qt.CursorShape.PointingHandCursor)
-        button.setStyleSheet(
-            "QToolButton { color: rgba(255,255,255,190); background: rgba(255,255,255,14); "
+        button.setStyleSheet(CaptionOverlay._button_style("rgba(255,255,255,190)"))
+        return button
+
+    @staticmethod
+    def _button_style(color: str) -> str:
+        return (
+            f"QToolButton {{ color: {color}; background: rgba(255,255,255,14); "
             "border: 0; border-radius: 5px; font-weight: 600; }"
             "QToolButton:hover { background: rgba(255,255,255,35); color: white; }"
             "QToolButton:pressed { background: rgba(112,183,255,80); }"
         )
-        return button
 
     def publish_transcript(self, event: AsrEvent, target_language: str) -> None:
         """Show recognition immediately while the newest translation is still running."""

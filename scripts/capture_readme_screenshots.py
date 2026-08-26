@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import tempfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from PySide6.QtWidgets import QApplication, QTabWidget  # noqa: E402
 
 from lingua_relay.config import Settings  # noqa: E402
 from lingua_relay.events import CaptionEvent  # noqa: E402
+from lingua_relay.offline.project import Cue, OfflineProjectStore  # noqa: E402
+from lingua_relay.ui.offline_workbench import OfflineWorkbench  # noqa: E402
 from lingua_relay.ui.overlay import CaptionOverlay  # noqa: E402
 from lingua_relay.ui.settings_view import SettingsDialog  # noqa: E402
 
@@ -101,6 +104,44 @@ def capture(output_dir: Path) -> None:
         raise RuntimeError("settings tab widget was not found")
     tabs.setCurrentIndex(3)
     _save_widget(dialog, output_dir / "llm-settings.png")
+
+    with tempfile.TemporaryDirectory(prefix="lingua-relay-screenshot-") as temporary:
+        store = OfflineProjectStore(Path(temporary) / "projects")
+        project = store.create_project(
+            title="Weekly product meeting",
+            kind="recording",
+            source_language="en",
+            target_language="zh",
+        )
+        store.update_project(project.id, status="completed", progress=1, duration_ms=68_400)
+        store.replace_cues(
+            project.id,
+            [
+                Cue(None, project.id, 0, 0, 3250, "Good morning, everyone.", "大家早上好。"),
+                Cue(
+                    None,
+                    project.id,
+                    1,
+                    3480,
+                    8290,
+                    "Let's review the launch plan and open questions.",
+                    "我们来回顾发布计划和待确认的问题。",
+                ),
+                Cue(
+                    None,
+                    project.id,
+                    2,
+                    8640,
+                    13_200,
+                    "The offline transcript is ready for editing.",
+                    "离线转写结果已经可以编辑。",
+                ),
+            ],
+        )
+        workbench = OfflineWorkbench(store)
+        workbench.resize(1180, 720)
+        workbench.refresh(select_id=project.id)
+        _save_widget(workbench, output_dir / "offline-workbench.png")
 
 
 def main() -> int:

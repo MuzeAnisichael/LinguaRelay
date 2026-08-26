@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2026-08-26
+
+- Added start, pause, resume, and stop recording for the current system, process, or microphone source, with crash-recoverable WAV fragments and pause gaps removed from the media timeline.
+- Added an offline project workbench with persistent SQLite metadata, playback, waveform seeking, time-aligned editable source/translation cues, and task progress.
+- Added audio import and video audio-track extraction through PyAV, followed by a shared high-quality offline recognition and translation pipeline.
+- Added faster-whisper word timestamps, punctuation-aware readable cue splitting, accuracy profiles, optional per-cue LLM revision, and the opt-in Large-v3 model.
+- Added WAV, FLAC, MP3, WebVTT, SRT, ASS, TXT, CSV, and JSONL export.
+- Updated the overlay with compact recording and workbench controls; updated installer, privacy, model, uninstaller, packaging, and release documentation for persisted recordings.
+
 ## 0.2.0 - 2026-08-13
 
 - Added native Windows per-process audio capture, including the selected process tree, automatic PID recovery after app restarts, and runtime tray/settings switching.

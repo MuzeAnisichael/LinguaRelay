@@ -16,6 +16,7 @@ the Python standard library):
 | NumPy | PCM arrays and signal calculations | BSD-3-Clause | https://numpy.org |
 | psutil | Stress-test process memory metrics | BSD-3-Clause | https://github.com/giampaolo/psutil |
 | PySide6 / Qt | Desktop overlay | LGPL-3.0 / GPL/commercial options | https://www.qt.io/qt-for-python |
+| PyAV / FFmpeg libraries | Audio/video import, decoding, playback preparation, and audio export | BSD-3-Clause / LGPL or configured FFmpeg component licenses | https://pyav.org/ |
 | faster-whisper | Multilingual Whisper inference integration | MIT | https://github.com/SYSTRAN/faster-whisper |
 | CTranslate2 | CPU/CUDA Transformer inference runtime | MIT | https://github.com/OpenNMT/CTranslate2 |
 | Silero VAD | Speech filtering used through faster-whisper | MIT | https://github.com/snakers4/silero-vad |

@@ -14,6 +14,7 @@ class AppPaths:
     config_path: Path
     history_path: Path
     model_dir: Path
+    projects_dir: Path
     resource_dir: Path
 
     @classmethod
@@ -31,6 +32,7 @@ class AppPaths:
             config_path=data_dir / "config.toml",
             history_path=data_dir / "history.jsonl",
             model_dir=data_dir / "models",
+            projects_dir=data_dir / "projects",
             resource_dir=resource_dir,
         )
 

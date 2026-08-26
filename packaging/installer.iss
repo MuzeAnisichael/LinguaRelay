@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.0"
+  #define AppVersion "0.3.0"
 #endif
 #ifndef SourceDir
   #define SourceDir "..\dist\LinguaRelay"
@@ -72,6 +72,7 @@ Type: filesandordirs; Name: "{app}"
 var
   ModelCheckReported: Boolean;
   RemoveModelsOnUninstall: Boolean;
+  RemoveUserDataOnUninstall: Boolean;
 
 function ExistingModelsDetected(): Boolean;
 var
@@ -94,7 +95,7 @@ begin
         '已检测到本地模型。首次启动会校验并直接复用，不会重复下载。')
     else
       WizardForm.ReadyMemo.Lines.Add(
-        '未检测到完整模型。首次启动可安装 Small/Base 基础包；之后可在设置中选择 Medium、Large-v3 Turbo 或 M2M100 1.2B。');
+        '未检测到完整模型。首次启动可安装 Small/Base 基础包；之后可选择 Medium、Large-v3 Turbo、Large-v3 或 M2M100 1.2B。');
     ModelCheckReported := True;
   end;
 end;
@@ -108,6 +109,12 @@ begin
       '配置和字幕历史将继续保留。',
       mbConfirmation,
       MB_YESNO or MB_DEFBUTTON2) = IDYES;
+  RemoveUserDataOnUninstall :=
+    MsgBox(
+      '是否同时删除录音、离线项目、配置和字幕历史？' + #13#10 + #13#10 +
+      '这些用户数据可能包含私密音频。选择“否”可在重新安装后继续使用。',
+      mbConfirmation,
+      MB_YESNO or MB_DEFBUTTON2) = IDYES;
   Result := True;
 end;
 
@@ -117,5 +124,12 @@ begin
   begin
     DelTree(ExpandConstant('{localappdata}\LinguaRelay\models'), True, True, True);
     DelTree(ExpandConstant('{localappdata}\LinguaRelay\downloads'), True, True, True);
+  end;
+  if (CurUninstallStep = usUninstall) and RemoveUserDataOnUninstall then
+  begin
+    DelTree(ExpandConstant('{localappdata}\LinguaRelay\projects'), True, True, True);
+    DeleteFile(ExpandConstant('{localappdata}\LinguaRelay\config.toml'));
+    DeleteFile(ExpandConstant('{localappdata}\LinguaRelay\history.jsonl'));
+    DeleteFile(ExpandConstant('{localappdata}\LinguaRelay\glossary.json'));
   end;
 end;

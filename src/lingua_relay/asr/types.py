@@ -18,12 +18,21 @@ class AsrRuntime:
 
 
 @dataclass(frozen=True, slots=True)
+class AsrWord:
+    start_seconds: float
+    end_seconds: float
+    text: str
+    probability: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class AsrSegment:
     start_seconds: float
     end_seconds: float
     text: str
     avg_logprob: float | None = None
     no_speech_prob: float | None = None
+    words: tuple[AsrWord, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

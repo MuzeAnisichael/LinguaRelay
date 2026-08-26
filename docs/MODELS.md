@@ -19,7 +19,7 @@ All 12 ordered source/target pairs must be supported. Automatic language
 detection stays disabled. The internal translation configuration uses a route
 registry rather than a single hard-coded English-to-Chinese model.
 
-## v0.2.0 model profiles
+## v0.3.0 model profiles
 
 First launch exposes two fully verified profiles instead of silently forcing one pack:
 
@@ -30,12 +30,13 @@ First launch exposes two fully verified profiles instead of silently forcing one
 
 Both profiles use the same M2M100 translation model and cover all 12 routes. The catalog, manifests, archive URLs, sizes, file paths, SHA-256 hashes, revisions, and licenses are bundled with the app. A detected directory is adopted only after full hash verification.
 
-The first-launch Base/Small packs remain the smallest offline entry point. v0.2.0 adds opt-in advanced choices inside **Settings → Recognition & translation**:
+The first-launch Base/Small packs remain the smallest offline entry point. v0.3.0 offers opt-in advanced choices inside **Settings → Recognition & translation** and the offline workbench:
 
 | Role | Choice | Download | Guidance |
 |---|---|---:|---|
 | ASR | multilingual `medium` | about 1.5 GiB | Higher accuracy; NVIDIA GPU recommended for live use |
 | ASR | multilingual `large-v3-turbo` | about 1.6 GiB | Best advanced speed/quality balance; NVIDIA GPU strongly recommended |
+| ASR | multilingual `large-v3` | about 3.0 GiB | Highest offline accuracy option; high memory use and NVIDIA GPU recommended |
 | MT | M2M100 1.2B CTranslate2 | about 2.5 GiB | Higher translation capacity; at least 16 GB RAM recommended |
 
 Advanced files come from Hugging Face only after confirmation and can resume. They are not bundled in the installer. Removing local models also removes these advanced directories.
@@ -51,6 +52,7 @@ built-in revision pins are:
 | `base` (CPU comparison) | `Systran/faster-whisper-base` | `ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66` |
 | `medium` (advanced) | `Systran/faster-whisper-medium` | `08e178d48790749d25932bbc082711ddcfdfbc4f` |
 | `large-v3-turbo` (advanced) | `mobiuslabsgmbh/faster-whisper-large-v3-turbo` | resolved by faster-whisper at install time |
+| `large-v3` (advanced) | `Systran/faster-whisper-large-v3` | resolved by faster-whisper at install time |
 
 On the RTX 5070 Laptop GPU host, `small/CUDA float16` produced an aggregate
 RTF of 0.024 and a first non-empty partial P50 of 0.79 seconds after warm-up.
@@ -78,7 +80,7 @@ were 79/104 ms. All routes passed the 1.8 s gate. chrF++/BLEU in this tiny corpu
 are regression signals only, not evidence of production translation quality.
 See `docs/benchmarks/m3-m2m100-cuda-final.json`.
 
-v0.2.0 can additionally download the MIT-licensed CTranslate2 conversion
+v0.3.0 can additionally download the MIT-licensed CTranslate2 conversion
 `michaelfeil/ct2fast-m2m100_1.2B` at revision
 `081c9b82953d4eeb2309daabf2951e395c5dc979`. This optional 2.49 GB model has not
 yet passed the project's full 12-route quality gate, so it is labeled an advanced

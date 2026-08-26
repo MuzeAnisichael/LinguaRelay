@@ -6,7 +6,7 @@
 2. **显式语言优先。** 用户从 `zh / ja / en / ko` 中选择源语言和目标语言，不运行自动检测。
 3. **有界队列。** 音频、识别和修正队列都必须设置上限；系统过载时丢弃过期的中间结果，不累积无限延迟。
 4. **结果可替换。** 音频、ASR、机器翻译和大模型修正均通过端口接口隔离。
-5. **默认本地和最少留存。** 默认不保存音频，API 修正默认关闭。
+5. **默认本地和显式留存。** 实时模式默认不保存音频；只有用户开始录制或导入媒体才建立离线项目，API 修正默认关闭。
 6. **先测量再优化。** 每个片段记录捕获、端点检测、ASR、翻译、修正和绘制耗时。
 
 ## 2. 组件与数据流
@@ -33,6 +33,17 @@ AudioCapture --PCM--> Resampler/RingBuffer --> VAD/Segmenter
                                              revision event
                                                      |
                                              Overlay + History
+
+Explicit record / imported audio or video
+      |
+      v
+Recoverable WAV fragments / PyAV decode --> Offline ASR with word timestamps
+                                                  |
+                                                  v
+                                  readable cues --> MT --> optional LLM
+                                                  |
+                                                  v
+                              SQLite project + timeline editor + media/subtitle export
 ```
 
 所有跨线程通信使用带容量限制的队列。UI 线程只消费不可变事件，不执行模型推理。
@@ -49,7 +60,9 @@ AudioCapture --PCM--> Resampler/RingBuffer --> VAD/Segmenter
 | 端点检测 | 在线能量门控 + final Silero VAD | partial 避免重复 VAD 开销，final 用 Silero 清理静音 | 字幕断句体验不足时加入标点/语义端点器 |
 | 即时翻译 | 按 `(source, target)` 路由的 provider registry | 覆盖四语全部 12 个方向，不锁定单一模型 | 某方向本地模型不达标时提供显式 API 选项 |
 | 大模型修正 | Provider 接口，默认关闭 | 不绑定厂商；可接本地或兼容 API | 在延迟、费用、隐私基准完成后选择默认实现 |
-| 历史 | JSONL + 原子追加 | 简单、可检查、便于离线重译 | 需要全文检索和会话管理时迁移 SQLite |
+| 实时历史 | JSONL + 原子追加 | 简单、可检查、便于回放修订 | 保持轻量，与离线项目隔离 |
+| 离线项目 | SQLite + 每项目媒体目录 | 可恢复任务、可编辑时间轴、避免把音频放入数据库 | 需要团队协作时增加显式导入/导出层 |
+| 媒体导入导出 | PyAV / FFmpeg | 本地读取常见音视频、标准化音轨并导出 MP3/FLAC | 需要专业剪辑时提供无损原始轨保留选项 |
 
 Windows 官方文档说明 WASAPI 回环可从渲染端点捕获正在播放的音频，即使硬件没有专用 loopback 设备；不过受保护内容可能不可捕获：
 https://learn.microsoft.com/windows/win32/coreaudio/loopback-recording
@@ -111,6 +124,16 @@ partial 和 final 都可提交给独立修正线程；快译仍先显示。该�
 - provider 超时、断线、限流或熔断只改变修正状态，不得把主字幕服务置为错误；
 - 每条 `revised` 事件复用 `segment_id`，并保存 `parent_revision`、`original_translation`、`revision_source`、`processing_scope`、provider 和 model；
 - `history-revise` 只写入新的 JSONL 文件，先复制所有原事件，再追加批量修订。
+
+## 6.1 录制与离线流水线
+
+- `RecordingSession` 只消费实时捕获已经归一化的 16 kHz 单声道块。每次开始/继续建立新的 PCM WAV 片段，每次暂停立即关闭文件；清单使用临时文件加原子替换，异常退出后可拼接已经完成的片段。
+- 暂停空档从媒体时间轴删除，但真实暂停开始/结束和时长写入 SQLite `interruptions`，既保证字幕轴连续，又保留审计信息。
+- 导入媒体由 PyAV 只读打开，第一个音轨在本地重采样为 16 kHz 单声道工作 WAV。源媒体不复制进数据库，也不覆盖。
+- `OfflineProcessor` 运行带 Silero VAD、前文条件、词级时间戳和可选 Beam 1/5/8 的 faster-whisper；按句末标点、7.5 秒和语言相关字符上限重新形成可读 cue。
+- 每条 cue 经过本地 M2M100 翻译；用户明确勾选后，再通过现有大模型 provider 携带最近上下文和术语逐条精修。
+- 后期任务开始前停止并释放实时模型，避免 CPU/GPU 同时驻留两套 ASR/MT；任务完成或失败后重新启动实时服务。当前只串行运行一个任务。
+- SQLite 保存项目、状态、进度和可编辑 cue；媒体留在对应 UUID 项目目录。导出器从最终编辑值生成 WebVTT/SRT/ASS/TXT/CSV/JSONL，并通过 PyAV 编码 WAV/FLAC/MP3。
 
 ## 7. 延迟与质量预算
 

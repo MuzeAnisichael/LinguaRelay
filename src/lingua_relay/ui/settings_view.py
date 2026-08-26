@@ -273,6 +273,7 @@ class SettingsDialog(QDialog):
         self.asr_model.addItem("Small · 均衡推荐（约 460 MiB）", "small")
         self.asr_model.addItem("Medium · 更高准确率（约 1.5 GiB）", "medium")
         self.asr_model.addItem("Large-v3 Turbo · 高质量低延迟（约 1.6 GiB）", "large-v3-turbo")
+        self.asr_model.addItem("Large-v3 · 离线最高准确度（约 3.0 GiB）", "large-v3")
         if self.asr_model.findData(self._initial.asr.model) < 0:
             self.asr_model.addItem(f"自定义：{self._initial.asr.model}", self._initial.asr.model)
         self._select_data(self.asr_model, self._initial.asr.model)
@@ -707,7 +708,7 @@ class SettingsDialog(QDialog):
             return
         asr_model = str(self.asr_model.currentData())
         translation_model = str(self.translation_model.currentData())
-        if asr_model in {"medium", "large-v3-turbo"}:
+        if asr_model in {"medium", "large-v3-turbo", "large-v3"}:
             asr_text = "高级识别模型建议使用 NVIDIA GPU；纯 CPU 也能运行，但延迟和占用会明显提高。"
         else:
             asr_text = "Base 速度优先，Small 在中/日/英/韩四语上通常更稳。"

@@ -166,6 +166,7 @@ def missing_model_downloads(settings: Settings, model_root: Path) -> tuple[Model
         "small": "约 460 MiB",
         "medium": "约 1.5 GiB",
         "large-v3-turbo": "约 1.6 GiB",
+        "large-v3": "约 3.0 GiB",
     }
     if settings.asr.model in asr_sizes and not _asr_installed(
         settings.asr.model,
@@ -191,6 +192,7 @@ def advanced_model_directories(model_root: Path) -> tuple[Path, ...]:
     return (
         model_root / "models--Systran--faster-whisper-medium",
         model_root / "models--mobiuslabsgmbh--faster-whisper-large-v3-turbo",
+        model_root / "models--Systran--faster-whisper-large-v3",
         model_root / "m2m100_1.2b_ct2",
     )
 

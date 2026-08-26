@@ -11,7 +11,7 @@ from typing import Any
 
 import numpy as np
 
-from lingua_relay.asr.types import AsrResult, AsrRuntime, AsrSegment
+from lingua_relay.asr.types import AsrResult, AsrRuntime, AsrSegment, AsrWord
 from lingua_relay.config import AsrSettings
 from lingua_relay.languages import SUPPORTED_LANGUAGES, normalize_language
 
@@ -213,6 +213,72 @@ class FasterWhisperRecognizer:
             segments=segments,
         )
 
+    def transcribe_offline(
+        self,
+        audio: str | Path | np.ndarray,
+        *,
+        language: str,
+        beam_size: int = 5,
+        cancel: Any | None = None,
+        on_progress: Any | None = None,
+    ) -> AsrResult:
+        """Run the accuracy-oriented path with word timestamps and speech VAD."""
+
+        normalized = normalize_language(language)
+        if normalized not in SUPPORTED_LANGUAGES:
+            raise ValueError(f"unsupported ASR language: {language}")
+        if isinstance(audio, np.ndarray):
+            if audio.ndim != 1:
+                raise ValueError("ASR input must be mono")
+            audio_input: str | np.ndarray = np.asarray(audio, dtype=np.float32)
+        else:
+            audio_input = str(Path(audio))
+        self.load()
+        assert self._model is not None
+        started = time.perf_counter()
+        generated, info = self._model.transcribe(
+            audio_input,
+            language=SUPPORTED_LANGUAGES[normalized].whisper_code,
+            task="transcribe",
+            beam_size=max(1, beam_size),
+            repetition_penalty=max(1.05, self.settings.repetition_penalty),
+            no_repeat_ngram_size=self.settings.no_repeat_ngram_size,
+            compression_ratio_threshold=self.settings.compression_ratio_threshold,
+            log_prob_threshold=self.settings.log_prob_threshold,
+            no_speech_threshold=self.settings.no_speech_threshold,
+            vad_filter=True,
+            vad_parameters={
+                "threshold": self.settings.vad_threshold,
+                "min_speech_duration_ms": 200,
+                "min_silence_duration_ms": 420,
+                "speech_pad_ms": 160,
+            },
+            condition_on_previous_text=True,
+            word_timestamps=True,
+            initial_prompt=self.settings.context_hint.strip() or None,
+            hotwords=self.settings.context_hint.strip() or None,
+        )
+        segments_list: list[AsrSegment] = []
+        media_duration = max(0.0, float(getattr(info, "duration", 0.0)))
+        for segment in self._consume_segments(generated, normalized):
+            if cancel is not None and cancel.is_set():
+                raise InterruptedError("处理已取消")
+            segments_list.append(segment)
+            if on_progress is not None and media_duration:
+                on_progress(min(1.0, segment.end_seconds / media_duration))
+        segments = tuple(segments_list)
+        inference_ms = (time.perf_counter() - started) * 1000
+        joiner = "" if normalized in {"zh", "ja"} else " "
+        text = joiner.join(item.text.strip() for item in segments if item.text.strip()).strip()
+        duration = media_duration
+        return AsrResult(
+            text=text,
+            language=normalized,
+            duration_ms=duration * 1000,
+            inference_ms=inference_ms,
+            segments=segments,
+        )
+
     def _warm_up(self) -> None:
         assert self._model is not None
         generated, _ = self._model.transcribe(
@@ -238,6 +304,15 @@ class FasterWhisperRecognizer:
                 text=text,
                 avg_logprob=_optional_float(getattr(segment, "avg_logprob", None)),
                 no_speech_prob=_optional_float(getattr(segment, "no_speech_prob", None)),
+                words=tuple(
+                    AsrWord(
+                        start_seconds=float(word.start),
+                        end_seconds=float(word.end),
+                        text=str(word.word),
+                        probability=_optional_float(getattr(word, "probability", None)),
+                    )
+                    for word in (getattr(segment, "words", None) or ())
+                ),
             )
 
 

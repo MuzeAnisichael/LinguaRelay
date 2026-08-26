@@ -181,14 +181,33 @@ def test_overlay_exposes_compact_controls_and_hides_them_in_click_through_mode()
     overlay.pause_requested.connect(lambda: requested.append("pause"))
     overlay.display_mode_requested.connect(lambda: requested.append("display"))
     overlay.history_requested.connect(lambda: requested.append("history"))
+    overlay.record_requested.connect(lambda: requested.append("record"))
+    overlay.workbench_requested.connect(lambda: requested.append("workbench"))
     overlay.settings_requested.connect(lambda: requested.append("settings"))
 
     overlay.pause_button.click()
     overlay.display_button.click()
+    overlay.record_button.click()
+    overlay.workbench_button.click()
     overlay.history_button.click()
     overlay.settings_button.click()
     app.processEvents()
 
-    assert requested == ["pause", "display", "history", "settings"]
+    assert requested == ["pause", "display", "record", "workbench", "history", "settings"]
     overlay.set_click_through(True)
     assert all(button.isHidden() for button in overlay.control_buttons)
+
+
+def test_overlay_recording_controls_show_pause_and_stop_state() -> None:
+    app = QApplication.instance() or QApplication([])
+    overlay = CaptionOverlay(OverlaySettings())
+    overlay.set_recording_state("recording")
+    app.processEvents()
+    assert overlay.record_button.text() == "■"
+    assert not overlay.record_pause_button.isHidden()
+
+    overlay.set_recording_state("paused")
+    assert overlay.record_pause_button.text() == "▶"
+    overlay.set_recording_state("stopped")
+    assert overlay.record_button.text() == "●"
+    assert overlay.record_pause_button.isHidden()

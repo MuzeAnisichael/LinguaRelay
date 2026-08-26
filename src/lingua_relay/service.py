@@ -18,6 +18,7 @@ from lingua_relay.correction import (
 from lingua_relay.events import CaptionEvent, ProcessingScope
 from lingua_relay.history import JsonlHistory
 from lingua_relay.mt import M2M100Translator, StreamingTranslationEngine
+from lingua_relay.offline.recording import RecordingSession
 from lingua_relay.translation import build_m2m100_registry
 
 
@@ -32,6 +33,8 @@ class ServiceSnapshot:
     correction_state: str
     correction_scope: ProcessingScope | None
     correction_error: str | None
+    recording_state: str
+    recording_project_id: str | None
 
 
 class RealtimeCaptionService:
@@ -45,6 +48,7 @@ class RealtimeCaptionService:
         on_transcript: Callable[[AsrEvent, str], None] | None = None,
         on_status: Callable[[str, str], None] | None = None,
         on_correction_status: Callable[[str, str], None] | None = None,
+        on_recording: Callable[[str, str, str | None], None] | None = None,
         model_root: str | Path = "models",
         resource_dir: str | Path = ".",
     ) -> None:
@@ -53,6 +57,7 @@ class RealtimeCaptionService:
         self.on_transcript = on_transcript or (lambda _event, _target: None)
         self.on_status = on_status or (lambda _state, _message: None)
         self.on_correction_status = on_correction_status or (lambda _state, _message: None)
+        self.on_recording = on_recording or (lambda _state, _message, _project_id: None)
         self.model_root = Path(model_root)
         self.resource_dir = Path(resource_dir)
         self._source = settings.app.source_language
@@ -74,6 +79,7 @@ class RealtimeCaptionService:
         self._displayed_segment_id: str | None = None
         self._displayed_revision = 0
         self._capture_error_reported: str | None = None
+        self._recorder: RecordingSession | None = None
 
     def start(self) -> None:
         if self._thread is not None and self._thread.is_alive():
@@ -87,7 +93,7 @@ class RealtimeCaptionService:
     def pause(self) -> None:
         self._paused.set()
         capture = self._capture
-        if capture is not None:
+        if capture is not None and not self._recording_needs_audio():
             capture.stop()
         if self._asr is not None:
             self._asr.flush()
@@ -131,6 +137,8 @@ class RealtimeCaptionService:
         self.set_audio_source(replace(self.settings.audio, source="system", device=device))
 
     def set_audio_source(self, audio: AudioSettings) -> None:
+        if self._recording_active():
+            raise RuntimeError("请先结束当前录制，再切换音频源")
         candidate = replace(self.settings, audio=audio)
         candidate.validate()
         replacement = create_audio_capture(audio, resource_dir=self.resource_dir)
@@ -151,6 +159,14 @@ class RealtimeCaptionService:
         self._notify(self._audio_status_message(prefix="音频源已切换："))
 
     def stop(self, timeout: float = 40.0) -> None:
+        recorder = self._recorder
+        if recorder is not None and recorder.state in {"recording", "paused"}:
+            try:
+                recorder.stop()
+            except Exception as error:
+                recorder.abort(str(error))
+            finally:
+                self._recorder = None
         self._stop.set()
         if self._capture is not None:
             self._capture.stop()
@@ -183,7 +199,59 @@ class RealtimeCaptionService:
                 self._correction_state,
                 self._correction_scope(),
                 self._correction_error,
+                self._recorder.state if self._recorder is not None else "stopped",
+                self._recorder.project_id if self._recorder is not None else None,
             )
+
+    def start_recording(self, session: RecordingSession) -> None:
+        with self._lock:
+            if self._recorder is not None and self._recorder.state in {"recording", "paused"}:
+                raise RuntimeError("已有录制正在进行")
+            if self._capture is None or self._state not in {"ready", "running", "paused"}:
+                raise RuntimeError("音频服务尚未就绪，请等待模型加载完成")
+            session.start()
+            self._recorder = session
+            self._capture.start()
+        self.on_recording("recording", "正在录制", session.project_id)
+
+    def pause_recording(self) -> None:
+        with self._lock:
+            recorder = self._require_recorder()
+            recorder.pause()
+            if self._paused.is_set() and self._capture is not None:
+                self._capture.stop()
+        self.on_recording("paused", "录制已暂停", recorder.project_id)
+
+    def resume_recording(self) -> None:
+        with self._lock:
+            recorder = self._require_recorder()
+            if self._capture is not None:
+                self._capture.start()
+            recorder.resume()
+        self.on_recording("recording", "正在录制", recorder.project_id)
+
+    def stop_recording(self) -> Path:
+        with self._lock:
+            recorder = self._require_recorder()
+            output = recorder.stop()
+            project_id = recorder.project_id
+            self._recorder = None
+            if self._paused.is_set() and self._capture is not None:
+                self._capture.stop()
+        self.on_recording("stopped", "录制完成，准备后期处理", project_id)
+        return output
+
+    def _require_recorder(self) -> RecordingSession:
+        recorder = self._recorder
+        if recorder is None or recorder.state not in {"recording", "paused"}:
+            raise RuntimeError("当前没有录制任务")
+        return recorder
+
+    def _recording_needs_audio(self) -> bool:
+        return self._recorder is not None and self._recorder.state == "recording"
+
+    def _recording_active(self) -> bool:
+        return self._recorder is not None and self._recorder.state in {"recording", "paused"}
 
     def _run(self) -> None:
         try:
@@ -219,7 +287,7 @@ class RealtimeCaptionService:
                 self._capture.start()
                 self._set_state("running", self._audio_status_message())
             while not self._stop.is_set():
-                if not self._paused.is_set():
+                if not self._paused.is_set() or self._recording_needs_audio():
                     self._pump_audio()
                 else:
                     self._stop.wait(0.05)
@@ -265,6 +333,11 @@ class RealtimeCaptionService:
             self._report_capture_state()
             return
         self._report_capture_state()
+        recorder = self._recorder
+        if recorder is not None:
+            recorder.write(chunk)
+        if self._paused.is_set():
+            return
         with self._lock:
             source = self._source
         self._asr.submit_chunk(chunk, language=source)

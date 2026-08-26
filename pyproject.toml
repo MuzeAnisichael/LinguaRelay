@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "lingua-relay"
-version = "0.2.0"
-description = "Low-latency Windows audio translation captions with optional LLM revision"
+version = "0.3.0"
+description = "Real-time and offline Windows audio translation with timestamped subtitles"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = { file = "LICENSE" }
@@ -53,6 +53,7 @@ packaging = [
   "pyinstaller>=6.18,<7",
 ]
 runtime = [
+  "av>=14,<19",
   "ctranslate2>=4.8,<5",
   "faster-whisper>=1.2.1,<2",
   "numpy>=1.26,<3",

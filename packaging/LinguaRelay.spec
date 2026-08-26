@@ -40,6 +40,7 @@ if not audio_helper.is_file():
 binaries.append((str(audio_helper), "native"))
 
 for package in (
+    "av",
     "faster_whisper",
     "opencc",
     "pyaudiowpatch",
@@ -68,6 +69,7 @@ if os.environ.get("LINGUA_RELAY_PACKAGE_CUDA") == "1":
                     binaries.append((str(dll), f"nvidia/{component}/bin"))
 
 for distribution in (
+    "av",
     "ctranslate2",
     "faster-whisper",
     "huggingface-hub",
