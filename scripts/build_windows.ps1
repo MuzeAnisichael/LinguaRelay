@@ -2,9 +2,10 @@
 param(
     [ValidateSet("cpu", "cuda")]
     [string]$Runtime = "cpu",
-    [string]$Version = "0.3.2",
+    [string]$Version = "0.3.3",
     [switch]$Installer,
     [switch]$SkipInstall,
+    [string]$PythonPath = "",
     [string]$ModelPackDir = "",
     [string]$ReleaseDir = ""
 )
@@ -13,34 +14,58 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Push-Location $projectRoot
 try {
-    $venvPython = Join-Path $projectRoot ".venv\Scripts\python.exe"
-    $python = if (Test-Path -LiteralPath $venvPython) {
-        $venvPython
+    $venvPython = Join-Path $projectRoot ".release-venv\Scripts\python.exe"
+    if ($PythonPath) {
+        $python = (Resolve-Path -LiteralPath $PythonPath).Path
     }
     else {
-        (Get-Command python.exe -ErrorAction Stop).Source
+        if (-not (Test-Path -LiteralPath $venvPython)) {
+            if ($SkipInstall) {
+                throw "The release environment is missing. Run without -SkipInstall first."
+            }
+            & py -3.11 -m venv (Join-Path $projectRoot ".release-venv")
+            if ($LASTEXITCODE -ne 0) {
+                throw "Could not create the isolated Python 3.11 release environment."
+            }
+        }
+        $python = $venvPython
+    }
+    # Validate isolation before pip changes anything; never build from system packages.
+    & $python -I scripts\verify_release_environment.py
+    if ($LASTEXITCODE -ne 0) {
+        throw "Release environment isolation check failed."
+    }
+    $lockFiles = @(Join-Path $projectRoot "packaging\requirements-release.lock")
+    if ($Runtime -eq "cuda") {
+        $lockFiles += Join-Path $projectRoot "packaging\requirements-release-cuda.lock"
     }
     if (-not $SkipInstall) {
-        & $python -m pip install -e ".[dev,runtime,packaging]"
+        $pipArguments = @("-I", "-m", "pip", "install", "--only-binary=:all:")
+        foreach ($lock in $lockFiles) { $pipArguments += @("-r", $lock) }
+        & $python @pipArguments
         if ($LASTEXITCODE -ne 0) {
             throw "Dependency installation failed with exit code $LASTEXITCODE"
         }
     }
+    $verifyArguments = @("-I", "scripts\verify_release_environment.py")
+    foreach ($lock in $lockFiles) { $verifyArguments += @("--lock", $lock) }
+    & $python @verifyArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Release dependencies differ from the committed lock."
+    }
+    & $python -I -m pip check
+    if ($LASTEXITCODE -ne 0) { throw "Release dependency consistency check failed." }
     if ($Runtime -eq "cuda") {
-        & $python -m pip install -e ".[gpu]"
-        if ($LASTEXITCODE -ne 0) {
-            throw "GPU dependency installation failed with exit code $LASTEXITCODE"
-        }
         $env:LINGUA_RELAY_PACKAGE_CUDA = "1"
     }
     else {
         $env:LINGUA_RELAY_PACKAGE_CUDA = "0"
     }
-    & $python -m pytest
+    & $python -I -m pytest
     if ($LASTEXITCODE -ne 0) {
         throw "Tests failed with exit code $LASTEXITCODE"
     }
-    & $python -m ruff check .
+    & $python -I -m ruff check .
     if ($LASTEXITCODE -ne 0) {
         throw "Ruff failed with exit code $LASTEXITCODE"
     }
@@ -58,7 +83,7 @@ try {
     }
     $env:Path = ($pathEntries | Select-Object -Unique) -join ";"
     try {
-        & $python -m PyInstaller --noconfirm --clean packaging\LinguaRelay.spec
+        & $python -I -m PyInstaller --noconfirm --clean packaging\LinguaRelay.spec
         if ($LASTEXITCODE -ne 0) {
             throw "PyInstaller failed with exit code $LASTEXITCODE"
         }
@@ -74,7 +99,8 @@ try {
     Write-Host "Application bundle: $application"
     & $python scripts\verify_windows_bundle.py `
         --bundle (Join-Path $projectRoot "dist\LinguaRelay") `
-        --analysis (Join-Path $projectRoot "build\LinguaRelay\Analysis-00.toc")
+        --analysis (Join-Path $projectRoot "build\LinguaRelay\Analysis-00.toc") `
+        --self-test-report (Join-Path $projectRoot "build\bundle-self-test.json")
     if ($LASTEXITCODE -ne 0) {
         throw "Windows bundle verification failed with exit code $LASTEXITCODE"
     }

@@ -147,3 +147,73 @@ def test_older_translation_does_not_overwrite_a_newer_transcript() -> None:
     service._pump_captions()
 
     assert published == []
+
+
+def test_same_segment_llm_result_uses_parent_revision_to_prevent_rollback() -> None:
+    published: list[CaptionEvent] = []
+    service = RealtimeCaptionService(
+        Settings(correction=CorrectionSettings(mode="live", provider="local", model="mock")),
+        on_caption=published.append,
+    )
+    revisions: queue.Queue[CaptionEvent] = queue.Queue()
+    revisions.put(
+        CaptionEvent(
+            "old source",
+            "stale correction",
+            "en",
+            "zh",
+            "revised",
+            0,
+            segment_id="same",
+            revision=3,
+            parent_revision=2,
+        )
+    )
+    current = CaptionEvent(
+        "new source",
+        "current correction",
+        "en",
+        "zh",
+        "revised",
+        0,
+        segment_id="same",
+        revision=4,
+        parent_revision=3,
+    )
+    revisions.put(current)
+
+    class CorrectionQueue:
+        def get_event(self, timeout: float = 0) -> CaptionEvent:
+            return revisions.get(timeout=timeout)
+
+    service._correction = CorrectionQueue()  # type: ignore[assignment]
+    service._displayed_segment_id = "same"
+    service._displayed_revision = 3
+    service._pump_revisions()
+
+    assert published == [current]
+    # The counter follows ASR/MT versions, not the LLM's derived N+1 version.
+    assert service._displayed_revision == 3
+
+
+def test_service_disables_correction_before_waiting_for_other_workers() -> None:
+    service = RealtimeCaptionService(Settings(), on_caption=lambda _event: None)
+    order = []
+
+    class Correction:
+        def set_enabled(self, enabled: bool) -> None:
+            assert not enabled
+            order.append("correction disabled")
+
+    class Worker:
+        def join(self, timeout: float) -> None:
+            order.append("worker joined")
+
+        def is_alive(self) -> bool:
+            return False
+
+    service._correction = Correction()  # type: ignore[assignment]
+    service._thread = Worker()  # type: ignore[assignment]
+    service.stop()
+
+    assert order == ["correction disabled", "worker joined"]

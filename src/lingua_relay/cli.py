@@ -476,34 +476,34 @@ def run_correction_doctor(args: argparse.Namespace) -> int:
     if settings.provider == "none":
         print(json.dumps({"configured": False, "mode": settings.mode}, indent=2))
         return 1
-    provider = OpenAICompatibleProvider(settings)
-    report: dict[str, object] = {
-        "configured": True,
-        "mode": settings.mode,
-        "provider": provider.name,
-        "scope": provider.scope,
-        "model": provider.model,
-        "endpoint": provider.url,
-        "api_key_environment": settings.api_key_env,
-        "api_key_present": bool(os.environ.get(settings.api_key_env, "").strip()),
-        "probe_succeeded": None,
-    }
-    if args.probe:
-        try:
-            provider.revise(
-                _single_correction_request(
-                    "The fast path stays available.",
-                    "快速路径保持可用。",
-                    "en",
-                    "zh",
-                    settings,
+    with OpenAICompatibleProvider(settings) as provider:
+        report: dict[str, object] = {
+            "configured": True,
+            "mode": settings.mode,
+            "provider": provider.name,
+            "scope": provider.scope,
+            "model": provider.model,
+            "endpoint": provider.url,
+            "api_key_environment": settings.api_key_env,
+            "api_key_present": bool(os.environ.get(settings.api_key_env, "").strip()),
+            "probe_succeeded": None,
+        }
+        if args.probe:
+            try:
+                provider.revise(
+                    _single_correction_request(
+                        "The fast path stays available.",
+                        "快速路径保持可用。",
+                        "en",
+                        "zh",
+                        settings,
+                    )
                 )
-            )
-        except Exception as error:
-            report["probe_succeeded"] = False
-            report["probe_error"] = f"{type(error).__name__}: {error}"
-        else:
-            report["probe_succeeded"] = True
+            except Exception as error:
+                report["probe_succeeded"] = False
+                report["probe_error"] = f"{type(error).__name__}: {error}"
+            else:
+                report["probe_succeeded"] = True
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0 if report["probe_succeeded"] is not False else 1
 
@@ -514,16 +514,16 @@ def run_correction_revise(args: argparse.Namespace) -> int:
     from lingua_relay.correction import OpenAICompatibleProvider
 
     settings = Settings.load(args.config).correction
-    provider = OpenAICompatibleProvider(settings)
-    result = provider.revise(
-        _single_correction_request(
-            args.source_text,
-            args.fast_translation,
-            args.source,
-            args.target,
-            settings,
+    with OpenAICompatibleProvider(settings) as provider:
+        result = provider.revise(
+            _single_correction_request(
+                args.source_text,
+                args.fast_translation,
+                args.source,
+                args.target,
+                settings,
+            )
         )
-    )
     print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
     return 0
 
@@ -533,12 +533,8 @@ def run_history_revise(args: argparse.Namespace) -> int:
     from lingua_relay.correction.batch import write_batch_report
 
     settings = Settings.load(args.config).correction
-    report = revise_history(
-        args.input,
-        args.output,
-        OpenAICompatibleProvider(settings),
-        settings,
-    )
+    with OpenAICompatibleProvider(settings) as provider:
+        report = revise_history(args.input, args.output, provider, settings)
     if args.report:
         write_batch_report(report, args.report)
     print(json.dumps(asdict(report), ensure_ascii=False, indent=2))

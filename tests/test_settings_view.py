@@ -60,3 +60,18 @@ def test_settings_dialog_configures_local_llm_without_putting_a_key_in_config() 
     assert result.correction.provider == "local"
     assert result.correction.endpoint == "http://127.0.0.1:11434/v1"
     assert result.correction.model == "local-translator"
+
+
+def test_openrouter_preset_and_routing_do_not_copy_api_key(monkeypatch) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-secret-not-for-config")
+    _app = QApplication.instance() or QApplication([])
+    dialog = SettingsDialog(Settings())
+    dialog._apply_openrouter_preset()
+    dialog.llm_model.setText("google/gemini-2.5-flash-lite")
+    dialog.llm_routing.setCurrentIndex(dialog.llm_routing.findData("latency"))
+    result = dialog._collect()
+    result.validate()
+    assert result.correction.api_key_env == "OPENROUTER_API_KEY"
+    assert result.correction.endpoint == "https://openrouter.ai/api/v1"
+    assert result.correction.openrouter_provider_sort == "latency"
+    assert "test-secret-not-for-config" not in repr(result)

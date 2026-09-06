@@ -1,3 +1,3 @@
 """LinguaRelay: low-latency desktop translation captions."""
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"

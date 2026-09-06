@@ -131,6 +131,7 @@ class CorrectionSettings:
     max_output_chars: int = 4_000
     max_tokens: int = 512
     temperature: float = 0.1
+    openrouter_provider_sort: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,6 +219,8 @@ class Settings:
             raise ValueError("correction output limits must be positive")
         if not 0 <= self.correction.temperature <= 2:
             raise ValueError("correction.temperature must be between 0 and 2")
+        if self.correction.openrouter_provider_sort not in {"", "price", "latency", "throughput"}:
+            raise ValueError("invalid correction.openrouter_provider_sort")
         if self.audio.sample_rate <= 0 or self.audio.chunk_ms <= 0 or self.audio.raw_frame_ms <= 0:
             raise ValueError("audio sample_rate, chunk_ms, and raw_frame_ms must be positive")
         if self.audio.source not in {"system", "process", "microphone"}:

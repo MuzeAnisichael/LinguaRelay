@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import queue
+import threading
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
 from lingua_relay.config import CorrectionSettings
+from lingua_relay.correction.controls import CircuitBreaker, RateLimiter
 from lingua_relay.correction.engine import AsynchronousRevisionEngine
 from lingua_relay.correction.types import CorrectionRequest, RevisionResult
 from lingua_relay.events import CaptionEvent
@@ -195,3 +198,151 @@ def test_context_does_not_cross_language_routes() -> None:
         engine.stop()
 
     assert contexts == [(), ()]
+
+
+class BlockingProvider(SuccessProvider):
+    def __init__(self) -> None:
+        self.started = threading.Event()
+        self.release = threading.Event()
+        self.requests: list[CorrectionRequest] = []
+        self.closed = False
+
+    def revise(self, request: CorrectionRequest) -> RevisionResult:
+        self.requests.append(request)
+        if len(self.requests) == 1:
+            self.started.set()
+            assert self.release.wait(2), "test did not release the first request"
+        return super().revise(request)
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_stop_cancels_queued_requests_and_allows_join_after_timeout() -> None:
+    provider = BlockingProvider()
+    engine = AsynchronousRevisionEngine(provider, _settings())
+    engine.start()
+    try:
+        assert engine.submit(_event(1))
+        assert provider.started.wait(1)
+        assert engine.submit(_event(2))
+        assert engine.submit(_event(3))
+        with pytest.raises(TimeoutError):
+            engine.stop(timeout=0)
+        assert not provider.closed
+    finally:
+        provider.release.set()
+        engine.stop()
+
+    assert len(provider.requests) == 1
+    assert provider.closed
+    with pytest.raises(RuntimeError, match="cannot restart"):
+        engine.start()
+    assert engine.snapshot().cancelled_requests == 3
+    assert engine.snapshot().queue_depth == 0
+    with pytest.raises(queue.Empty):
+        engine.get_event(timeout=0)
+
+
+def test_reenabling_does_not_revive_previous_requests() -> None:
+    provider = BlockingProvider()
+    engine = AsynchronousRevisionEngine(provider, _settings())
+    engine.start()
+    try:
+        assert engine.submit(_event(1))
+        assert provider.started.wait(1)
+        assert engine.submit(_event(2))
+        engine.set_enabled(False)
+        engine.set_enabled(True)
+        assert engine.submit(_event(3))
+        provider.release.set()
+        revised = engine.get_event(timeout=2)
+    finally:
+        provider.release.set()
+        engine.stop()
+
+    assert revised.segment_id == "segment-3"
+    assert [request.segment_id for request in provider.requests] == ["segment-1", "segment-3"]
+    assert engine.snapshot().cancelled_requests == 2
+
+
+def test_newer_revision_skips_obsolete_work_before_provider_call() -> None:
+    provider = BlockingProvider()
+    engine = AsynchronousRevisionEngine(provider, _settings())
+    engine.start()
+    try:
+        assert engine.submit(_event(10))
+        assert provider.started.wait(1)
+        original = _event(1)
+        assert engine.submit(original)
+        assert engine.submit(replace(original, revision=2, translated_text="new fast text"))
+        provider.release.set()
+        engine.get_event(timeout=2)
+        revised = engine.get_event(timeout=2)
+    finally:
+        provider.release.set()
+        engine.stop()
+
+    assert len(provider.requests) == 2
+    assert revised.parent_revision == 2
+    assert engine.snapshot().stale_requests_dropped == 1
+
+
+def test_full_final_queue_reports_dropped_requests() -> None:
+    provider = BlockingProvider()
+    engine = AsynchronousRevisionEngine(provider, _settings(queue_capacity=2))
+    engine.start()
+    try:
+        assert engine.submit(_event(1))
+        assert provider.started.wait(1)
+        assert engine.submit(_event(2))
+        assert engine.submit(_event(3))
+        assert not engine.submit(_event(4))
+        assert engine.snapshot().finals_dropped == 1
+        engine.set_enabled(False)
+    finally:
+        provider.release.set()
+        engine.stop()
+
+
+def test_rate_limit_does_not_hold_half_open_recovery_probe_forever() -> None:
+    clock = [0.0]
+    failed = threading.Event()
+    limited = threading.Event()
+
+    class RecoversProvider(SuccessProvider):
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def revise(self, request: CorrectionRequest) -> RevisionResult:
+            self.calls += 1
+            if self.calls == 1:
+                raise ConnectionError("first request fails")
+            return super().revise(request)
+
+    def status(state: str, _message: str) -> None:
+        if state == "error":
+            failed.set()
+        elif state == "rate_limited":
+            limited.set()
+
+    provider = RecoversProvider()
+    engine = AsynchronousRevisionEngine(provider, _settings(), on_status=status)
+    engine._circuit = CircuitBreaker(1, 1, clock=lambda: clock[0])
+    engine._limiter = RateLimiter(1, clock=lambda: clock[0])
+    engine.start()
+    try:
+        assert engine.submit(_event(1))
+        assert failed.wait(1)
+        clock[0] = 1
+        assert engine.submit(_event(2))
+        assert limited.wait(1)
+        clock[0] = 60
+        assert engine.submit(_event(3))
+        revised = engine.get_event(timeout=2)
+    finally:
+        engine.stop()
+
+    assert revised.segment_id == "segment-3"
+    assert provider.calls == 2
+    assert engine.snapshot().circuit_state == "closed"

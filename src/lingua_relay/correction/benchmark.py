@@ -54,8 +54,10 @@ def run_fault_gate_benchmark(event_count: int = 6) -> dict[str, object]:
         started = time.monotonic_ns()
         healthy.submit(event)
         submit_ms.append((time.monotonic_ns() - started) / 1e6)
-    healthy.stop()
-    revisions = _drain(healthy)
+    try:
+        revisions = [healthy.get_event(timeout=2) for _ in range(event_count)]
+    finally:
+        healthy.stop()
 
     disconnected = AsynchronousRevisionEngine(_ScriptedProvider(fail=True), settings)
     disconnected.start()
@@ -64,6 +66,12 @@ def run_fault_gate_benchmark(event_count: int = 6) -> dict[str, object]:
         event = _event(100 + index)
         disconnected_fast_events.append(event)
         disconnected.submit(event)
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        snapshot = disconnected.snapshot()
+        if snapshot.provider_errors + snapshot.circuit_rejected == event_count:
+            break
+        time.sleep(0.001)
     disconnected.stop()
     disconnected_revisions = _drain(disconnected)
     disconnected_snapshot = disconnected.snapshot()

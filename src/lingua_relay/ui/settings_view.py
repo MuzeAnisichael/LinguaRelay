@@ -455,6 +455,9 @@ class SettingsDialog(QDialog):
         )
         presets.layout().addWidget(ollama)
         presets.layout().addWidget(lm_studio)
+        openrouter = QPushButton("OpenRouter")
+        openrouter.clicked.connect(self._apply_openrouter_preset)
+        presets.layout().addWidget(openrouter)
         presets.layout().addStretch(1)
         form.addRow("快速预设", presets)
 
@@ -467,6 +470,14 @@ class SettingsDialog(QDialog):
         self.llm_api_key_env = QLineEdit(self._initial.correction.api_key_env)
         self.llm_api_key_env.setPlaceholderText("LINGUA_RELAY_API_KEY")
         form.addRow("密钥环境变量", self.llm_api_key_env)
+        self.llm_routing = QComboBox()
+        self.llm_routing.addItem("服务默认", "")
+        self.llm_routing.addItem("低延迟优先（可能增加费用）", "latency")
+        self.llm_routing.addItem("低价格优先", "price")
+        self.llm_routing.addItem("高输出速度优先", "throughput")
+        self._select_data(self.llm_routing, self._initial.correction.openrouter_provider_sort)
+        self.llm_routing.setToolTip("仅对 openrouter.ai 生效；低延迟不保证完整修正的响应时间。")
+        form.addRow("OpenRouter 路由", self.llm_routing)
 
         self.llm_context = QSpinBox()
         self.llm_context.setRange(0, 20)
@@ -651,6 +662,7 @@ class SettingsDialog(QDialog):
             requests_per_minute=self.llm_rpm.value(),
             max_tokens=self.llm_max_tokens.value(),
             temperature=self.llm_temperature.value(),
+            openrouter_provider_sort=str(self.llm_routing.currentData()),
         )
         return replace(
             self._initial,
@@ -747,6 +759,11 @@ class SettingsDialog(QDialog):
         self.preferred_segment.setValue(preferred)
         self.max_caption.setValue(maximum)
 
+    def _apply_openrouter_preset(self) -> None:
+        self._apply_llm_preset("openai_compatible", "https://openrouter.ai/api/v1")
+        self.llm_api_key_env.setText("OPENROUTER_API_KEY")
+        self.llm_model.setPlaceholderText("例如 google/gemini-2.5-flash-lite")
+
     def _apply_llm_preset(self, provider: str, endpoint: str) -> None:
         self._select_data(self.llm_provider, provider)
         self.llm_endpoint.setText(endpoint)
@@ -766,6 +783,7 @@ class SettingsDialog(QDialog):
             self.llm_rpm,
             self.llm_max_tokens,
             self.llm_temperature,
+            self.llm_routing,
         ):
             control.setEnabled(enabled)
 

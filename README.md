@@ -16,9 +16,9 @@
     <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
   </p>
   <p>
-    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2"><strong>Download v0.3.2</strong></a>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.3"><strong>Download v0.3.3</strong></a>
     · <a href="#quick-start">Quick start</a>
-    · <a href="docs/releases/v0.3.2.md">Release notes</a>
+    · <a href="docs/releases/v0.3.3.md">Release notes</a>
   </p>
 </div>
 
@@ -30,7 +30,7 @@ English, and Korean are supported in every direction. The source language stays
 manual by design, avoiding language-detection delay and accidental route changes.
 
 > [!IMPORTANT]
-> v0.3.2 is an unsigned Windows x64 alpha. Download it only from this repository,
+> v0.3.3 is an unsigned Windows x64 alpha. Download it only from this repository,
 > verify `SHA256SUMS.txt`, and expect Windows to show an unknown-publisher warning.
 
 ## Why LinguaRelay?
@@ -46,15 +46,15 @@ manual by design, avoiding language-detection delay and accidental route changes
 
 ## Quick start
 
-1. Open [v0.3.2 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2)
-   and download `LinguaRelay-0.3.2-Setup-x64.exe`.
+1. Open [v0.3.3 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.3)
+   and download `LinguaRelay-0.3.3-Setup-x64.exe`.
 2. On first launch, let LinguaRelay verify an existing model directory or choose
    a model profile. The installer does not silently download model weights.
 3. Select the source language, target language, and system/process/microphone source from the tray
    menu. Play audio and position the overlay where you want it.
 
 Prefer not to install? The release also includes
-`LinguaRelay-0.3.2-Windows-x64-portable.zip`. Extract portable upgrades into a new,
+`LinguaRelay-0.3.3-Windows-x64-portable.zip`. Extract portable upgrades into a new,
 empty directory rather than over an older folder. Both editions can reuse existing offline models.
 
 ### Choose a model profile
@@ -113,6 +113,11 @@ See the [v0.3.0 release guide](docs/releases/v0.3.0.md) for storage, privacy, mo
 Open **Settings → LLM** to choose completed-caption revision (recommended) or
 experimental live revision. LinguaRelay supports local OpenAI-compatible servers
 such as Ollama and LM Studio, plus opt-in HTTPS OpenAI-compatible APIs.
+
+v0.3.3 adds an **OpenRouter** preset, optional latency/price routing, and pooled HTTP
+connections. For EN→ZH, start by testing completed-caption revision with
+`google/gemini-2.5-flash-lite`; revision is not guaranteed to improve every caption.
+See the [measured latency, cost and quality report](docs/benchmarks/OPENROUTER-v0.3.3.zh-CN.md).
 
 The fast local translation is always displayed first. Timeouts, rate limits,
 disconnects, or an unavailable correction model do not stop live captions. API

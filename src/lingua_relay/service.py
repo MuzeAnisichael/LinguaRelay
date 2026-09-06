@@ -168,6 +168,8 @@ class RealtimeCaptionService:
             finally:
                 self._recorder = None
         self._stop.set()
+        if self._correction is not None:
+            self._correction.set_enabled(False)
         if self._capture is not None:
             self._capture.stop()
         thread = self._thread
@@ -407,7 +409,16 @@ class RealtimeCaptionService:
                     event.segment_id,
                 }
                 mode = self._correction_mode
-            if is_current_segment and mode != "off":
+                # LLM revision N+1 still refers to ASR/MT revision N. Compare its
+                # parent, so a delayed revision cannot overwrite newer source text.
+                source_revision = (
+                    event.parent_revision if event.parent_revision is not None else event.revision
+                )
+                is_current_revision = source_revision >= self._displayed_revision
+                if is_current_segment and is_current_revision and mode != "off":
+                    self._displayed_segment_id = event.segment_id
+                    self._displayed_revision = source_revision
+            if is_current_segment and is_current_revision and mode != "off":
                 self.on_caption(event)
 
     def _shutdown_workers(self) -> None:

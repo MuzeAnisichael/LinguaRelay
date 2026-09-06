@@ -23,6 +23,7 @@ class CorrectionRequest:
     segment_id: str
     revision: int
     submitted_at_ns: int
+    generation: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +33,8 @@ class RevisionResult:
     provider: str
     model: str
     scope: ProcessingScope
+    usage: dict[str, int | float] | None = None
+    response_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,6 +57,9 @@ class CorrectionSnapshot:
     event_queue_depth: int
     event_queue_capacity: int
     last_error: str | None
+    finals_dropped: int = 0
+    cancelled_requests: int = 0
+    stale_requests_dropped: int = 0
 
 
 class CorrectionProvider(Protocol):

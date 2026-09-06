@@ -7,9 +7,11 @@ from PyInstaller.utils.hooks import (
 )
 from pathlib import Path
 import os
+import runpy
 import sys
 
 project_root = Path(SPECPATH).parent
+bundle_support = runpy.run_path(str(project_root / "packaging/bundle_support.py"))
 
 # PyInstaller resolves transitive DLLs from PATH while this spec is executing.
 # Remove workspace-only toolchains inside the Python process as launchers may
@@ -34,6 +36,7 @@ datas = [
     (str(project_root / "packaging/model-manifest.json"), "packaging"),
     (str(project_root / "packaging/model-manifest-base.json"), "packaging"),
     (str(project_root / "packaging/model-catalog.json"), "packaging"),
+    (str(project_root / "native/ProcessAudioCapture/packages.lock.json"), "packaging"),
     (str(project_root / "assets/linguarelay.ico"), "assets"),
     (str(project_root / "assets/linguarelay.png"), "assets"),
 ]
@@ -135,6 +138,24 @@ analysis = Analysis(
     noarchive=False,
     optimize=1,
 )
+analysis.binaries = bundle_support["trim_optional_qt"](analysis.binaries)
+# Include metadata for the wheels actually represented by the collected modules,
+# binaries and data. The SBOM reads these copies, never the developer environment.
+for distribution in bundle_support["collected_distribution_names"](
+    [*analysis.pure, *analysis.binaries, *analysis.datas]
+):
+    for source, destination in copy_metadata(distribution):
+        source_path = Path(source)
+        if source_path.is_dir():
+            for metadata_file in source_path.rglob("*"):
+                if metadata_file.is_file():
+                    analysis.datas.append((
+                        str(Path(destination) / metadata_file.relative_to(source_path)),
+                        str(metadata_file),
+                        "DATA",
+                    ))
+        else:
+            analysis.datas.append((str(Path(destination) / source_path.name), source, "DATA"))
 pyz = PYZ(analysis.pure)
 exe = EXE(
     pyz,

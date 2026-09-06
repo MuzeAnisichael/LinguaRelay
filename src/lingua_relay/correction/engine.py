@@ -3,7 +3,7 @@ from __future__ import annotations
 import queue
 import threading
 import time
-from collections import deque
+from collections import OrderedDict, deque
 from collections.abc import Callable
 
 from lingua_relay.asr.buffer import InferenceBacklog, LatestEventBuffer
@@ -42,11 +42,13 @@ class AsynchronousRevisionEngine:
         self._limiter = RateLimiter(settings.requests_per_minute)
         self._circuit = CircuitBreaker(settings.failure_threshold, settings.recovery_seconds)
         self._contexts: dict[tuple[str, str], deque[CaptionEvent]] = {}
-        self._latest_revision: dict[str, int] = {}
+        self._latest_revision: OrderedDict[str, int] = OrderedDict()
+        self._generation = 0
         self._running = threading.Event()
         self._enabled = threading.Event()
         self._enabled.set()
         self._thread: threading.Thread | None = None
+        self._stopped = False
         self._lock = threading.Lock()
         self._revisions_emitted = 0
         self._unchanged_results = 0
@@ -55,9 +57,14 @@ class AsynchronousRevisionEngine:
         self._circuit_rejected = 0
         self._provider_errors = 0
         self._output_drops = 0
+        self._finals_dropped = 0
+        self._cancelled_requests = 0
+        self._stale_requests_dropped = 0
         self._last_error: str | None = None
 
     def start(self) -> None:
+        if self._stopped:
+            raise RuntimeError("a stopped correction engine cannot restart; create a new engine")
         if self._thread is not None and self._thread.is_alive():
             return
         self._running.set()
@@ -73,6 +80,7 @@ class AsynchronousRevisionEngine:
         if event.state not in {"partial", "final"} or not event.translated_text.strip():
             return False
         with self._lock:
+            generation = self._generation
             route = (event.source_language, event.target_language)
             route_context = self._contexts.setdefault(
                 route, deque(maxlen=max(1, self.settings.context_segments))
@@ -84,7 +92,13 @@ class AsynchronousRevisionEngine:
             )
             if event.state == "final":
                 route_context.append(event)
-            self._latest_revision[event.segment_id] = event.revision
+            self._latest_revision[event.segment_id] = max(
+                event.revision, self._latest_revision.get(event.segment_id, event.revision)
+            )
+            self._latest_revision.move_to_end(event.segment_id)
+            # Rejected finals and replaced partials must not retain segment IDs forever.
+            while len(self._latest_revision) > max(32, self.settings.queue_capacity * 4):
+                self._latest_revision.popitem(last=False)
         request = CorrectionRequest(
             event=event,
             context=context,
@@ -95,20 +109,28 @@ class AsynchronousRevisionEngine:
             segment_id=event.segment_id,
             revision=event.revision,
             submitted_at_ns=time.monotonic_ns(),
+            generation=generation,
         )
         if event.state == "partial":
             return self._requests.put_partial(request)  # type: ignore[arg-type]
-        return self._requests.put_final(request, timeout=0)  # type: ignore[arg-type]
+        accepted = self._requests.put_final(request, timeout=0)  # type: ignore[arg-type]
+        if not accepted:
+            with self._lock:
+                self._finals_dropped += 1
+        return accepted
 
     def set_enabled(self, enabled: bool) -> None:
         if enabled:
             self._enabled.set()
         else:
-            self._enabled.clear()
+            with self._lock:
+                self._enabled.clear()
+                self._generation += 1
 
     def stop(self, timeout: float = 15.0) -> None:
-        if not self._running.is_set():
+        if self._thread is None:
             return
+        self._stopped = True
         self._running.clear()
         self._requests.close()
         if self._thread is not None:
@@ -145,9 +167,22 @@ class AsynchronousRevisionEngine:
                 event_queue_depth=event_depth,
                 event_queue_capacity=event_capacity,
                 last_error=self._last_error,
+                finals_dropped=self._finals_dropped,
+                cancelled_requests=self._cancelled_requests,
+                stale_requests_dropped=self._stale_requests_dropped,
             )
 
     def _work(self) -> None:
+        try:
+            self._process_requests()
+        finally:
+            self._running.clear()
+            self._stopped = True
+            close = getattr(self.provider, "close", None)
+            if callable(close):
+                close()
+
+    def _process_requests(self) -> None:
         while True:
             try:
                 request = self._requests.get(timeout=0.2)  # type: ignore[assignment]
@@ -156,9 +191,15 @@ class AsynchronousRevisionEngine:
                     return
                 continue
             assert isinstance(request, CorrectionRequest)
-            if not self._enabled.is_set():
+            if self._request_cancelled(request):
+                with self._lock:
+                    self._cancelled_requests += 1
                 continue
-            if not self._circuit.allow_request():
+            if self._request_obsolete(request):
+                with self._lock:
+                    self._stale_requests_dropped += 1
+                continue
+            if self._circuit.snapshot().state == "open":
                 with self._lock:
                     self._circuit_rejected += 1
                 self.on_status("circuit_open", self._scope_message("修正暂不可用，快译继续"))
@@ -168,25 +209,38 @@ class AsynchronousRevisionEngine:
                     self._rate_limited += 1
                 self.on_status("rate_limited", self._scope_message("修正已限流，快译继续"))
                 continue
+            # Reserve a half-open probe only once a rate-limit token is available.
+            # Otherwise the probe flag would remain set without a provider outcome.
+            if not self._circuit.allow_request():
+                with self._lock:
+                    self._circuit_rejected += 1
+                self.on_status("circuit_open", self._scope_message("修正暂不可用，快译继续"))
+                continue
             self.on_status("processing", self._scope_message("正在异步修正"))
             try:
                 result = self.provider.revise(request)
             except Exception as error:  # provider boundary: the fast event already survived
-                message = f"{type(error).__name__}: {error}"
                 self._circuit.record_failure()
+                if self._request_cancelled(request):
+                    with self._lock:
+                        self._cancelled_requests += 1
+                    continue
+                message = f"{type(error).__name__}: {error}"
                 with self._lock:
                     self._provider_errors += 1
                     self._last_error = message
                 self.on_status("error", self._scope_message("修正失败，快译继续"))
                 continue
             self._circuit.record_success()
-            if not self._enabled.is_set():
+            if self._request_cancelled(request):
+                with self._lock:
+                    self._cancelled_requests += 1
                 continue
             with self._lock:
                 latest = self._latest_revision.get(request.segment_id, request.revision)
-                if request.state == "final":
+                if request.state == "final" and request.revision >= latest:
                     self._latest_revision.pop(request.segment_id, None)
-            if request.state == "partial" and request.revision < latest:
+            if request.revision < latest:
                 with self._lock:
                     self._stale_results_dropped += 1
                 continue
@@ -232,6 +286,20 @@ class AsynchronousRevisionEngine:
                 with self._lock:
                     self._output_drops += 1
             self.on_status("ready", self._scope_message("修正 provider 已就绪"))
+
+    def _request_cancelled(self, request: CorrectionRequest) -> bool:
+        with self._lock:
+            return (
+                not self._running.is_set()
+                or not self._enabled.is_set()
+                or request.generation != self._generation
+            )
+
+    def _request_obsolete(self, request: CorrectionRequest) -> bool:
+        with self._lock:
+            return request.revision < self._latest_revision.get(
+                request.segment_id, request.revision
+            )
 
     def _scope_message(self, message: str) -> str:
         prefix = "本地处理" if self.provider.scope == "local" else "云端传输"

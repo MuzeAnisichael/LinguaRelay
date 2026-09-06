@@ -1,0 +1,58 @@
+{
+  "version": "0.3.3",
+  "date_local": "2026-09-07",
+  "platform": "Windows x64 build 26200",
+  "python": "3.11.7",
+  "release_environment": {"isolated": true, "locked_packages": 45, "pip_check": "passed"},
+  "tests": {"passed": 206, "failed": 0, "duration_seconds": 10.03},
+  "ruff_check": "passed",
+  "ruff_format": "passed",
+  "frozen_executable": {
+    "status": "passed",
+    "duration_ms": 2610.74,
+    "qt_platform": "windows",
+    "qt_version": "6.11.1",
+    "checks": ["runtime_imports", "sqlite_project", "media_roundtrip", "qt_widgets_media"],
+    "settings_dialog_loaded": true,
+    "windows_shown": false,
+    "audio_played": false,
+    "live_audio_devices_tested": false,
+    "user_config_or_models_loaded": false
+  },
+  "installer_smoke": {
+    "status": "passed",
+    "scope": "same installer logic compiled with isolated SmokeTest product marker; not production registered installation",
+    "checks": [
+      "install_1_preserves_user_files", "install_2_preserves_user_files",
+      "upgrade_removes_obsolete_dlls", "installed_exe_self_test",
+      "silent_uninstall_preserves_user_files", "uninstall_removes_application_files"
+    ],
+    "application_files_removed": 791,
+    "retained_synthetic_files": ["config.toml", "exports/preserve.vtt", "models/preserve-model.bin"],
+    "existing_install_registration_and_shortcuts_unchanged": true
+  },
+  "bundle": {
+    "files": 791, "bytes": 386216649, "v0_3_2_bytes": 427747732,
+    "bytes_reduced": 41531083, "sbom_packages": 39,
+    "optional_qt_dlls_removed": 9,
+    "both_qt_and_pyav_ffmpeg_preserved": true,
+    "software_opengl_preserved": true
+  },
+  "release_assets": {
+    "integrity_verification": "passed",
+    "installer_bytes": 124655076,
+    "portable_zip_bytes": 171344566,
+    "installer_sha256": "e9f2ea0baa8dfcd8146e73b14a9ead11c276449bf855599c25f295b688be4a70",
+    "authenticode_signed": false
+  },
+  "openrouter": {
+    "attempts": 204, "successes": 204, "reported_cost_usd": 0.00635959,
+    "reserved_upper_bound_usd": 0.552624, "authorized_budget_usd": 1,
+    "data": "project-authored synthetic captions only"
+  },
+  "not_verified": [
+    "Local antivirus scan: Windows Defender disabled; no clean-scan assertion",
+    "NuGet vulnerability feed: network warning during native build",
+    "Clean-machine Windows version matrix, CUDA, physical capture devices and long-running live ASR"
+  ]
+}

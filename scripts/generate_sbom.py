@@ -12,20 +12,36 @@ from pathlib import Path
 def main() -> int:
     parser = argparse.ArgumentParser(description="Generate an SPDX 2.3 JSON SBOM")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--version", default="0.3.2")
+    parser.add_argument("--version", default="0.3.3")
+    parser.add_argument("--bundle", type=Path, default=Path("dist/LinguaRelay"))
     args = parser.parse_args()
+    internal = args.bundle / "_internal"
+    if not internal.is_dir():
+        raise FileNotFoundError(f"frozen bundle is required for an accurate SBOM: {internal}")
     distributions = sorted(
-        importlib.metadata.distributions(),
+        importlib.metadata.distributions(path=[str(internal)]),
         key=lambda item: (item.metadata.get("Name", "").casefold(), item.version),
     )
     root_id = "SPDXRef-Package-LinguaRelay"
     packages_by_id: dict[str, dict[str, object]] = {}
+    versions_by_name: dict[str, str] = {}
     for distribution in distributions:
         package = _package(distribution)
-        if package["name"].casefold() == "linguarelay":
+        normalized = re.sub(r"[-_.]", "", str(package["name"]).casefold())
+        if normalized == "linguarelay":
             continue
+        previous = versions_by_name.setdefault(normalized, distribution.version)
+        if previous != distribution.version:
+            raise ValueError(f"bundle contains conflicting metadata for {package['name']}")
         packages_by_id.setdefault(str(package["SPDXID"]), package)
-    for package in _native_packages():
+    if not packages_by_id:
+        raise ValueError("frozen bundle contains no distribution metadata")
+    native_lock = internal / "packaging" / "packages.lock.json"
+    if (
+        internal / "native" / "LinguaRelay.AudioCapture.exe"
+    ).is_file() and not native_lock.is_file():
+        raise FileNotFoundError("audio helper bundle is missing its dependency lock")
+    for package in _native_packages(native_lock):
         packages_by_id.setdefault(str(package["SPDXID"]), package)
     packages = [_root_package(args.version), *packages_by_id.values()]
     namespace_seed = "|".join(f"{item['name']}@{item['versionInfo']}" for item in packages).encode()
@@ -41,6 +57,12 @@ def main() -> int:
             "creators": ["Tool: LinguaRelay scripts/generate_sbom.py"],
         },
         "documentDescribes": [root_id],
+        "comment": (
+            "Python package versions come from metadata in the frozen bundle, including wheels "
+            "that are only partially shipped. Native helper packages come from its bundled lock. "
+            "Build-only tools and unbundled development dependencies are not "
+            "application dependencies."
+        ),
         "packages": packages,
         "relationships": [
             {
@@ -104,8 +126,7 @@ def _root_package(version: str) -> dict[str, object]:
     }
 
 
-def _native_packages() -> tuple[dict[str, object], ...]:
-    lock_path = Path("native/ProcessAudioCapture/packages.lock.json")
+def _native_packages(lock_path: Path) -> tuple[dict[str, object], ...]:
     dependencies: dict[str, str] = {}
     if lock_path.is_file():
         lock = json.loads(lock_path.read_text(encoding="utf-8"))

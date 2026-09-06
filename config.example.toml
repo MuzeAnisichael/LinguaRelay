@@ -105,3 +105,4 @@ recovery_seconds = 30.0
 max_output_chars = 4000
 max_tokens = 512
 temperature = 0.1
+openrouter_provider_sort = "" # OpenRouter only: default "" | latency | price | throughput

@@ -4,6 +4,7 @@ import json
 import math
 import threading
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -13,6 +14,7 @@ from lingua_relay.asr import FasterWhisperRecognizer
 from lingua_relay.asr.types import AsrResult, AsrSegment, AsrWord
 from lingua_relay.config import Settings
 from lingua_relay.correction import OpenAICompatibleProvider, load_glossary
+from lingua_relay.correction.controls import CircuitBreaker, RateLimiter
 from lingua_relay.correction.glossary import glossary_for_route
 from lingua_relay.correction.types import CorrectionRequest
 from lingua_relay.events import CaptionEvent
@@ -65,6 +67,7 @@ class OfflineProcessor:
         project = self.store.update_project(
             project_id, status="processing", progress=0.01, error=""
         )
+        provider = None
         try:
             audio_path = self._prepare_audio(project, progress)
             self._check_cancelled(cancelled)
@@ -108,8 +111,13 @@ class OfflineProcessor:
             )
             translator.load()
             provider, glossary = self._correction_provider(options, project)
+            limiter = RateLimiter(self.settings.correction.requests_per_minute)
+            circuit = CircuitBreaker(
+                self.settings.correction.failure_threshold,
+                self.settings.correction.recovery_seconds,
+            )
             cues: list[Cue] = []
-            context: list[CaptionEvent] = []
+            context: deque[CaptionEvent] = deque(maxlen=self.settings.correction.context_segments)
             llm_errors = 0
             total = max(1, len(specs))
             for index, (start_ms, end_ms, text, words, confidence) in enumerate(specs):
@@ -119,6 +127,7 @@ class OfflineProcessor:
                     source=project.source_language,
                     target=project.target_language,
                 ).text
+                self._check_cancelled(cancelled)
                 event = CaptionEvent(
                     source_text=text,
                     translated_text=translated,
@@ -131,23 +140,43 @@ class OfflineProcessor:
                 if provider is not None:
                     request = CorrectionRequest(
                         event=event,
-                        context=tuple(context[-self.settings.correction.context_segments :]),
+                        context=tuple(context),
                         glossary=glossary,
                         state="final",
                         segment_id=event.segment_id,
                         revision=0,
                         submitted_at_ns=time.monotonic_ns(),
                     )
-                    try:
-                        translated = provider.revise(request).text
-                    except Exception:
-                        # Offline LLM revision is an optional quality layer. Keep
-                        # the local translation if the configured service fails.
+                    # Keep every cue: rate limiting waits cooperatively instead
+                    # of dropping offline work. Do not reserve a half-open probe
+                    # until the limiter and cancellation checks have completed.
+                    if circuit.snapshot().state == "open":
                         llm_errors += 1
                     else:
-                        event = replace(
-                            event, translated_text=translated, state="revised", revision=1
-                        )
+                        while not limiter.acquire():
+                            progress(
+                                0.57 + 0.4 * index / total,
+                                f"正在等待大模型调用额度：字幕 {index + 1}/{total}（可取消）",
+                            )
+                            cancelled.wait(0.1)
+                            self._check_cancelled(cancelled)
+                        self._check_cancelled(cancelled)
+                        if not circuit.allow_request():
+                            llm_errors += 1
+                        else:
+                            try:
+                                translated = provider.revise(request).text
+                            except Exception:
+                                # LLM correction is optional. Open the circuit
+                                # after repeated failures and retain local MT.
+                                circuit.record_failure()
+                                llm_errors += 1
+                            else:
+                                circuit.record_success()
+                                event = replace(
+                                    event, translated_text=translated, state="revised", revision=1
+                                )
+                    self._check_cancelled(cancelled)
                 context.append(event)
                 cues.append(
                     Cue(
@@ -198,6 +227,10 @@ class OfflineProcessor:
                 error=str(error),
             )
             raise
+        finally:
+            close = getattr(provider, "close", None)
+            if callable(close):
+                close()
 
     def _prepare_audio(
         self, project: OfflineProject, progress: Callable[[float, str], None]
@@ -225,15 +258,15 @@ class OfflineProcessor:
             return None, ()
         if self.settings.correction.provider == "none":
             raise ValueError("请先在大模型设置中配置本地或 OpenAI 兼容服务")
-        provider = (
-            self._correction_factory(self.settings.correction)
-            if self._correction_factory
-            else OpenAICompatibleProvider(self.settings.correction)
-        )
         glossary = glossary_for_route(
             load_glossary(self.settings.correction.glossary_path),
             project.source_language,
             project.target_language,
+        )
+        provider = (
+            self._correction_factory(self.settings.correction)
+            if self._correction_factory
+            else OpenAICompatibleProvider(self.settings.correction)
         )
         return provider, glossary
 
