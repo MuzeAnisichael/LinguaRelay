@@ -85,3 +85,36 @@ def test_recovery_rejects_fragment_paths_outside_project(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="无效的片段路径"):
         recover_recording(store, project.id)
+
+
+def test_long_recording_fragments_merge_in_bounded_reads(tmp_path, monkeypatch) -> None:
+    from lingua_relay.offline.recording import _MERGE_CHUNK_FRAMES, _merge_wave_fragments
+
+    fragments = []
+    expected = bytearray()
+    for index, frames in enumerate([_MERGE_CHUNK_FRAMES * 2 + 7, _MERGE_CHUNK_FRAMES + 3]):
+        path = tmp_path / f"fragment-{index}.wav"
+        data = np.full(frames, index + 123, dtype="<i2").tobytes()
+        expected.extend(data)
+        with wave.open(str(path), "wb") as stream:
+            stream.setnchannels(1)
+            stream.setsampwidth(2)
+            stream.setframerate(16_000)
+            stream.writeframes(data)
+        fragments.append(path)
+
+    readframes = wave.Wave_read.readframes
+    requests = []
+
+    def bounded_readframes(self, frames):
+        requests.append(frames)
+        assert frames <= _MERGE_CHUNK_FRAMES
+        return readframes(self, frames)
+
+    monkeypatch.setattr(wave.Wave_read, "readframes", bounded_readframes)
+    output = tmp_path / "merged.wav"
+    _merge_wave_fragments(fragments, output, 16_000)
+    assert len(requests) >= 5
+    with wave.open(str(output), "rb") as stream:
+        assert stream.getnframes() * 2 == len(expected)
+        assert readframes(stream, stream.getnframes()) == expected

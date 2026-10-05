@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+Source version remains **0.3.3**; the latest public release is **v0.3.2**. This maintenance work does not create a new version, tag, or GitHub Release.
+
+- Added a unified requirement/status baseline and a developer guide with module ownership, directory navigation, targeted tests, and explicit build/release boundaries.
+- Corrected both READMEs to link to the actual public v0.3.2 assets and distinguish unreleased features from downloadable functionality.
+- Updated architecture and roadmap descriptions for partial translation, existing punctuation endpointing, explicit recording/import persistence, and the limits of historical performance evidence.
+- Extracted audio capture/recording lifecycle into an independent runtime so recording can continue without loaded ASR/MT models, through model errors, or while live captions are paused; locked source changes for both active and paused recordings.
+- Extracted offline task coordination from the desktop controller; recording-end and import workflows share the workbench ASR/quality/LLM options. Added cooperative cancellation, task-cleanup gating, preservation of saved cues on cancellation, and restoration of the prior live-caption pause state.
+- Made cue replacement and completed-project state one SQLite transaction, so cancellation before commit preserves prior edits; cancellation after commit does not retract successful results.
+- Streamed WAV fragment merging in 64K-frame blocks instead of loading whole fragments. Recording start/resume now isolates pre-boundary buffered audio, and recording failures clear active UI controls.
+
+## 0.3.3 — unreleased development snapshot
+
+The following work was locally validated on **2026-09-07**, but v0.3.3 has not been publicly released. Historical validation applies to that snapshot, not automatically to later changes under the same source version.
+
+- Hardened LLM revision against stale results, unbounded zero-context requests, shutdown races, rate-limit/circuit-breaker failures, and invalid or truncated responses; preserved fast translation on correction failures.
+- Added pooled HTTP connections, an OpenRouter preset, and optional latency/price routing; API credentials remain environment-only.
+- Isolated the release environment with committed version locks, generated the SBOM from actual bundled metadata, and pruned nonessential Qt dependencies with retained-library dependency checks.
+- Added final-EXE runtime/media/UI self-tests and isolated installer regression tests; stopped recursively deleting the application directory during uninstall so unregistered user files survive.
+- Clarified installer model-directory discovery versus application-level integrity verification.
+- Recorded 206 passing regressions, frozen-EXE and isolated installation checks, and 204 synthetic-caption OpenRouter calls. See the [local validation scope](docs/benchmarks/v0.3.3-local-validation.json) and [LLM latency/quality report](docs/benchmarks/OPENROUTER-v0.3.3.zh-CN.md); these are not clean-machine, real-device long-run, or universal accuracy certifications.
+
 ## 0.3.2 - 2026-08-27
 
 - Added installer migration cleanup for incompatible ICU/OpenSSL DLLs left by v0.3.0, so the QtCore startup fix also applies to in-place upgrades without touching models or user data.

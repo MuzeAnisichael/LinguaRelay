@@ -1,5 +1,7 @@
 # 开发路线图
 
+最新公开版本是 **v0.3.2**；`main` 源码版本 **0.3.3 尚未公开发布**。本页回顾里程碑并列出计划；逐项现状、验收证据与边界见[统一需求表](REQUIREMENTS.zh-CN.md)，目录与测试入口见[开发指引](DEVELOPMENT.zh-CN.md)。“已完成”表示对应功能里程碑已落地，不代表所有硬件/语言/场景达到全部性能目标。
+
 ## M0：项目基础（已完成）
 
 - [x] 明确 Windows 首发；
@@ -30,7 +32,7 @@ lingua-relay audio-self-test
 lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 ```
 
-本机验收记录见 `docs/benchmarks/`。任何音频都只在内存中处理，报告只保存设备和性能指标。
+本机历史验收记录见 `docs/benchmarks/`。实时模式及该音频验收默认只在内存中处理音频，报告只保存设备和性能指标；v0.3 起用户主动录制或导入的音频会写入本地离线项目。
 
 ## M2：四语实时识别（已完成）
 
@@ -41,7 +43,7 @@ lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 - [x] 使用固定修订的 CC-BY-4.0 FLEURS 四语测试集；
 - [x] 记录 WER/CER、首条非空 partial P50/P95、内存和持续运行表现。
 
-本机最终验收采用 `small/CUDA float16`。四语首条非空 partial P50 分别为约 0.71 / 0.72 / 0.91 / 1.03 秒；每种语言处理超过 30 分钟音频，674 次持续推理错误数为 0，持续阶段 RSS 增长 5.84 MiB。推理队列容量为 4，事件队列容量为 16，旧 partial 可替换而 final 不丢弃。详细报告见 `docs/benchmarks/m2-small-cuda-final.json`。
+M2 当时的本机验收采用 `small/CUDA float16`。四语首条非空 partial P50 分别为约 0.71 / 0.72 / 0.91 / 1.03 秒；每种语言处理超过 30 分钟音频，674 次持续推理错误数为 0，持续阶段 RSS 增长 5.84 MiB。推理队列容量为 4，事件队列容量为 16，旧 partial 可替换而 final 不丢弃。详细报告见 [m2-small-cuda-final.json](benchmarks/m2-small-cuda-final.json)。这些是指定配置的历史数据，不是当前提交的全场景性能保证。
 
 ## M3：12 方向即时翻译与完整悬浮窗（已完成）
 
@@ -55,7 +57,7 @@ lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 - [x] 支持 JSONL 历史及 JSONL/CSV/SRT 导出；
 - [x] 准备 PyInstaller、独立模型包、Inno Setup 安装器和 GitHub 打包工作流。
 
-验收：12 个方向都能运行并有独立基准；快速译文 P50 不高于 1.8 秒；翻译失败时仍显示原文。
+功能验收：12 个方向都能运行并有独立基准，翻译失败时仍显示原文。快速译文 P50 ≤ 1.8 秒是性能目标；具体硬件结果和未达标项以[基准报告](benchmarks/README.md)为准。
 
 ## M4：异步大模型修正（已完成）
 
@@ -87,7 +89,27 @@ lingua-relay audio-stress --minutes 30 --report data/m1-stress.json
 - [x] 导出 WAV、FLAC、MP3、VTT、SRT、ASS、TXT、CSV、JSONL；
 - [x] 打包并发布 `v0.3.0` Windows 安装版和便携版。
 
-## v0.4：更多语言与后期质量
+## v0.3.1–v0.3.2：Windows 启动与升级修复（已公开）
+
+- [x] v0.3.1 隔离 PyInstaller 的依赖发现，检查冻结 QtCore 加载并拒绝混入不兼容 ICU；
+- [x] v0.3.2 按确切路径清理旧包遗留的冲突 ICU/OpenSSL DLL，使覆盖升级也得到修复；
+- [x] 明确便携版需解压到新的空目录，避免旧运行库污染。
+
+当前公开下载仍为 [v0.3.2](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2)。
+
+## 0.3.3：可靠性与结构整理（main，未公开）
+
+- [x] 修正过期 LLM 结果、上下文 0、速率/熔断与取消边界，加入 HTTP 连接复用与 OpenRouter 设置预设；
+- [x] 独立锁版本的发行环境、按实际打包组件生成 SBOM、受依赖检查约束的 Qt 裁剪；
+- [x] 最终 EXE 自测、隔离安装/升级/卸载回归及保留用户未登记文件；
+- [x] 记录 2026-09-07 的小样本 OpenRouter 延迟/费用/质量与本地打包结果；
+- [x] 本轮统一需求表、开发指引、目录导航及公开版/开发版状态说明；
+- [x] 本轮拆分独立音频运行时与离线任务控制，支持模型未就绪/失败时录制；暂停实时字幕不影响录制，录制期间锁定音频来源；
+- [x] 统一自动/手动后期处理参数，提供协作取消并在任务收尾后恢复原实时暂停状态；仍不提供批量队列或推理断点续跑。
+
+版本号保持 0.3.3，本轮只做源码修改、测试和 GitHub 推送，不创建新发行版。历史 [206 项回归与安装器验证](benchmarks/v0.3.3-local-validation.json)仅对应 2026-09-07 的代码与环境；真实设备长测、完整 Windows/CUDA 矩阵和更多语种人工评审仍未完成。
+
+## 后续候选：更多语言与后期质量（原 v0.4 方向，未承诺发布时间）
 
 - [ ] 按能力清单扩展第一组欧洲语言，不把单一模型支持误当作正式质量支持；
 - [ ] 以 FLEURS/FLORES、人工断句与方向级翻译评审建立上线门槛；

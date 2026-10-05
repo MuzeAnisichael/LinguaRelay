@@ -12,6 +12,8 @@ import numpy as np
 from lingua_relay.audio.types import AudioChunk
 from lingua_relay.offline.project import OfflineProjectStore
 
+_MERGE_CHUNK_FRAMES = 64 * 1024  # 128 KiB of normalized mono PCM per read.
+
 
 class RecordingSession:
     """Crash-recoverable speech recording assembled from normalized capture chunks."""
@@ -206,7 +208,8 @@ def _merge_wave_fragments(fragments: list[Path], output: Path, sample_rate: int)
                     raise ValueError(f"unsupported recording fragment: {path}")
                 if source.getframerate() != sample_rate:
                     raise ValueError(f"recording fragment sample rate changed: {path}")
-                destination.writeframes(source.readframes(source.getnframes()))
+                while data := source.readframes(_MERGE_CHUNK_FRAMES):
+                    destination.writeframesraw(data)
     os.replace(temporary, output)
 
 

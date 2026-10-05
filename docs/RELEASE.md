@@ -1,6 +1,8 @@
 # Windows release process
 
-v0.3.3 uses separate application and selectable model assets. The per-user installer and portable ZIP contain the CPU-capable runtime, PyAV media codecs, and a self-contained native process-audio helper; first launch offers pinned Small and Base packs after license consent. Medium, Large-v3 Turbo, Large-v3, and M2M100 1.2B are opt-in downloads from settings or the offline workbench.
+This document describes the **unreleased 0.3.3 source/build process**. The latest public release is v0.3.2; a successful local build or CI artifact is not a published release. Publishing requires a separate explicit release decision. See the [requirements/status baseline](REQUIREMENTS.zh-CN.md) and [developer guide](DEVELOPMENT.zh-CN.md).
+
+Application and selectable model assets are separate. The per-user installer and portable ZIP contain the CPU-capable runtime, PyAV media codecs, and a self-contained native process-audio helper; first launch offers pinned Small and Base packs after license consent. Medium, Large-v3 Turbo, Large-v3, and M2M100 1.2B are opt-in downloads from settings. The offline workbench can choose its ASR model; its translation model comes from global settings.
 
 ## Reproduce the quality gate
 
@@ -42,7 +44,7 @@ Run `.\.release-venv\Scripts\python -I scripts\test_installer.py --installer bui
 
 ## Signing and updates
 
-Authenticode signing is required once the project obtains a protected code-signing certificate. v0.3.3 is intentionally and visibly published unsigned; never substitute a self-signed certificate while claiming publisher identity. The in-app updater only queries the latest GitHub release and notifies the user. It does not download or execute installers, so upgrade and rollback are explicit installer operations.
+Authenticode signing is deferred until the project obtains a protected code-signing certificate. Public v0.3.2 and the historical local v0.3.3 build are unsigned; v0.3.3 has not been published. Never substitute a self-signed certificate while claiming publisher identity. The in-app updater only queries the latest GitHub release and notifies the user. It does not download or execute installers, so upgrade and rollback are explicit installer operations.
 
 ## Validation
 

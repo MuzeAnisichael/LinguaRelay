@@ -8,10 +8,9 @@ import sys
 import threading
 from contextlib import suppress
 from dataclasses import replace
-from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QProcess, QThread, QTimer, QUrl, Signal
+from PySide6.QtCore import QObject, QProcess, QTimer, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -32,14 +31,7 @@ from lingua_relay.config import AudioSettings, Settings, migrate_legacy_realtime
 from lingua_relay.history import JsonlHistory
 from lingua_relay.languages import SUPPORTED_LANGUAGES
 from lingua_relay.model_pack import load_model_catalog, uninstall_model_pack
-from lingua_relay.offline import (
-    OfflineProcessor,
-    OfflineProjectStore,
-    ProcessingOptions,
-    RecordingSession,
-    export_project,
-    probe_media,
-)
+from lingua_relay.offline import OfflineProjectStore
 from lingua_relay.offline.recording import recover_recording
 from lingua_relay.paths import AppPaths
 from lingua_relay.runtime_state import RuntimeJournal
@@ -57,7 +49,7 @@ from lingua_relay.ui.advanced_models import (
 )
 from lingua_relay.ui.history_view import HistoryWindow
 from lingua_relay.ui.model_setup import ensure_model_installation
-from lingua_relay.ui.offline_workbench import OfflineWorkbench
+from lingua_relay.ui.offline_tasks import OfflineTasksMixin
 from lingua_relay.ui.overlay import CaptionOverlay
 from lingua_relay.ui.settings_view import SettingsDialog
 from lingua_relay.updates import UpdateInfo, check_for_update
@@ -71,54 +63,6 @@ class _Bridge(QObject):
     recording = Signal(str, str, object)
     update = Signal(object, bool)
     update_error = Signal(str)
-
-
-class _OfflineWorker(QObject):
-    progress = Signal(str, float, str)
-    finished = Signal(str)
-    failed = Signal(str, str)
-
-    def __init__(
-        self,
-        processor: OfflineProcessor,
-        service: RealtimeCaptionService,
-        project_id: str,
-        options: ProcessingOptions,
-    ) -> None:
-        super().__init__()
-        self.processor = processor
-        self.service = service
-        self.project_id = project_id
-        self.options = options
-        self.cancelled = threading.Event()
-        self._restart_service = True
-
-    def run(self) -> None:
-        was_paused = self.service.snapshot().state == "paused"
-        try:
-            self.service.stop()
-            self.service.release_resources()
-            self.processor.process(
-                self.project_id,
-                self.options,
-                on_progress=lambda value, message: self.progress.emit(
-                    self.project_id, value, message
-                ),
-                cancel=self.cancelled,
-            )
-        except Exception as error:
-            self.failed.emit(self.project_id, f"{type(error).__name__}: {error}")
-        else:
-            self.finished.emit(self.project_id)
-        finally:
-            if self._restart_service:
-                self.service.start()
-                if was_paused:
-                    self.service.pause()
-
-    def cancel(self, *, restart_service: bool = True) -> None:
-        self._restart_service = restart_service
-        self.cancelled.set()
 
 
 class _GlobalHotkey(QObject):
@@ -161,7 +105,7 @@ class _GlobalHotkey(QObject):
             was_down = down
 
 
-class DesktopController:
+class DesktopController(OfflineTasksMixin):
     def __init__(
         self,
         app: QApplication,
@@ -187,8 +131,7 @@ class DesktopController:
         self.bridge = _Bridge()
         self.project_store = OfflineProjectStore(self.paths.projects_dir)
         self._recovered_recordings = self._recover_recordings()
-        self._offline_thread: QThread | None = None
-        self._offline_worker: _OfflineWorker | None = None
+        self._init_offline_tasks()
         self.overlay = CaptionOverlay(self.settings.overlay)
         self.overlay.geometry_changed.connect(self._persist_overlay_geometry)
         self.overlay.pause_requested.connect(self.toggle_pause)
@@ -432,6 +375,9 @@ class DesktopController:
         persist_setting("overlay", "click_through", enabled, self.config_path, self.template_path)
 
     def show_settings(self) -> None:
+        if self._offline_is_busy():
+            self._warn_offline_busy()
+            return
         dialog = SettingsDialog(self.settings)
         dialog.setWindowIcon(self.icon)
         dialog.remove_models_requested.connect(
@@ -635,6 +581,9 @@ class DesktopController:
         persist_setting("correction", "mode", mode, self.config_path, self.template_path)
 
     def toggle_pause(self) -> None:
+        if self._offline_is_busy():
+            self._warn_offline_busy()
+            return
         state = self.service.snapshot().state
         if state in {"error", "stopped"}:
             self.service.start()
@@ -645,174 +594,6 @@ class DesktopController:
         else:
             self.service.pause()
             self.pause_action.setText("继续")
-
-    def toggle_recording(self) -> None:
-        snapshot = self.service.snapshot()
-        if snapshot.recording_state in {"recording", "paused"}:
-            try:
-                self.service.stop_recording()
-            except Exception as error:
-                QMessageBox.critical(None, "无法结束录制", str(error))
-                return
-            project_id = snapshot.recording_project_id
-            if project_id:
-                self.show_workbench(select_id=project_id)
-                self._start_offline_processing(
-                    project_id,
-                    ProcessingOptions(
-                        asr_model=self.settings.asr.model,
-                        quality="balanced",
-                        use_llm=False,
-                    ),
-                )
-            return
-        if snapshot.state not in {"ready", "running", "paused"}:
-            QMessageBox.information(None, "尚未就绪", "请等待语音识别与翻译模型加载完成。")
-            return
-        source_label = {
-            "system": "系统音频",
-            "microphone": "麦克风",
-            "process": self.settings.audio.process_name.strip() or "进程音频",
-        }.get(self.settings.audio.source, "音频")
-        title = f"{datetime.now():%Y-%m-%d %H-%M-%S} · {source_label}"
-        project = self.project_store.create_project(
-            title=title,
-            kind="recording",
-            source_language=self.settings.app.source_language,
-            target_language=self.settings.app.target_language,
-        )
-        try:
-            self.service.start_recording(RecordingSession(self.project_store, project.id))
-        except Exception as error:
-            self.project_store.update_project(project.id, status="failed", error=str(error))
-            QMessageBox.critical(None, "无法开始录制", str(error))
-
-    def toggle_recording_pause(self) -> None:
-        state = self.service.snapshot().recording_state
-        try:
-            if state == "recording":
-                self.service.pause_recording()
-            elif state == "paused":
-                self.service.resume_recording()
-        except Exception as error:
-            QMessageBox.warning(None, "录制状态切换失败", str(error))
-
-    def show_workbench(self, *, select_id: str | None = None) -> None:
-        viewer = getattr(self, "_offline_workbench", None)
-        if viewer is None:
-            viewer = OfflineWorkbench(self.project_store, self.icon)
-            viewer.import_audio_requested.connect(lambda: self._import_media("audio"))
-            viewer.import_video_requested.connect(lambda: self._import_media("video"))
-            viewer.process_requested.connect(self._start_offline_processing)
-            viewer.export_requested.connect(self._export_offline_project)
-            self._offline_workbench = viewer
-        viewer.refresh(select_id=select_id)
-        viewer.show()
-        viewer.raise_()
-        viewer.activateWindow()
-
-    def _import_media(self, kind: str) -> None:
-        if kind == "video":
-            title = "导入视频"
-            file_filter = "视频文件 (*.mp4 *.mkv *.mov *.avi *.webm *.m4v);;所有文件 (*)"
-        else:
-            title = "导入音频"
-            file_filter = "音频文件 (*.wav *.mp3 *.flac *.m4a *.aac *.ogg *.opus);;所有文件 (*)"
-        path, _ = QFileDialog.getOpenFileName(None, title, str(Path.home()), file_filter)
-        if not path:
-            return
-        try:
-            info = probe_media(path)
-            if kind == "video" and not info.has_video:
-                raise ValueError("所选文件不包含视频轨，请使用“导入音频”")
-            project = self.project_store.create_project(
-                title=Path(path).stem,
-                kind=kind,
-                source_path=path,
-                source_language=self.settings.app.source_language,
-                target_language=self.settings.app.target_language,
-            )
-            self.project_store.update_project(project.id, duration_ms=info.duration_ms)
-        except Exception as error:
-            QMessageBox.critical(None, "无法导入媒体", str(error))
-            return
-        self.show_workbench(select_id=project.id)
-        viewer = self._offline_workbench
-        self._start_offline_processing(project.id, viewer.processing_options())
-
-    def _start_offline_processing(self, project_id: str, options: ProcessingOptions) -> None:
-        if self._offline_thread is not None and self._offline_thread.isRunning():
-            QMessageBox.information(None, "已有任务", "请等待当前后期处理完成。")
-            viewer = getattr(self, "_offline_workbench", None)
-            if viewer is not None:
-                viewer.process_button.setEnabled(True)
-            return
-        if self.service.snapshot().recording_state in {"recording", "paused"}:
-            QMessageBox.warning(None, "正在录制", "请先结束录制，再运行后期处理。")
-            return
-        candidate = replace(
-            self.settings,
-            asr=replace(self.settings.asr, model=options.asr_model, revision=""),
-        )
-        viewer = getattr(self, "_offline_workbench", None)
-        if not ensure_advanced_models(candidate, self.model_root, viewer):
-            if viewer is not None:
-                viewer.process_button.setEnabled(True)
-            return
-        processor = OfflineProcessor(self.project_store, self.settings, self.model_root)
-        thread = QThread(self.app)
-        worker = _OfflineWorker(processor, self.service, project_id, options)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.progress.connect(self._offline_progress)
-        worker.finished.connect(self._offline_finished)
-        worker.failed.connect(self._offline_failed)
-        worker.finished.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._clear_offline_worker)
-        self._offline_thread = thread
-        self._offline_worker = worker
-        if viewer is not None:
-            viewer.update_progress(project_id, 0.01, "正在切换到后期处理模式…")
-        thread.start()
-
-    def _offline_progress(self, project_id: str, value: float, message: str) -> None:
-        viewer = getattr(self, "_offline_workbench", None)
-        if viewer is not None:
-            viewer.update_progress(project_id, value, message)
-
-    def _offline_finished(self, project_id: str) -> None:
-        viewer = getattr(self, "_offline_workbench", None)
-        if viewer is not None:
-            viewer.processing_finished(project_id)
-        self.tray.showMessage(
-            "LinguaRelay",
-            "后期识别与翻译已完成，可以查看、编辑或导出字幕。",
-            QSystemTrayIcon.MessageIcon.Information,
-        )
-
-    def _offline_failed(self, project_id: str, detail: str) -> None:
-        viewer = getattr(self, "_offline_workbench", None)
-        if viewer is not None:
-            viewer.processing_finished(project_id, detail)
-
-    def _clear_offline_worker(self) -> None:
-        self._offline_worker = None
-        self._offline_thread = None
-
-    def _export_offline_project(self, project_id: str, path: str) -> None:
-        try:
-            export_project(self.project_store, project_id, path)
-        except Exception as error:
-            QMessageBox.critical(None, "导出失败", str(error))
-        else:
-            self.tray.showMessage(
-                "LinguaRelay",
-                f"已导出：{Path(path).name}",
-                QSystemTrayIcon.MessageIcon.Information,
-            )
 
     def toggle_overlay(self) -> None:
         if self.overlay.isVisible():
@@ -956,6 +737,12 @@ class DesktopController:
             QMessageBox.critical(None, "导出失败", str(error))
 
     def remove_local_models(self) -> None:
+        if self._offline_is_busy():
+            self._warn_offline_busy()
+            return
+        if self.service.snapshot().recording_state in {"recording", "paused"}:
+            QMessageBox.warning(None, "正在录制", "请先结束录制，再删除本地模型。")
+            return
         catalog_path = self.paths.resource_dir / "packaging" / "model-catalog.json"
         try:
             profiles = load_model_catalog(catalog_path)
@@ -1158,11 +945,7 @@ class DesktopController:
 
     def shutdown(self) -> None:
         self.hotkey.stop()
-        if self._offline_worker is not None:
-            self._offline_worker.cancel(restart_service=False)
-        if self._offline_thread is not None and self._offline_thread.isRunning():
-            self._offline_thread.quit()
-            self._offline_thread.wait(30_000)
+        self._shutdown_offline_tasks()
         with suppress(TimeoutError):
             self.service.stop()
 

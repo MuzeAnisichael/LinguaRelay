@@ -5,7 +5,8 @@ evidence-backed changes are easiest to review.
 
 ## Before starting
 
-- Search existing issues and the [roadmap](docs/ROADMAP.zh-CN.md).
+- Search existing issues, the [requirement/status baseline](docs/REQUIREMENTS.zh-CN.md),
+  and the [roadmap](docs/ROADMAP.zh-CN.md). Reference a requirement ID when useful.
 - Use a structured issue form for bugs, quality/performance reports, and feature
   proposals. Discuss large architecture or dependency changes before coding.
 - Never commit model weights, API keys, recordings, generated caption history,
@@ -13,12 +14,14 @@ evidence-backed changes are easiest to review.
 
 ## Development setup
 
-Python 3.11 is recommended on Windows 10 or 11:
+Python 3.11 is recommended on Windows 10 or 11. The
+[developer guide](docs/DEVELOPMENT.zh-CN.md) maps modules to targeted tests and
+explains when a change actually requires a frozen build or installer regression.
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev,audio,asr,translation]"
+python -m pip install -e ".[dev,runtime]"
 lingua-relay doctor
 ```
 
@@ -52,6 +55,9 @@ publicly licensed, or explicitly consented text/audio for quality examples.
 - Add or update tests for changed behavior.
 - Update both README languages or the release notes when user-facing behavior
   changes.
+- Keep requirement status and boundaries current. Source version 0.3.3 is
+  unreleased; successful CI or local artifacts do not change the public v0.3.2
+  download until a separate release is published.
 - Document new dependencies, model revisions, licenses, network transmission,
   persistent storage, and packaging impact.
 - Include sanitized screenshots for UI changes and benchmark evidence for latency,

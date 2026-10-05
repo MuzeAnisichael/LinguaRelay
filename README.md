@@ -6,6 +6,7 @@
   <p>
     <a href="README.zh-CN.md">简体中文</a> ·
     <a href="docs/ARCHITECTURE.md">Architecture</a> ·
+    <a href="docs/REQUIREMENTS.zh-CN.md">Requirements</a> ·
     <a href="docs/ROADMAP.zh-CN.md">Roadmap</a> ·
     <a href="https://github.com/MuzeAnisichael/LinguaRelay/issues/new/choose">Feedback</a>
   </p>
@@ -16,9 +17,9 @@
     <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
   </p>
   <p>
-    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.3"><strong>Download v0.3.3</strong></a>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2"><strong>Download v0.3.2</strong></a>
     · <a href="#quick-start">Quick start</a>
-    · <a href="docs/releases/v0.3.3.md">Release notes</a>
+    · <a href="docs/releases/v0.3.2.md">Release notes</a>
   </p>
 </div>
 
@@ -30,8 +31,10 @@ English, and Korean are supported in every direction. The source language stays
 manual by design, avoiding language-detection delay and accidental route changes.
 
 > [!IMPORTANT]
-> v0.3.3 is an unsigned Windows x64 alpha. Download it only from this repository,
-> verify `SHA256SUMS.txt`, and expect Windows to show an unknown-publisher warning.
+> The latest public release is **v0.3.2**, an unsigned Windows x64 alpha. Download
+> it only from this repository, verify `SHA256SUMS.txt`, and expect an
+> unknown-publisher warning. **`main` uses version 0.3.3 but is not yet released**;
+> local builds, CI artifacts, and draft release notes are not a public release.
 
 ## Why LinguaRelay?
 
@@ -41,20 +44,20 @@ manual by design, avoiding language-detection delay and accidental route changes
 | **Three audio sources** | Capture all system output, one process and its children, or a selected microphone. |
 | **Live and offline** | Pause/resume recording or import media, then review and edit time-aligned subtitles. |
 | **Four languages, 12 routes** | Manually selected `zh`, `ja`, `en`, and `ko`, with every ordered source/target pair supported. |
-| **Local by default** | Audio stays in memory, model inference runs locally, and caption history can be disabled. |
+| **Local by default** | Live audio stays in memory; explicit recordings/imports persist locally. Model inference is local and caption history can be disabled. |
 | **LLM when useful** | A local model or opt-in HTTPS API can revise completed captions without blocking the live path. |
 
 ## Quick start
 
-1. Open [v0.3.3 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.3)
-   and download `LinguaRelay-0.3.3-Setup-x64.exe`.
+1. Open [v0.3.2 on GitHub Releases](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2)
+   and download `LinguaRelay-0.3.2-Setup-x64.exe`.
 2. On first launch, let LinguaRelay verify an existing model directory or choose
    a model profile. The installer does not silently download model weights.
 3. Select the source language, target language, and system/process/microphone source from the tray
    menu. Play audio and position the overlay where you want it.
 
 Prefer not to install? The release also includes
-`LinguaRelay-0.3.3-Windows-x64-portable.zip`. Extract portable upgrades into a new,
+`LinguaRelay-0.3.2-Windows-x64-portable.zip`. Extract portable upgrades into a new,
 empty directory rather than over an older folder. Both editions can reuse existing offline models.
 
 ### Choose a model profile
@@ -68,10 +71,11 @@ Both profiles use the same local translation model and support all 12 language
 routes. Existing and offline model packs are fully hash-verified before use.
 See [model choices and licenses](docs/MODELS.md) for revisions and benchmarks.
 
-After first launch, **Settings → Recognition & translation** and the offline workbench also offer
-multilingual Medium, Large-v3 Turbo, and Large-v3 ASR, plus M2M100 1.2B translation. Missing
-advanced weights are identified before save, with download size and hardware
-guidance; downloads are explicit and resumable.
+After first launch, **Settings → Recognition & translation** also offers
+multilingual Medium, Large-v3 Turbo, and Large-v3 ASR, plus M2M100 1.2B translation.
+The offline workbench can choose its own ASR model; it uses the translation model
+from global settings. Missing advanced weights are identified before save, with
+download size and hardware guidance; downloads are explicit and resumable.
 
 ## Recording and offline workbench
 
@@ -84,6 +88,18 @@ guidance; downloads are explicit and resumable.
 - Export WAV, FLAC, MP3, WebVTT, SRT, ASS, TXT, CSV, or JSONL. Export matching `.mp3` and `.vtt` files when a platform needs the pair.
 
 See the [v0.3.0 release guide](docs/releases/v0.3.0.md) for storage, privacy, model, and workflow details.
+
+**Unreleased `main` improvements:** recording no longer waits for ASR/MT model
+readiness; pausing live captions does not pause recording. Recording-end processing and imported media now
+use the same workbench ASR/quality/LLM selections (initially Large-v3 Turbo,
+balanced, LLM off; missing weights still require an explicit download). A cancel
+button requests cooperative cancellation; the current native/model call may
+finish first. The workbench stays locked until task cleanup and restoration of
+the prior live-caption pause state finish. Existing saved cues remain available
+when processing is cancelled; a completed, committed result is not undone by a
+late cancel request. Only one offline task runs at a time; batch queues, inference
+resume, and project rename/delete are not implemented. See the
+[requirement/status table](docs/REQUIREMENTS.zh-CN.md) for scope and test evidence.
 
 ## What it can do
 
@@ -114,8 +130,8 @@ Open **Settings → LLM** to choose completed-caption revision (recommended) or
 experimental live revision. LinguaRelay supports local OpenAI-compatible servers
 such as Ollama and LM Studio, plus opt-in HTTPS OpenAI-compatible APIs.
 
-v0.3.3 adds an **OpenRouter** preset, optional latency/price routing, and pooled HTTP
-connections. For EN→ZH, start by testing completed-caption revision with
+Unreleased `main` (0.3.3) adds an **OpenRouter** preset, optional latency/price
+routing, and pooled HTTP connections. The 2026-09-07 EN→ZH test supports trying completed-caption revision with
 `google/gemini-2.5-flash-lite`; revision is not guaranteed to improve every caption.
 See the [measured latency, cost and quality report](docs/benchmarks/OPENROUTER-v0.3.3.zh-CN.md).
 
@@ -167,12 +183,13 @@ using LinguaRelay with sensitive audio.
 
 ## Development
 
-Python 3.11 is recommended:
+Python 3.11 is recommended. See the [developer guide](docs/DEVELOPMENT.zh-CN.md)
+for module ownership, targeted tests, and the separate release environment:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev,audio,asr,translation]"
+python -m pip install -e ".[dev,runtime]"
 lingua-relay doctor
 lingua-relay app
 ```
@@ -193,6 +210,8 @@ Product screenshots can be refreshed with
 
 | Document | Purpose |
 |---|---|
+| [Requirements and status](docs/REQUIREMENTS.zh-CN.md) (Chinese) | Requirement IDs, implementation evidence, known boundaries, and next steps |
+| [Developer guide](docs/DEVELOPMENT.zh-CN.md) (Chinese) | Directory map, module boundaries, setup, and proportionate testing |
 | [Architecture](docs/ARCHITECTURE.md) | Fast path, queue boundaries, desktop runtime, and revision path |
 | [Model choices](docs/MODELS.md) | Install profiles, exact revisions, licenses, and performance notes |
 | [v0.1.5 design](docs/OPTIMIZATION-v0.1.5.zh-CN.md) | First optimization plan and its product trade-offs |

@@ -10,7 +10,7 @@ import pytest
 from lingua_relay.asr.types import AsrResult, AsrSegment, AsrWord
 from lingua_relay.config import Settings
 from lingua_relay.offline.processor import OfflineProcessor, ProcessingOptions
-from lingua_relay.offline.project import OfflineProjectStore
+from lingua_relay.offline.project import Cue, OfflineProjectStore
 
 
 class _Recognizer:
@@ -410,3 +410,163 @@ def test_offline_rate_wait_cancel_does_not_reserve_half_open_probe(monkeypatch, 
     assert store.get_project(project.id).status == "cancelled"
     assert closed == [True]
     assert circuit.allow_request()  # Cancellation did not leave a probe latched in flight.
+
+
+def test_pre_cancelled_processing_does_not_start_media_or_models(tmp_path, monkeypatch):
+    processor, store, project = _controlled_processor(tmp_path, Settings(), None)
+    cancelled = threading.Event()
+    cancelled.set()
+
+    def unexpected(*_args, **_kwargs):
+        pytest.fail("Pre-cancelled work must not start")
+
+    monkeypatch.setattr(processor, "_prepare_audio", unexpected)
+    with pytest.raises(InterruptedError):
+        processor.process(project.id, ProcessingOptions(), cancel=cancelled, on_progress=unexpected)
+    assert store.get_project(project.id).status == "cancelled"
+    assert not store.list_cues(project.id)
+
+
+@pytest.mark.parametrize("stage", ["recognizer_factory", "translator_factory", "translator_load"])
+def test_cancellation_during_model_loading_does_not_start_next_stage(tmp_path, stage):
+    processor, store, project = _controlled_processor(tmp_path, Settings(), None)
+    cancelled = threading.Event()
+    calls = []
+
+    def unexpected(*_args, **_kwargs):
+        pytest.fail("No later work may run after a cancelled model load")
+
+    if stage == "recognizer_factory":
+
+        def recognizer_factory(_settings):
+            cancelled.set()
+            return SimpleNamespace(transcribe_offline=unexpected)
+
+        processor._recognizer_factory = recognizer_factory
+    else:
+
+        def translator_factory(_settings):
+            calls.append("factory")
+            if stage == "translator_factory":
+                cancelled.set()
+                return SimpleNamespace(load=unexpected, translate=unexpected)
+
+            def load():
+                calls.append("load")
+                cancelled.set()
+
+            return SimpleNamespace(load=load, translate=unexpected)
+
+        processor._translator_factory = translator_factory
+    with pytest.raises(InterruptedError):
+        processor.process(project.id, ProcessingOptions(), cancel=cancelled)
+    assert store.get_project(project.id).status == "cancelled"
+    assert not store.list_cues(project.id)
+    if stage == "translator_load":
+        assert calls == ["factory", "load"]
+
+
+def test_cancel_after_final_progress_preserves_cues_and_allows_retry(tmp_path):
+    processor, store, project = _controlled_processor(tmp_path, Settings(), None, count=1)
+    store.replace_cues(project.id, [Cue(None, project.id, 0, 0, 1000, "Old", "手动修改")])
+    previous = store.list_cues(project.id)
+    cancelled = threading.Event()
+    updates = []
+
+    def progress(value, _message):
+        updates.append(value)
+        if value >= 0.97:
+            cancelled.set()
+
+    with pytest.raises(InterruptedError):
+        processor.process(project.id, ProcessingOptions(), cancel=cancelled, on_progress=progress)
+    assert store.get_project(project.id).status == "cancelled"
+    assert store.list_cues(project.id) == previous
+    assert 1.0 not in updates
+
+    result = processor.process(project.id, ProcessingOptions(), cancel=threading.Event())
+    assert result.status == "completed"
+    assert result.error == ""
+    assert store.list_cues(project.id)[0].source_text == "Cue 0."
+
+
+def test_cancellation_during_decode_keeps_reusable_audio_without_starting_asr(
+    tmp_path, monkeypatch
+):
+    from lingua_relay.offline import processor as module
+
+    processor, store, project = _controlled_processor(tmp_path, Settings(), None)
+    store.update_project(project.id, audio_path=None, source_path=tmp_path / "source.mp3")
+    cancelled = threading.Event()
+    monkeypatch.setattr(module, "probe_media", lambda _path: SimpleNamespace(duration_ms=1000))
+    decoded = []
+
+    def decode(_source, output):
+        output.touch()
+        decoded.append(output)
+        cancelled.set()
+
+    def unexpected(_settings):
+        pytest.fail("ASR must not load after cancelled media preparation")
+
+    monkeypatch.setattr(module, "decode_media_to_wav", decode)
+    processor._recognizer_factory = unexpected
+    with pytest.raises(InterruptedError):
+        processor.process(project.id, ProcessingOptions(), cancel=cancelled)
+    loaded = store.get_project(project.id)
+    assert loaded.status == "cancelled"
+    assert loaded.audio_path == decoded[0]
+    assert loaded.audio_path.is_file()
+    assert not store.list_cues(project.id)
+
+
+def test_cancelled_native_error_is_reported_as_cancellation(tmp_path):
+    processor, store, project = _controlled_processor(tmp_path, Settings(), None)
+    cancelled = threading.Event()
+
+    def load(_settings):
+        cancelled.set()
+        raise RuntimeError("Native call failed after cancellation")
+
+    processor._recognizer_factory = load
+    with pytest.raises(InterruptedError):
+        processor.process(project.id, ProcessingOptions(), cancel=cancelled)
+    assert store.get_project(project.id).status == "cancelled"
+
+
+def test_cancel_after_successful_commit_does_not_retract_result(tmp_path):
+    processor, store, project = _controlled_processor(tmp_path, Settings(), None, count=1)
+    cancelled = threading.Event()
+
+    def progress(value, _message):
+        if value == 1.0:
+            cancelled.set()
+
+    result = processor.process(
+        project.id, ProcessingOptions(), cancel=cancelled, on_progress=progress
+    )
+    assert result.status == store.get_project(project.id).status == "completed"
+    assert len(store.list_cues(project.id)) == 1
+
+
+def test_provider_cleanup_error_does_not_hide_cancellation(tmp_path):
+    cancelled = threading.Event()
+    defaults = Settings()
+    settings = replace(
+        defaults, correction=replace(defaults.correction, provider="local", model="test")
+    )
+
+    def revise(_request):
+        cancelled.set()
+        return SimpleNamespace(text="Late response")
+
+    def close():
+        raise RuntimeError("Cleanup error")
+
+    processor, store, project = _controlled_processor(
+        tmp_path, settings, SimpleNamespace(revise=revise, close=close)
+    )
+    with pytest.raises(InterruptedError):
+        processor.process(project.id, ProcessingOptions(use_llm=True), cancel=cancelled)
+    assert store.get_project(project.id).status == "cancelled"
+    assert not store.list_cues(project.id)

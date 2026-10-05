@@ -8,7 +8,8 @@ from pathlib import Path
 
 from lingua_relay.asr import FasterWhisperRecognizer, StreamingAsrEngine
 from lingua_relay.asr.types import AsrEvent
-from lingua_relay.audio import WasapiLoopbackCapture, create_audio_capture
+from lingua_relay.audio.runtime import AudioCaptureRuntime
+from lingua_relay.audio.types import AudioChunk
 from lingua_relay.config import AudioSettings, Settings
 from lingua_relay.correction import (
     AsynchronousRevisionEngine,
@@ -72,39 +73,52 @@ class RealtimeCaptionService:
         self._stop = threading.Event()
         self._paused = threading.Event()
         self._thread: threading.Thread | None = None
-        self._capture: WasapiLoopbackCapture | None = None
         self._asr: StreamingAsrEngine | None = None
         self._mt: StreamingTranslationEngine | None = None
         self._correction: AsynchronousRevisionEngine | None = None
         self._displayed_segment_id: str | None = None
         self._displayed_revision = 0
-        self._capture_error_reported: str | None = None
-        self._recorder: RecordingSession | None = None
+        self._audio = AudioCaptureRuntime(
+            settings.audio,
+            resource_dir=self.resource_dir,
+            on_chunk=self._submit_audio,
+            on_message=self._notify,
+            on_recording=self.on_recording,
+        )
 
-    def start(self) -> None:
+    def start(self, *, paused: bool = False) -> None:
         if self._thread is not None and self._thread.is_alive():
-            self.resume()
+            if paused:
+                self.pause()
+            else:
+                self.resume()
             return
         self._stop.clear()
-        self._paused.clear()
+        self._audio.prepare()
+        if paused:
+            self._paused.set()
+        else:
+            self._paused.clear()
         self._thread = threading.Thread(target=self._run, name="lingua-relay-service", daemon=True)
         self._thread.start()
 
     def pause(self) -> None:
         self._paused.set()
-        capture = self._capture
-        if capture is not None and not self._recording_needs_audio():
-            capture.stop()
+        self._audio.set_realtime_enabled(False)
         if self._asr is not None:
             self._asr.flush()
-        self._set_state("paused", "已暂停")
+        if self._state in {"ready", "running", "paused"}:
+            self._set_state("paused", "已暂停")
+
+    @property
+    def paused(self) -> bool:
+        return self._paused.is_set()
 
     def resume(self) -> None:
         self._paused.clear()
-        capture = self._capture
-        if capture is not None:
-            capture.start()
-        self._set_state("running", self._audio_status_message())
+        if self._state in {"ready", "running", "paused"}:
+            self._audio.set_realtime_enabled(True)
+            self._set_state("running", self._audio_status_message())
 
     def set_route(self, source: str, target: str) -> None:
         if source == target:
@@ -137,41 +151,19 @@ class RealtimeCaptionService:
         self.set_audio_source(replace(self.settings.audio, source="system", device=device))
 
     def set_audio_source(self, audio: AudioSettings) -> None:
-        if self._recording_active():
-            raise RuntimeError("请先结束当前录制，再切换音频源")
         candidate = replace(self.settings, audio=audio)
         candidate.validate()
-        replacement = create_audio_capture(audio, resource_dir=self.resource_dir)
+        self._audio.set_source(audio)
         with self._lock:
-            old_capture = self._capture
-            if old_capture is not None:
-                old_capture.stop()
             self.settings = candidate
             self._device = _audio_selector(audio)
-            self._capture = replacement
-            if (
-                self._asr is not None
-                and self._mt is not None
-                and self._state in {"ready", "running", "paused"}
-                and not self._paused.is_set()
-            ):
-                replacement.start()
         self._notify(self._audio_status_message(prefix="音频源已切换："))
 
     def stop(self, timeout: float = 40.0) -> None:
-        recorder = self._recorder
-        if recorder is not None and recorder.state in {"recording", "paused"}:
-            try:
-                recorder.stop()
-            except Exception as error:
-                recorder.abort(str(error))
-            finally:
-                self._recorder = None
         self._stop.set()
         if self._correction is not None:
             self._correction.set_enabled(False)
-        if self._capture is not None:
-            self._capture.stop()
+        self._audio.stop()
         thread = self._thread
         if thread is not None:
             thread.join(timeout)
@@ -184,12 +176,13 @@ class RealtimeCaptionService:
         thread = self._thread
         if thread is not None and thread.is_alive():
             raise RuntimeError("caption service must stop before releasing model resources")
-        self._capture = None
+        self._audio.release_resources()
         self._asr = None
         self._mt = None
         self._correction = None
 
     def snapshot(self) -> ServiceSnapshot:
+        recording_state, recording_project_id = self._audio.recording_snapshot()
         with self._lock:
             return ServiceSnapshot(
                 self._state,
@@ -201,69 +194,35 @@ class RealtimeCaptionService:
                 self._correction_state,
                 self._correction_scope(),
                 self._correction_error,
-                self._recorder.state if self._recorder is not None else "stopped",
-                self._recorder.project_id if self._recorder is not None else None,
+                recording_state,
+                recording_project_id,
             )
 
     def start_recording(self, session: RecordingSession) -> None:
-        with self._lock:
-            if self._recorder is not None and self._recorder.state in {"recording", "paused"}:
-                raise RuntimeError("已有录制正在进行")
-            if self._capture is None or self._state not in {"ready", "running", "paused"}:
-                raise RuntimeError("音频服务尚未就绪，请等待模型加载完成")
-            session.start()
-            self._recorder = session
-            self._capture.start()
-        self.on_recording("recording", "正在录制", session.project_id)
+        self._audio.start_recording(session)
 
     def pause_recording(self) -> None:
-        with self._lock:
-            recorder = self._require_recorder()
-            recorder.pause()
-            if self._paused.is_set() and self._capture is not None:
-                self._capture.stop()
-        self.on_recording("paused", "录制已暂停", recorder.project_id)
+        self._audio.pause_recording()
 
     def resume_recording(self) -> None:
-        with self._lock:
-            recorder = self._require_recorder()
-            if self._capture is not None:
-                self._capture.start()
-            recorder.resume()
-        self.on_recording("recording", "正在录制", recorder.project_id)
+        self._audio.resume_recording()
 
     def stop_recording(self) -> Path:
-        with self._lock:
-            recorder = self._require_recorder()
-            output = recorder.stop()
-            project_id = recorder.project_id
-            self._recorder = None
-            if self._paused.is_set() and self._capture is not None:
-                self._capture.stop()
-        self.on_recording("stopped", "录制完成，准备后期处理", project_id)
-        return output
-
-    def _require_recorder(self) -> RecordingSession:
-        recorder = self._recorder
-        if recorder is None or recorder.state not in {"recording", "paused"}:
-            raise RuntimeError("当前没有录制任务")
-        return recorder
-
-    def _recording_needs_audio(self) -> bool:
-        return self._recorder is not None and self._recorder.state == "recording"
-
-    def _recording_active(self) -> bool:
-        return self._recorder is not None and self._recorder.state in {"recording", "paused"}
+        return self._audio.stop_recording()
 
     def _run(self) -> None:
         try:
             self._set_state("loading", "正在加载语音识别模型…")
             recognizer = FasterWhisperRecognizer(self.settings.asr, download_root=self.model_root)
             recognizer.load()
+            if self._stop.is_set():
+                return
             self._set_state("loading", "语音识别已就绪，正在加载翻译模型…")
             translation_settings = self.settings.translation
             translator = M2M100Translator(translation_settings)
             translator.load()
+            if self._stop.is_set():
+                return
             self._set_state("ready", "模型加载完成，正在启动音频捕获…")
             history = (
                 JsonlHistory(self.settings.app.history_path)
@@ -275,10 +234,6 @@ class RealtimeCaptionService:
                 build_m2m100_registry(translator), translation_settings, history=history
             )
             self._prepare_correction(history)
-            self._capture = create_audio_capture(
-                self.settings.audio,
-                resource_dir=self.resource_dir,
-            )
             self._asr.start()
             self._mt.start()
             if self._correction is not None:
@@ -286,16 +241,13 @@ class RealtimeCaptionService:
             if self._paused.is_set():
                 self._set_state("paused", "已暂停")
             else:
-                self._capture.start()
+                self._audio.set_realtime_enabled(True)
                 self._set_state("running", self._audio_status_message())
             while not self._stop.is_set():
-                if not self._paused.is_set() or self._recording_needs_audio():
-                    self._pump_audio()
-                else:
-                    self._stop.wait(0.05)
                 self._pump_asr()
                 self._pump_captions()
                 self._pump_revisions()
+                self._stop.wait(0.01)
         except Exception as error:
             with self._lock:
                 self._last_error = f"{type(error).__name__}: {error}"
@@ -327,35 +279,18 @@ class RealtimeCaptionService:
         if self._correction_mode == "off":
             self._set_correction_state("off", "修正已关闭；仅显示本地快译")
 
-    def _pump_audio(self) -> None:
-        assert self._capture is not None and self._asr is not None
-        try:
-            chunk = self._capture.get_chunk(timeout=0.05)
-        except queue.Empty:
-            self._report_capture_state()
-            return
-        self._report_capture_state()
-        recorder = self._recorder
-        if recorder is not None:
-            recorder.write(chunk)
-        if self._paused.is_set():
-            return
+    def _submit_audio(self, chunk: AudioChunk) -> None:
+        """Audio runs independently; only ready, unpaused models consume chunks."""
         with self._lock:
+            asr = self._asr
             source = self._source
-        self._asr.submit_chunk(chunk, language=source)
-
-    def _report_capture_state(self) -> None:
-        capture = self._capture
-        if capture is None:
-            return
-        snapshot = capture.snapshot()
-        if snapshot.last_error and snapshot.state in {"reconnecting", "failed"}:
-            if snapshot.last_error != self._capture_error_reported:
-                self._capture_error_reported = snapshot.last_error
-                self._notify(f"音频重连中：{snapshot.last_error}")
-        elif snapshot.state == "running" and self._capture_error_reported is not None:
-            self._capture_error_reported = None
-            self._notify(self._audio_status_message(prefix="音频已恢复："))
+        if (
+            asr is not None
+            and not self._paused.is_set()
+            and not self._stop.is_set()
+            and self._audio.accepts_realtime_chunk(chunk)
+        ):
+            asr.submit_chunk(chunk, language=source)
 
     def _pump_asr(self) -> None:
         assert self._asr is not None and self._mt is not None
@@ -422,8 +357,8 @@ class RealtimeCaptionService:
                 self.on_caption(event)
 
     def _shutdown_workers(self) -> None:
-        if self._capture is not None:
-            self._capture.stop()
+        # A failed ASR/MT load must not terminate an independently started recording.
+        self._audio.set_realtime_enabled(False)
         if self._asr is not None:
             self._asr.stop()
             if self._mt is not None:

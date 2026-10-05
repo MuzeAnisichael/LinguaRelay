@@ -6,6 +6,7 @@
   <p>
     <a href="README.md">English</a> ·
     <a href="docs/ARCHITECTURE.md">架构</a> ·
+    <a href="docs/REQUIREMENTS.zh-CN.md">需求状态</a> ·
     <a href="docs/ROADMAP.zh-CN.md">路线图</a> ·
     <a href="https://github.com/MuzeAnisichael/LinguaRelay/issues/new/choose">反馈问题</a>
   </p>
@@ -16,9 +17,9 @@
     <img alt="Windows 10 和 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4?style=flat-square&logo=windows">
   </p>
   <p>
-    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.3"><strong>下载 v0.3.3</strong></a>
+    <a href="https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2"><strong>下载 v0.3.2</strong></a>
     · <a href="#快速开始">快速开始</a>
-    · <a href="docs/releases/v0.3.3.md">发布说明</a>
+    · <a href="docs/releases/v0.3.2.md">发布说明</a>
   </p>
 </div>
 
@@ -27,8 +28,9 @@
 LinguaRelay 可在后台监听 Windows 系统输出、指定进程或麦克风，识别其中的语音，再把译文显示在简洁的置顶悬浮窗中。它也能录制当前音频源，或导入音频/视频生成带时间轴、可编辑、可导出的后期字幕。支持中文、日语、英语、韩语全部 12 个互译方向。源语言由用户手动选择，以避免自动检测带来的等待和语言方向误切换。
 
 > [!IMPORTANT]
-> v0.3.3 是尚未签名的 Windows x64 Alpha 版本。请只从本仓库下载，使用
-> `SHA256SUMS.txt` 校验文件；Windows 显示“未知发布者”属于当前版本的已知情况。
+> 最新公开版本为 **v0.3.2**，是尚未签名的 Windows x64 Alpha。请只从本仓库下载，使用
+> `SHA256SUMS.txt` 校验；Windows 可能显示“未知发布者”。**`main` 的源码版本为 0.3.3，尚未公开发布**；
+> 本地安装包、CI 构建产物和草稿发布说明不等于公开发行版。
 
 ## 为什么使用 LinguaRelay？
 
@@ -38,16 +40,16 @@ LinguaRelay 可在后台监听 Windows 系统输出、指定进程或麦克风�
 | **三种音频源** | 可捕获全部系统输出、单个进程及其子进程，或指定麦克风。 |
 | **实时与后期一体** | 随时开始/暂停录制，也可导入音视频，在时间轴上检查并编辑字幕。 |
 | **四语全部互译** | 手动选择 `zh`、`ja`、`en`、`ko`，覆盖全部 12 个源语言/目标语言组合。 |
-| **默认本地处理** | 音频只在内存中流转，识别与快译使用本地模型，字幕历史可以关闭。 |
+| **默认本地处理** | 实时音频在内存中流转，主动录制/导入才持久化；识别与快译使用本地模型，字幕历史可以关闭。 |
 | **按需接入 LLM** | 本地大模型或用户主动启用的 HTTPS API 可以异步修正完整字幕，不阻塞实时链路。 |
 
 ## 快速开始
 
-1. 打开 [GitHub Releases 的 v0.3.3 页面](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.3)，下载 `LinguaRelay-0.3.3-Setup-x64.exe`。
+1. 打开 [GitHub Releases 的 v0.3.2 页面](https://github.com/MuzeAnisichael/LinguaRelay/releases/tag/v0.3.2)，下载 `LinguaRelay-0.3.2-Setup-x64.exe`。
 2. 首次启动时，让 LinguaRelay 校验已有模型目录，或选择一种模型方案。安装程序不会在没有提示的情况下静默下载模型。
 3. 在托盘菜单中选择源语言、目标语言和系统输出/指定进程/麦克风。播放音频，再把悬浮窗拖动、缩放到合适位置。
 
-不想安装也可以使用 `LinguaRelay-0.3.3-Windows-x64-portable.zip`。升级便携版时请解压到新的空文件夹，不要覆盖旧目录；安装版和便携版都能复用已有模型。
+不想安装也可以使用 `LinguaRelay-0.3.2-Windows-x64-portable.zip`。升级便携版时请解压到新的空文件夹，不要覆盖旧目录；安装版和便携版都能复用已有模型。
 
 ### 如何选择模型
 
@@ -58,7 +60,7 @@ LinguaRelay 可在后台监听 Windows 系统输出、指定进程或麦克风�
 
 两个方案使用相同的本地翻译模型，都支持全部 12 个语言方向。已有模型和离线模型包只有通过完整哈希校验后才会被采用。模型版本、许可证和测试数据见[模型选择说明](docs/MODELS.md)。
 
-首次启动后，还可在“**用户设置 → 识别与翻译**”或离线工作台中选择多语言 Medium、Large-v3 Turbo、Large-v3 识别模型，以及 M2M100 1.2B 翻译模型。软件会明确提示缺失模型、下载体积和硬件建议；高级模型只在用户确认后下载，并支持断点续传。
+首次启动后，还可在“**用户设置 → 识别与翻译**”中选择多语言 Medium、Large-v3 Turbo、Large-v3 识别模型，以及 M2M100 1.2B 翻译模型。离线工作台可单独选择识别模型，翻译模型沿用全局设置。软件会明确提示缺失模型、下载体积和硬件建议；高级模型只在用户确认后下载，并支持断点续传。
 
 ## 录制与离线工作台
 
@@ -72,6 +74,8 @@ LinguaRelay 可在后台监听 Windows 系统输出、指定进程或麦克风�
 - 可选用“大模型设置”中的本地或 HTTPS API 对后期译文逐条精修。处理时会暂时释放实时模型，完成后自动恢复实时字幕。
 
 完整用法、存储位置和模型建议见 [v0.3.0 发布说明](docs/releases/v0.3.0.md)。
+
+**尚未发布的 main 改进：** 录制不再等待识别/翻译模型就绪，暂停实时字幕也不会暂停录制。结束录制后的自动处理与导入媒体共用工作台的识别模型、质量和 LLM 选项；首次默认 Large-v3 Turbo、均衡、LLM 关闭，缺失模型仍需用户明确下载。新增“取消处理”，采用协作取消，当前原生/模型调用可能需要先返回。任务清理并恢复原实时字幕暂停状态后，工作台才重新解锁；取消保留原有已保存字幕，可再次处理，晚到的取消不会撤销已经提交的结果。目前仍为单任务，不支持批量队列、推理断点续跑、项目重命名或删除。详细状态与测试证据见[统一需求表](docs/REQUIREMENTS.zh-CN.md)。
 
 ## 主要功能
 
@@ -91,8 +95,8 @@ LinguaRelay 可在后台监听 Windows 系统输出、指定进程或麦克风�
 
 打开“**用户设置 → 大模型**”，可选择推荐的“完整句异步修正”，或实验性的实时异步修正。支持 Ollama、LM Studio 等本地 OpenAI-compatible 服务，也支持用户主动配置的 HTTPS OpenAI-compatible API。
 
-v0.3.3 新增 **OpenRouter** 一键预设与低延迟/低价格路由选项，并复用网络连接。
-英语→中文建议先测试 `google/gemini-2.5-flash-lite` 的完整句修正；它并不保证每句都更准确。
+尚未发布的 `main`（0.3.3）新增 **OpenRouter** 一键预设与低延迟/低价格路由选项，并复用网络连接。
+根据 2026-09-07 的英语→中文测试，可先尝试 `google/gemini-2.5-flash-lite` 的完整句修正；它并不保证每句都更准确。
 真实 API 延迟、费用、改进与误改样例见[实测报告](docs/benchmarks/OPENROUTER-v0.3.3.zh-CN.md)。
 
 本地快译始终优先显示。即使大模型超时、限流、断线或不可用，实时字幕也会继续工作。API 密钥只从指定环境变量读取，不写入 TOML 配置或字幕历史。图形化设置步骤见 [v0.2.0 发布说明](docs/releases/v0.2.0.md#大模型接入)，后期精修说明见 [v0.3.0 发布说明](docs/releases/v0.3.0.md#高质量后期处理)。
@@ -127,12 +131,12 @@ flowchart LR
 
 ## 本地开发
 
-建议使用 Python 3.11：
+建议使用 Python 3.11；模块边界、目录索引、按改动规模选择测试和独立发布环境见[开发指引](docs/DEVELOPMENT.zh-CN.md)。
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev,audio,asr,translation]"
+python -m pip install -e ".[dev,runtime]"
 lingua-relay doctor
 lingua-relay app
 ```
@@ -151,6 +155,8 @@ pytest
 
 | 文档 | 内容 |
 |---|---|
+| [统一需求与状态](docs/REQUIREMENTS.zh-CN.md) | 需求编号、实现与验收证据、边界、下一步 |
+| [开发指引](docs/DEVELOPMENT.zh-CN.md) | 目录索引、模块职责、环境、分级测试与构建边界 |
 | [系统架构](docs/ARCHITECTURE.md) | 快速链路、队列边界、桌面运行时和修正链路 |
 | [模型选择](docs/MODELS.md) | 安装方案、固定版本、许可证和性能说明 |
 | [v0.1.5 优化设计](docs/OPTIMIZATION-v0.1.5.zh-CN.md) | 第一版综合优化方案与产品取舍 |

@@ -1,4 +1,21 @@
-# M1 host validation
+# Benchmark and validation index
+
+Reports retain their original date, configuration, and scope. Passing a historical
+test does not establish current performance or mean a release was published.
+Current feature status is tracked in the [requirements baseline](../REQUIREMENTS.zh-CN.md);
+test selection and build boundaries are in the [developer guide](../DEVELOPMENT.zh-CN.md).
+
+| Evidence | Scope |
+|---|---|
+| [M1 sustained capture](m1-30min-windows.json) | 2026-08-11 host/device capture metrics |
+| [M2 ASR](m2-small-cuda-final.json) | Fixed four-language corpus, model and CUDA hardware |
+| [M3 translation](m3-m2m100-cuda-final.json) | Twelve routes and measured local MT latency/quality |
+| [M4 correction fault gates](m4-correction-fault-gates.json) | Non-blocking behavior and simulated provider failures |
+| [M5 release gate](m5-release-gate.json) | Small-corpus quality aggregation with explicit limitations |
+| [OpenRouter report](OPENROUTER-v0.3.3.zh-CN.md) | 2026-09-07 synthetic-caption EN→ZH API latency/cost/quality; not audio end-to-end latency |
+| [0.3.3 local validation](v0.3.3-local-validation.json) | 2026-09-07 source, frozen EXE and isolated installer checks; not a public release or real-device long test |
+
+## M1 host validation
 
 M5 adds `m5-corpus-manifest.json`, `m5-asr-cpu-final.json`, and
 `m5-release-gate.json`. The public manifest records the pinned FLEURS attribution

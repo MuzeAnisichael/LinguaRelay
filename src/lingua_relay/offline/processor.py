@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 import threading
 import time
@@ -21,6 +22,8 @@ from lingua_relay.events import CaptionEvent
 from lingua_relay.mt import M2M100Translator
 from lingua_relay.offline.media import decode_media_to_wav, probe_media
 from lingua_relay.offline.project import Cue, OfflineProject, OfflineProjectStore
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,14 +65,30 @@ class OfflineProcessor:
         on_progress: Callable[[float, str], None] | None = None,
         cancel: threading.Event | None = None,
     ) -> OfflineProject:
-        progress = on_progress or (lambda _value, _message: None)
+        """Process one project, raising InterruptedError on cooperative cancellation.
+
+        Native model loading/inference and media decoding may finish their
+        current call before noticing cancellation. No later stage or result
+        publication starts after it is observed. Existing cues remain intact
+        until the final transaction succeeds; cancelled projects can be retried.
+        """
+        notify = on_progress or (lambda _value, _message: None)
         cancelled = cancel or threading.Event()
-        project = self.store.update_project(
-            project_id, status="processing", progress=0.01, error=""
-        )
+
+        def progress(value: float, message: str) -> None:
+            self._check_cancelled(cancelled)
+            notify(value, message)
+            # A callback can itself request cancellation (including the last
+            # translation update), so check before any subsequent work/commit.
+            self._check_cancelled(cancelled)
+
         provider = None
         try:
-            audio_path = self._prepare_audio(project, progress)
+            self._check_cancelled(cancelled)
+            project = self.store.update_project(
+                project_id, status="processing", progress=0.01, error=""
+            )
+            audio_path = self._prepare_audio(project, progress, cancelled)
             self._check_cancelled(cancelled)
             progress(0.12, "正在加载高质量语音识别模型…")
             self.store.update_project(project_id, progress=0.12)
@@ -84,6 +103,7 @@ class OfflineProcessor:
                 if self._recognizer_factory
                 else FasterWhisperRecognizer(asr_settings, download_root=str(self.model_root))
             )
+            self._check_cancelled(cancelled)
             result: AsrResult = recognizer.transcribe_offline(
                 audio_path,
                 language=project.source_language,
@@ -109,8 +129,11 @@ class OfflineProcessor:
                 if self._translator_factory
                 else M2M100Translator(translation_settings)
             )
+            self._check_cancelled(cancelled)
             translator.load()
+            self._check_cancelled(cancelled)
             provider, glossary = self._correction_provider(options, project)
+            self._check_cancelled(cancelled)
             limiter = RateLimiter(self.settings.correction.requests_per_minute)
             circuit = CircuitBreaker(
                 self.settings.correction.failure_threshold,
@@ -205,50 +228,68 @@ class OfflineProcessor:
                 value = 0.57 + 0.4 * (index + 1) / total
                 progress(value, f"正在翻译字幕 {index + 1}/{total}")
                 self.store.update_project(project_id, progress=value)
-            self.store.replace_cues(project_id, cues)
+            self._check_cancelled(cancelled)
             duration_ms = max((cue.end_ms for cue in cues), default=round(result.duration_ms))
-            completed = self.store.update_project(
+            completed = self.store.complete_processing(
                 project_id,
+                cues,
                 audio_path=audio_path,
-                status="completed",
-                progress=1.0,
                 error=(
                     f"{llm_errors} 条字幕的大模型精修失败，已保留本地译文" if llm_errors else ""
                 ),
                 duration_ms=duration_ms,
+                cancel=cancelled,
             )
-            progress(1.0, "后期识别与翻译完成")
+            # Committed results are terminal: a late cancellation request must
+            # not change completed to cancelled or discard the committed cues.
+            try:
+                notify(1.0, "后期识别与翻译完成")
+            except Exception:
+                _LOGGER.warning("Could not notify completion of the committed offline result")
             return completed
         except Exception as error:
-            state = "cancelled" if isinstance(error, InterruptedError) else "failed"
+            was_cancelled = cancelled.is_set() or isinstance(error, InterruptedError)
             self.store.update_project(
                 project_id,
-                status=state,
-                error=str(error),
+                status="cancelled" if was_cancelled else "failed",
+                error="处理已取消，可重新处理" if was_cancelled else str(error),
             )
+            if was_cancelled and not isinstance(error, InterruptedError):
+                raise InterruptedError("处理已取消") from error
             raise
         finally:
             close = getattr(provider, "close", None)
             if callable(close):
-                close()
+                try:
+                    close()
+                except Exception:
+                    _LOGGER.warning("Could not close the offline correction provider")
 
     def _prepare_audio(
-        self, project: OfflineProject, progress: Callable[[float, str], None]
+        self,
+        project: OfflineProject,
+        progress: Callable[[float, str], None],
+        cancelled: threading.Event,
     ) -> Path:
+        self._check_cancelled(cancelled)
         if project.audio_path is not None and project.audio_path.is_file():
             return project.audio_path
         if project.source_path is None:
             raise ValueError("项目没有可处理的媒体文件")
         progress(0.04, "正在分离并标准化音轨…")
         info = probe_media(project.source_path)
+        self._check_cancelled(cancelled)
         output = self.store.project_dir(project.id) / "working-16k-mono.wav"
         decode_media_to_wav(project.source_path, output)
+        # A complete normalized file is a reusable cache, not a published
+        # transcript. Keep it if decoding finishes after cancellation.
         self.store.update_project(
             project.id,
             audio_path=output,
             duration_ms=info.duration_ms,
-            progress=0.1,
         )
+        self._check_cancelled(cancelled)
+        self.store.update_project(project.id, progress=0.1)
         return output
 
     def _correction_provider(

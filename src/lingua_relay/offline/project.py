@@ -153,28 +153,41 @@ class OfflineProjectStore:
 
     def replace_cues(self, project_id: str, cues: list[Cue] | tuple[Cue, ...]) -> None:
         with self._lock, closing(self._connect()) as connection, connection:
-            connection.execute("DELETE FROM cues WHERE project_id = ?", (project_id,))
-            connection.executemany(
+            _replace_cues(connection, project_id, cues)
+
+    def complete_processing(
+        self,
+        project_id: str,
+        cues: list[Cue] | tuple[Cue, ...],
+        *,
+        audio_path: Path,
+        duration_ms: int,
+        error: str = "",
+        cancel: threading.Event | None = None,
+    ) -> OfflineProject:
+        """Publish cues and completion atomically, or retain the previous result.
+
+        Cancellation is cooperative: the last check inside this transaction is
+        the completion boundary. A request arriving after that boundary does
+        not retract a successful result. Merely reopening a store never resets
+        another application's potentially active processing state.
+        """
+        with self._lock, closing(self._connect()) as connection, connection:
+            if cancel is not None and cancel.is_set():
+                raise InterruptedError("处理已取消")
+            cursor = connection.execute(
                 """
-                INSERT INTO cues (
-                    project_id, position, start_ms, end_ms, source_text,
-                    translated_text, confidence, words_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                UPDATE projects SET audio_path = ?, status = 'completed', progress = 1,
+                    error = ?, duration_ms = ?, updated_at = ? WHERE id = ?
                 """,
-                [
-                    (
-                        project_id,
-                        index,
-                        cue.start_ms,
-                        cue.end_ms,
-                        cue.source_text,
-                        cue.translated_text,
-                        cue.confidence,
-                        cue.words_json,
-                    )
-                    for index, cue in enumerate(cues)
-                ],
+                (str(audio_path), error, duration_ms, _now(), project_id),
             )
+            if cursor.rowcount != 1:
+                raise KeyError(project_id)
+            _replace_cues(connection, project_id, cues)
+            if cancel is not None and cancel.is_set():
+                raise InterruptedError("处理已取消")
+        return self.get_project(project_id)
 
     def list_cues(self, project_id: str) -> tuple[Cue, ...]:
         with self._lock, closing(self._connect()) as connection, connection:
@@ -266,6 +279,33 @@ class OfflineProjectStore:
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA journal_mode = WAL")
         return connection
+
+
+def _replace_cues(
+    connection: sqlite3.Connection, project_id: str, cues: list[Cue] | tuple[Cue, ...]
+) -> None:
+    connection.execute("DELETE FROM cues WHERE project_id = ?", (project_id,))
+    connection.executemany(
+        """
+        INSERT INTO cues (
+            project_id, position, start_ms, end_ms, source_text,
+            translated_text, confidence, words_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            (
+                project_id,
+                index,
+                cue.start_ms,
+                cue.end_ms,
+                cue.source_text,
+                cue.translated_text,
+                cue.confidence,
+                cue.words_json,
+            )
+            for index, cue in enumerate(cues)
+        ),
+    )
 
 
 def _project_from_row(row: sqlite3.Row) -> OfflineProject:

@@ -114,6 +114,7 @@ class OfflineWorkbench(QMainWindow):
     import_audio_requested = Signal()
     import_video_requested = Signal()
     process_requested = Signal(str, object)
+    cancel_requested = Signal(str)
     export_requested = Signal(str, str)
 
     def __init__(self, store: OfflineProjectStore, icon: QIcon | None = None) -> None:
@@ -122,6 +123,10 @@ class OfflineWorkbench(QMainWindow):
         self._project_id: str | None = None
         self._loading_cues = False
         self._loading_project = False
+        self._processing_project_id: str | None = None
+        self._cancel_pending = False
+        self._processing_value = 0.0
+        self._processing_message = ""
         self.setWindowTitle("LinguaRelay · 录制与离线工作台")
         self.resize(1180, 720)
         if icon:
@@ -141,12 +146,12 @@ class OfflineWorkbench(QMainWindow):
         root = QWidget()
         layout = QVBoxLayout(root)
         toolbar = QHBoxLayout()
-        audio_button = QPushButton("导入音频")
-        video_button = QPushButton("导入视频")
-        audio_button.clicked.connect(self.import_audio_requested.emit)
-        video_button.clicked.connect(self.import_video_requested.emit)
-        toolbar.addWidget(audio_button)
-        toolbar.addWidget(video_button)
+        self.audio_button = QPushButton("导入音频")
+        self.video_button = QPushButton("导入视频")
+        self.audio_button.clicked.connect(self.import_audio_requested.emit)
+        self.video_button.clicked.connect(self.import_video_requested.emit)
+        toolbar.addWidget(self.audio_button)
+        toolbar.addWidget(self.video_button)
         toolbar.addSpacing(12)
         toolbar.addWidget(QLabel("识别模型"))
         self.model_combo = QComboBox()
@@ -172,6 +177,11 @@ class OfflineWorkbench(QMainWindow):
         self.process_button = QPushButton("开始后期处理")
         self.process_button.clicked.connect(self._request_process)
         toolbar.addWidget(self.process_button)
+        self.cancel_button = QPushButton("取消处理")
+        self.cancel_button.setToolTip("合作式取消：等待当前模型调用结束，已保存字幕会保留。")
+        self.cancel_button.setEnabled(False)
+        self.cancel_button.clicked.connect(self._request_cancel)
+        toolbar.addWidget(self.cancel_button)
         self.export_button = QPushButton("导出…")
         self.export_button.clicked.connect(self._request_export)
         toolbar.addWidget(self.export_button)
@@ -279,9 +289,14 @@ class OfflineWorkbench(QMainWindow):
             self._show_empty()
 
     def update_progress(self, project_id: str, value: float, message: str) -> None:
+        if project_id != self._processing_project_id:
+            return
+        self._processing_value = value
+        if not self._cancel_pending:
+            self._processing_message = message
         if project_id == self._project_id:
             self.progress.setValue(round(max(0.0, min(1.0, value)) * 1000))
-            self.progress_label.setText(message)
+            self.progress_label.setText(self._processing_message)
 
     def processing_options(self) -> ProcessingOptions:
         return ProcessingOptions(
@@ -290,11 +305,63 @@ class OfflineWorkbench(QMainWindow):
             use_llm=self.llm_checkbox.isChecked(),
         )
 
-    def processing_finished(self, project_id: str, error: str = "") -> None:
-        self.process_button.setEnabled(True)
-        if error:
-            QMessageBox.critical(self, "后期处理失败", error)
+    def processing_started(self, project_id: str) -> None:
+        self._processing_project_id = project_id
+        self._cancel_pending = False
+        self._processing_value = 0.01
+        self._processing_message = "正在切换到后期处理模式…"
+        self._sync_task_controls()
+        self.update_progress(project_id, 0.01, self._processing_message)
+
+    def processing_cancelling(self, project_id: str) -> None:
+        if project_id != self._processing_project_id:
+            return
+        self._cancel_pending = True
+        self._processing_message = "正在取消，等待当前操作结束…"
+        self._sync_task_controls()
+        if self._project_id == project_id:
+            self.progress_label.setText(self._processing_message)
+
+    def processing_finished(
+        self, project_id: str, error: str = "", *, cancelled: bool = False
+    ) -> None:
+        if project_id != self._processing_project_id:
+            return
+        self._processing_project_id = None
+        self._cancel_pending = False
         self.refresh(select_id=project_id)
+        self._sync_task_controls()
+        if error:
+            self.progress_label.setText("处理失败")
+            QMessageBox.critical(self, "后期处理失败", error)
+        elif cancelled:
+            self.progress_label.setText("已取消；原有字幕已保留，可重新处理")
+
+    def _sync_task_controls(self) -> None:
+        busy = self._processing_project_id is not None
+        has_project = self._project_id is not None
+        recording = False
+        if has_project:
+            recording = self.store.get_project(self._project_id).status in {
+                "recording",
+                "recording_paused",
+            }
+        self.process_button.setEnabled(has_project and not busy and not recording)
+        self.cancel_button.setEnabled(busy and not self._cancel_pending)
+        self.cancel_button.setText("正在取消…" if self._cancel_pending else "取消处理")
+        for widget in (
+            self.audio_button,
+            self.video_button,
+            self.model_combo,
+            self.quality_combo,
+            self.llm_checkbox,
+        ):
+            widget.setEnabled(not busy)
+        for widget in (self.source_language, self.target_language, self.cues):
+            widget.setEnabled(has_project and not busy and not recording)
+        self.export_button.setEnabled(
+            has_project and self._project_id != self._processing_project_id and not recording
+        )
 
     def _select_project(self, current: QListWidgetItem | None, _previous=None) -> None:
         if current is None:
@@ -325,9 +392,12 @@ class OfflineWorkbench(QMainWindow):
         self.progress.setValue(round(project.progress * 1000))
         self.progress_label.setText(_status_label(project.status))
         self._load_cues(self.store.list_cues(project_id))
+        self._sync_task_controls()
+        if project_id == self._processing_project_id:
+            self.update_progress(project_id, self._processing_value, self._processing_message)
 
     def _route_changed(self) -> None:
-        if self._loading_project or not self._project_id:
+        if self._loading_project or not self._project_id or self._processing_project_id:
             return
         source = str(self.source_language.currentData())
         target = str(self.target_language.currentData())
@@ -366,7 +436,7 @@ class OfflineWorkbench(QMainWindow):
         self._loading_cues = False
 
     def _cue_changed(self, item: QTableWidgetItem) -> None:
-        if self._loading_cues:
+        if self._loading_cues or self._processing_project_id:
             return
         row = item.row()
         try:
@@ -386,10 +456,16 @@ class OfflineWorkbench(QMainWindow):
             self.player.setPosition(_parse_clock(self.cues.item(row, 0).text()))
 
     def _request_process(self) -> None:
-        if not self._project_id:
+        if not self._project_id or self._processing_project_id:
             return
-        self.process_button.setEnabled(False)
         self.process_requested.emit(self._project_id, self.processing_options())
+
+    def _request_cancel(self) -> None:
+        project_id = self._processing_project_id
+        if project_id is None or self._cancel_pending:
+            return
+        self.processing_cancelling(project_id)
+        self.cancel_requested.emit(project_id)
 
     def _request_export(self) -> None:
         if not self._project_id:
@@ -422,6 +498,7 @@ class OfflineWorkbench(QMainWindow):
         self.meta.setText("可从悬浮窗开始录制，或在此导入音频/视频。")
         self.cues.setRowCount(0)
         self.waveform.load(None)
+        self._sync_task_controls()
 
 
 def _clock(milliseconds: int) -> str:
