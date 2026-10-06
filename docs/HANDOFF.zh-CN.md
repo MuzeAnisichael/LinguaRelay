@@ -36,9 +36,9 @@
 
 ## 远端交付检查点
 
-- 实现/本地验收已完成，正在创建源码提交并尝试已授权推送；对应 CI 尚待该提交产生后核验。
-- gh 原账户 token 失效，已请求用户重新登录，没有读取/修改凭据。公共 release/ls-remote 查询成功不证明推送认证可用，需实际 push；可用公共 API 查看 CI。
-- 若实际推送失败需报告认证阻碍，不假报已推送/发布；不因 CLI 无效登录去改用户凭据。
+- 本轮实现/本地验收/源码交付完成；源码提交 [acb4b19](https://github.com/MuzeAnisichael/LinguaRelay/commit/acb4b19396f4fd3ef914ad1fb77afa5142fd7641) 已推送 main，[对应 CI](https://github.com/MuzeAnisichael/LinguaRelay/actions/runs/37409993862) 已通过 Windows Python 3.11/3.12 两个任务（公共 API 核验 conclusion=success）。收尾文档提交不改变该已测实现。
+- 沙箱内 gh 检查报 token 异常，首次 push 认证助手被拒绝；正常权限下 push 成功。不据沙箱结果判断账户凭据失效，不需要用户重新登录，没有读取/修改凭据。
+- 通过公共 API 核验 CI；没有创建标签/Release 或新安装包。
 
 ## 残余问题和后续
 
@@ -50,4 +50,4 @@
 
 ## 恢复入口
 
-先核实分支/HEAD/工作树，再读 AGENTS、需求与本页。接下来只需提交/推送/该提交 CI 收口；不重做已通过基线或沿用旧报告。完成后更新本页远端状态。从父目录 D:\\SOME PROJECT 启动必须显式读项目 AGENTS，文件存在不会自动加载子项目规则。
+先核实分支/HEAD/工作树，再读 AGENTS、需求与本页。本轮无遗留实施项，不重做已通过基线；后续先确认 0.3.4 的使用场景/指标与交互，再据新基线做对照，不沿用旧 API 预算或擅自打包发行。从父目录 D:\\SOME PROJECT 启动必须显式读项目 AGENTS，文件存在不会自动加载子项目规则。
