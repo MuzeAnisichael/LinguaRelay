@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import math
 import queue
 import re
 import threading
 import time
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import numpy as np
@@ -16,6 +18,9 @@ from lingua_relay.config import AsrSettings
 from lingua_relay.languages import SUPPORTED_LANGUAGES, normalize_language
 from lingua_relay.ports import SpeechRecognizer
 from lingua_relay.stabilizer import StablePrefix
+
+if TYPE_CHECKING:
+    from lingua_relay.telemetry import TraceCollector
 
 
 @dataclass(slots=True)
@@ -181,15 +186,29 @@ class StreamingSegmenter:
 class StreamingAsrEngine:
     """One inference worker with bounded, final-preserving ASR backpressure."""
 
-    def __init__(self, recognizer: SpeechRecognizer, settings: AsrSettings) -> None:
+    def __init__(
+        self,
+        recognizer: SpeechRecognizer,
+        settings: AsrSettings,
+        *,
+        output_timeout: float = 1.0,
+        trace: TraceCollector | None = None,
+    ) -> None:
+        if not math.isfinite(output_timeout) or output_timeout < 0:
+            raise ValueError("output_timeout must be finite and nonnegative")
         self.recognizer = recognizer
         self.settings = settings
+        self._output_timeout = output_timeout
+        self._trace = trace
         self.segmenter = StreamingSegmenter(settings)
         self._requests = InferenceBacklog(settings.inference_queue_capacity)
         self._events = LatestEventBuffer(settings.event_queue_capacity)
         self._thread: threading.Thread | None = None
         self._running = threading.Event()
+        self._aborted = threading.Event()
+        self._stopped = False
         self._lock = threading.Lock()
+        self._submission_lock = threading.RLock()
         self._stabilizers: dict[str, StablePrefix] = {}
         self._sentence_boundaries: queue.SimpleQueue[str] = queue.SimpleQueue()
         self._boundary_segments: set[str] = set()
@@ -198,33 +217,64 @@ class StreamingAsrEngine:
         self._hallucinations_suppressed = 0
         self._inference_errors = 0
         self._last_error: str | None = None
+        self._overloaded = False
+        self._final_requests_aborted = 0
+        self._final_outputs_rejected = 0
+        self._final_events_aborted = 0
 
     def start(self) -> None:
+        if self._stopped:
+            raise RuntimeError("a stopped ASR engine cannot restart; create a new engine")
         if self._thread is not None and self._thread.is_alive():
             return
         self._thread = threading.Thread(target=self._work, name="lingua-relay-asr", daemon=True)
         self._running.set()
         self._thread.start()
 
-    def submit_chunk(self, chunk: AudioChunk, *, language: str) -> None:
-        if not self._running.is_set():
-            raise RuntimeError("streaming ASR is not running")
-        self._finish_sentence_boundaries()
-        for request in self.segmenter.push(chunk, language=language):
-            self._submit(request)
+    def submit_chunk(self, chunk: AudioChunk, *, language: str, timeout: float = 0.0) -> None:
+        deadline = _deadline(timeout)
+        if not self._submission_lock.acquire(timeout=timeout):
+            raise TimeoutError("ASR segmenter is busy")
+        try:
+            if self._stopped or not self._running.is_set():
+                raise RuntimeError("streaming ASR is not running")
+            self._finish_sentence_boundaries(deadline)
+            for request in self.segmenter.push(chunk, language=language):
+                self._submit(request, timeout=max(0.0, deadline - time.monotonic()))
+        finally:
+            self._submission_lock.release()
 
-    def flush(self) -> None:
-        self._finish_sentence_boundaries()
-        request = self.segmenter.flush()
-        if request is not None:
-            self._submit(request)
+    def flush(self, timeout: float = 0.0) -> None:
+        deadline = _deadline(timeout)
+        if not self._submission_lock.acquire(timeout=timeout):
+            raise TimeoutError("ASR segmenter is busy")
+        try:
+            self._finish_sentence_boundaries(deadline)
+            request = self.segmenter.flush()
+            if request is not None:
+                self._submit(request, timeout=max(0.0, deadline - time.monotonic()))
+        finally:
+            self._submission_lock.release()
 
-    def stop(self, timeout: float = 30.0) -> None:
-        if not self._running.is_set():
+    @property
+    def worker_alive(self) -> bool:
+        return self._thread is not None and self._thread.is_alive()
+
+    def request_stop(self, *, flush_timeout: float = 0.0) -> None:
+        """Close admission even if the last segment cannot fit in the final queue."""
+        _deadline(flush_timeout)
+        if self._stopped:
             return
-        self.flush()
-        self._running.clear()
-        self._requests.close()
+        self._stopped = True
+        try:
+            self.flush(timeout=flush_timeout)
+        finally:
+            self._running.clear()
+            self._requests.close()
+
+    def finish_stop(self, timeout: float = 30.0) -> None:
+        """Join only; callers keep draining output until their shared deadline."""
+        _deadline(timeout)
         thread = self._thread
         if thread is not None:
             thread.join(timeout)
@@ -232,6 +282,54 @@ class StreamingAsrEngine:
                 raise TimeoutError("ASR inference worker did not stop in time")
         self._events.close()
         self._thread = None
+        self._stopped = True
+
+    def stop(self, timeout: float = 30.0) -> None:
+        deadline = _deadline(timeout)
+        flush_error: TimeoutError | None = None
+        try:
+            self.request_stop(flush_timeout=0.0)
+        except TimeoutError as error:
+            flush_error = error
+        try:
+            self.finish_stop(max(0.0, deadline - time.monotonic()))
+        except TimeoutError:
+            self.abort()
+            raise
+        if flush_error is not None:
+            raise flush_error
+
+    def abort(self) -> None:
+        """Cancel queue work/output, retaining ownership of any live native call."""
+        self._cancel_pending(discard_output=True)
+
+    def _cancel_pending(self, *, discard_output: bool) -> None:
+        self._stopped = True
+        self._running.clear()
+        self._aborted.set()
+        requests = self._requests.abort()
+        events = self._events.abort() if discard_output else ()
+        self._events.close()
+        with self._lock:
+            self._final_requests_aborted += sum(item.state == "final" for item in requests)
+            self._final_events_aborted += sum(item.state == "final" for item in events)
+        for item in (*requests, *events):
+            self._record(item, "cancelled")
+
+    def _record(
+        self, request: InferenceRequest | AsrEvent, stage: str, at_ns: int | None = None
+    ) -> None:
+        if self._trace is not None:
+            self._trace.record(request.segment_id, request.revision, stage, at_ns)
+
+    def _discard_cancelled(self, request: InferenceRequest, *, completed: bool) -> bool:
+        if not self._aborted.is_set():
+            return False
+        with self._lock:
+            self._final_requests_aborted += int(request.state == "final")
+            self._stale_results_dropped += int(completed)
+        self._record(request, "suppressed" if completed else "cancelled")
+        return True
 
     def get_event(self, timeout: float | None = None) -> AsrEvent:
         return self._events.get(timeout)
@@ -254,18 +352,35 @@ class StreamingAsrEngine:
                 event_queue_depth=event_depth,
                 event_queue_capacity=event_capacity,
                 last_error=self._last_error,
+                worker_alive=self.worker_alive,
+                overloaded=self._overloaded,
+                final_requests_added=requests.finals_added,
+                final_submit_rejections=requests.final_submit_rejections,
+                final_requests_aborted=self._final_requests_aborted,
+                final_outputs_rejected=self._final_outputs_rejected,
+                final_events_aborted=self._final_events_aborted,
             )
 
-    def _submit(self, request: InferenceRequest) -> None:
+    def _submit(self, request: InferenceRequest, *, timeout: float = 0.0) -> None:
         accepted = (
             self._requests.put_partial(request)
             if request.state == "partial"
-            else self._requests.put_final(request)
+            else self._requests.put_final(request, timeout=timeout)
         )
+        if self._trace is not None:
+            self._record(request, "audio_start", request.started_at_ns)
+            self._record(request, "audio_end", request.ended_at_ns)
+            if accepted:
+                self._record(request, "asr_submitted", request.submitted_at_ns)
+            else:
+                self._record(request, "rejected")
         if not accepted and request.state == "final":
+            with self._lock:
+                self._overloaded = True
+                self._last_error = "ASR final request queue exceeded its wait deadline"
             raise TimeoutError("bounded ASR queue could not accept a final request")
 
-    def _finish_sentence_boundaries(self) -> None:
+    def _finish_sentence_boundaries(self, deadline: float) -> None:
         while True:
             try:
                 segment_id = self._sentence_boundaries.get_nowait()
@@ -273,9 +388,21 @@ class StreamingAsrEngine:
                 return
             request = self.segmenter.finish_segment(segment_id)
             if request is not None:
-                self._submit(request)
+                self._submit(request, timeout=max(0.0, deadline - time.monotonic()))
 
     def _work(self) -> None:
+        try:
+            self._run_worker()
+        finally:
+            self._stopped = True
+            self._running.clear()
+            self._requests.close()
+            self._events.close()
+            self._stabilizers.clear()
+            with self._lock:
+                self._boundary_segments.clear()
+
+    def _run_worker(self) -> None:
         while True:
             try:
                 request = self._requests.get(timeout=0.2)
@@ -285,6 +412,9 @@ class StreamingAsrEngine:
                 if self._thread is None:
                     break
                 continue
+            if self._discard_cancelled(request, completed=False):
+                continue
+            self._record(request, "asr_started")
             try:
                 result = self.recognizer.transcribe(
                     request.samples,
@@ -292,15 +422,21 @@ class StreamingAsrEngine:
                     vad_filter=request.state == "final" and self.settings.vad_enabled,
                 )
             except Exception as error:  # model inference is this worker's fault boundary
+                if self._discard_cancelled(request, completed=True):
+                    continue
                 with self._lock:
                     self._inference_errors += 1
                     self._last_error = f"{type(error).__name__}: {error}"
                     if request.state == "final":
                         self._stabilizers.pop(request.segment_id, None)
                         self._boundary_segments.discard(request.segment_id)
+                self._record(request, "failed")
                 continue
 
             completed_ns = time.monotonic_ns()
+            self._record(request, "asr_completed", completed_ns)
+            if self._discard_cancelled(request, completed=True):
+                continue
             if self.settings.suppress_credit_hallucinations and _is_caption_credit_hallucination(
                 result.text
             ):
@@ -309,8 +445,10 @@ class StreamingAsrEngine:
                     if request.state == "final":
                         self._stabilizers.pop(request.segment_id, None)
                         self._boundary_segments.discard(request.segment_id)
+                self._record(request, "suppressed")
                 continue
             if request.state == "partial" and not result.text.strip():
+                self._record(request, "suppressed")
                 continue
 
             stabilizer = self._stabilizers.setdefault(
@@ -355,9 +493,26 @@ class StreamingAsrEngine:
                     "asr": result.inference_ms,
                 },
             )
-            if self._events.put(event):
+            if self._events.put(event, timeout=self._output_timeout):
                 with self._lock:
                     self._events_emitted += 1
+            elif self._discard_cancelled(request, completed=True):
+                continue
+            elif request.state == "final":
+                with self._lock:
+                    self._final_outputs_rejected += 1
+                    self._overloaded = True
+                    self._last_error = "ASR output queue exceeded its wait deadline"
+                self._record(request, "rejected")
+                self._cancel_pending(discard_output=False)
+            else:
+                self._record(request, "suppressed")
+
+
+def _deadline(timeout: float) -> float:
+    if not math.isfinite(timeout) or timeout < 0:
+        raise ValueError("timeout must be finite and nonnegative")
+    return time.monotonic() + timeout
 
 
 def _validate_language(language: str) -> str:

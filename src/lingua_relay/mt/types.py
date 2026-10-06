@@ -31,6 +31,7 @@ class TranslationSnapshot:
     requests_added: int
     partials_replaced: int
     partials_dropped: int
+    # Completed native results suppressed after abort, not all superseded partial work.
     stale_results_dropped: int
     events_emitted: int
     translation_errors: int
@@ -39,3 +40,12 @@ class TranslationSnapshot:
     event_queue_depth: int
     event_queue_capacity: int
     last_error: str | None
+    worker_alive: bool = False
+    overloaded: bool = False
+    final_requests_added: int = 0
+    # Rejected admission attempts; a caller may retry the same final successfully.
+    final_submit_rejections: int = 0
+    final_requests_aborted: int = 0
+    final_outputs_rejected: int = 0
+    final_events_aborted: int = 0
+    history_errors: int = 0

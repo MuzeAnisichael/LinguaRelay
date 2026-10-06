@@ -79,7 +79,7 @@ LinguaRelay 可在后台监听 Windows 系统输出、指定进程或麦克风�
 
 ## 主要功能
 
-- 通过 WASAPI 捕获默认/指定的 Windows 输出设备、单个进程及其子进程，或麦克风；音频源中断后自动重连，有界新数据优先队列避免延迟无限累积。
+- 通过 WASAPI 捕获默认/指定的 Windows 输出设备、单个进程及其子进程，或麦克风；音频源中断后自动重连，新数据优先队列限制捕获积压。未发布的 main 已将实时提交与录制消费隔离：持续过载时暂停字幕并告警、录制继续，不默认保存积压音频；等待旧推理结束后可手动恢复。真实设备长测仍见[问题台账 K-001](docs/KNOWN-ISSUES.zh-CN.md#k-001)。
 - 使用多语言 `faster-whisper` 流式输出 partial；先显示识别原文，在最新译文尚未完成时不让界面空等；遇到稳定句末标点、短停顿或六秒硬上限时断句。
 - 使用一个预热的 M2M100/CTranslate2 本地模型，直接覆盖四种语言全部 12 个互译方向。
 - 悬浮窗支持拖动、四边/四角缩放、仅译文/双语切换、字幕保留时间、字体、颜色、透明度和点击穿透。
@@ -133,6 +133,8 @@ flowchart LR
 
 建议使用 Python 3.11；模块边界、目录索引、按改动规模选择测试和独立发布环境见[开发指引](docs/DEVELOPMENT.zh-CN.md)。
 
+开发或恢复会话先读[项目规则](AGENTS.md)、[当前交接](docs/HANDOFF.zh-CN.md)与[需求表](docs/REQUIREMENTS.zh-CN.md)。从仓库根目录启动；父目录会话需显式读取项目规则。复杂需求先讨论确认，改动后同步问题与验证记录；这是人工维护机制，不是保证不会遗漏的自动门禁。
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -141,7 +143,7 @@ lingua-relay doctor
 lingua-relay app
 ```
 
-提交 Pull Request 前运行：
+应用源码/配置结构改动在提交 Pull Request 前运行；纯文档按开发指引的分级检查：
 
 ```powershell
 ruff check .
@@ -155,7 +157,10 @@ pytest
 
 | 文档 | 内容 |
 |---|---|
+| [项目规则](AGENTS.md) / [当前交接](docs/HANDOFF.zh-CN.md) | 任务入口、恢复检查点、范围、验证与下一步 |
+| [项目上下文](docs/PROJECT-CONTEXT.zh-CN.md) | 历史需求、决策与授权边界，不是完整聊天转录 |
 | [统一需求与状态](docs/REQUIREMENTS.zh-CN.md) | 需求编号、实现与验收证据、边界、下一步 |
+| [问题台账](docs/KNOWN-ISSUES.zh-CN.md) / [验证索引](docs/VERIFICATION.zh-CN.md) | 风险/修复沿革、关闭条件、需求到测试的映射与缺口 |
 | [开发指引](docs/DEVELOPMENT.zh-CN.md) | 目录索引、模块职责、环境、分级测试与构建边界 |
 | [系统架构](docs/ARCHITECTURE.md) | 快速链路、队列边界、桌面运行时和修正链路 |
 | [模型选择](docs/MODELS.md) | 安装方案、固定版本、许可证和性能说明 |

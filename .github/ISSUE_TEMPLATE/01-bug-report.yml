@@ -14,11 +14,21 @@ body:
     attributes:
       label: LinguaRelay version
       options:
-        - v0.1.5
-        - Current main branch
+        - v0.3.2
+        - v0.3.1
+        - v0.3.0
+        - Current main branch (0.3.3 unreleased)
         - Older release
+        - Another release (specify below)
     validations:
       required: true
+
+  - type: input
+    id: revision
+    attributes:
+      label: Exact release or source commit (if known)
+      description: For main/source, include the commit SHA; for another or older release, give its exact version. Source version 0.3.3 spans multiple unreleased snapshots.
+      placeholder: v0.3.2 or main at af920a5
 
   - type: dropdown
     id: installation
@@ -54,6 +64,9 @@ body:
       options:
         - Startup or model installation
         - System-audio capture
+        - Process-audio or microphone capture
+        - Recording or pause/resume
+        - Audio/video import or offline processing
         - Speech recognition
         - Fast translation
         - LLM revision
@@ -69,8 +82,15 @@ body:
     id: route
     attributes:
       label: Language route and model profile
-      description: If relevant, include the manual source/target languages and Small/Base profile.
+      description: If relevant, include manual source/target languages, ASR/MT models, quality profile, and CPU/CUDA compute type.
       placeholder: Japanese → Chinese, Small
+
+  - type: input
+    id: tracking
+    attributes:
+      label: Related requirement or ledger ID (optional)
+      description: Add R-... or K-.../H-... if known; otherwise describe the problem below. Maintainers will map it during triage.
+      placeholder: R-REC-01 / K-001
 
   - type: textarea
     id: behavior

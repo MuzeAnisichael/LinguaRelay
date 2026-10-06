@@ -298,6 +298,7 @@ def test_completed_partial_is_shown_even_when_a_newer_partial_is_waiting() -> No
 
     assert first.revision == 1
     assert first.text == "partial 1"
+    assert engine.snapshot().stale_results_dropped == 0
 
 
 def test_detects_short_template_caption_credit_hallucinations() -> None:

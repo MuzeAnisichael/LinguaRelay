@@ -31,7 +31,7 @@ class FakeCapture:
             self.starts += 1
             self.running = True
 
-    def stop(self) -> None:
+    def stop(self, timeout: float = 5.0) -> None:
         self.running = False
         self.stops += 1
 
@@ -46,10 +46,19 @@ class ObservedRecording(RecordingSession):
     def __init__(self, store: OfflineProjectStore, project_id: str) -> None:
         super().__init__(store, project_id)
         self.written = threading.Event()
+        self.sequences: list[int] = []
+        self.write_condition = threading.Condition()
 
     def write(self, chunk: AudioChunk) -> None:
         super().write(chunk)
+        with self.write_condition:
+            self.sequences.append(chunk.sequence)
+            self.write_condition.notify_all()
         self.written.set()
+
+    def wait_for_chunks(self, count: int) -> bool:
+        with self.write_condition:
+            return self.write_condition.wait_for(lambda: len(self.sequences) >= count, timeout=2)
 
 
 def _recording(tmp_path: Path) -> ObservedRecording:
@@ -81,13 +90,14 @@ def capture(monkeypatch) -> FakeCapture:
     return result
 
 
-def _runtime(on_chunk=lambda _chunk: None) -> AudioCaptureRuntime:
+def _runtime(on_chunk=lambda _chunk: None, **kwargs) -> AudioCaptureRuntime:
     return AudioCaptureRuntime(
         AudioSettings(),
         resource_dir=Path("."),
         on_chunk=on_chunk,
         on_message=lambda _message: None,
         on_recording=lambda *_args: None,
+        **kwargs,
     )
 
 
@@ -447,4 +457,38 @@ def test_stop_closes_recording_only_after_audio_consumer_has_finished(tmp_path, 
         assert closed.is_set()
     finally:
         release_write.set()
+        runtime.stop()
+
+
+def test_caption_pause_requests_capture_stop_without_a_default_join(capture) -> None:
+    runtime = _runtime()
+    released = threading.Event()
+    stopped = threading.Event()
+    budgets = []
+    original_stop = capture.stop
+
+    def slow_stop(timeout=5):
+        budgets.append(timeout)
+        if not released.wait(timeout):
+            raise TimeoutError("synthetic native capture shutdown")
+        original_stop(timeout)
+        stopped.set()
+
+    capture.stop = slow_stop
+    try:
+        runtime.set_realtime_enabled(True)
+        started = time.monotonic()
+        runtime.set_realtime_enabled(False)
+        assert time.monotonic() - started < 0.5
+        assert budgets and all(budget == 0 for budget in budgets)
+        assert runtime._capture_stop_pending
+        with pytest.raises(RuntimeError, match="停止尚未完成"):
+            runtime.set_realtime_enabled(True)
+        released.set()
+        assert stopped.wait(2)
+        assert not runtime._capture_stop_pending
+        runtime.set_realtime_enabled(True)
+        assert runtime.snapshot().realtime_enabled
+    finally:
+        released.set()
         runtime.stop()

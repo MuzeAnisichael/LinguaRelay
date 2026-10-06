@@ -4,6 +4,11 @@ title: "[Feature]: "
 labels:
   - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        This form records a proposal, not an approved implementation or release scope. Large or unclear requests are discussed before coding.
+
   - type: textarea
     id: problem
     attributes:
@@ -17,7 +22,7 @@ body:
     id: proposal
     attributes:
       label: Proposed experience
-      description: Explain the smallest useful behavior, including where it belongs in the overlay, tray, settings, or pipeline.
+      description: Explain the smallest useful behavior, including where it belongs in the overlay, tray, settings, offline workbench, or pipeline; include an observable acceptance example.
     validations:
       required: true
 
@@ -42,6 +47,13 @@ body:
     attributes:
       label: Alternatives and trade-offs
       description: Note any effect on latency, local/cloud processing, model size, privacy, or UI complexity.
+
+  - type: input
+    id: tracking
+    attributes:
+      label: Related requirement or ledger ID (optional)
+      description: Reference R-... or K-.../H-... if known; maintainers can assign a new ID after discussion.
+      placeholder: R-FUTURE-01 / K-012
 
   - type: checkboxes
     id: checks

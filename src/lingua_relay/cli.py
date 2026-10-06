@@ -377,7 +377,17 @@ def run_asr_stream(args: argparse.Namespace) -> int:
         engine.stop()
         _print_ready_events(engine)
     print(json.dumps(asdict(engine.snapshot()), ensure_ascii=False), file=sys.stderr)
-    return 0 if engine.snapshot().inference_errors == 0 else 1
+    snapshot = engine.snapshot()
+    return (
+        0
+        if not (
+            snapshot.inference_errors
+            or snapshot.overloaded
+            or snapshot.final_outputs_rejected
+            or snapshot.final_requests_aborted
+        )
+        else 1
+    )
 
 
 def _print_ready_events(engine: object) -> None:

@@ -1,0 +1,3175 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-06T03:34:17.840504+00:00",
+  "source": {
+    "version": "0.3.3",
+    "base_revision": "af920a5d100247f8913f46f5e6bed5034ec316d5",
+    "worktree_dirty": true,
+    "implementation_sha256": "d9ee86acf7a549f2f3bcef732a47813a109d87eb3a00e4fbc37ce54c567693e9",
+    "implementation_files": 66,
+    "fingerprint_scope": "src/**/*.py and the three replay scripts; excludes docs/tests/media"
+  },
+  "scope": "local_paced_file_replay",
+  "configuration": {
+    "scope": "local_paced_file_replay",
+    "routes": {
+      "en": "zh",
+      "zh": "en",
+      "ja": "ko",
+      "ko": "ja"
+    },
+    "asr": {
+      "provider": "faster_whisper",
+      "model": "explicit_local_directory",
+      "revision": "",
+      "device": "cuda",
+      "compute_type": "float16",
+      "beam_size": 1,
+      "repetition_penalty": 1.05,
+      "no_repeat_ngram_size": 3,
+      "compression_ratio_threshold": 2.4,
+      "log_prob_threshold": -1.0,
+      "no_speech_threshold": 0.6,
+      "vad_enabled": true,
+      "vad_threshold": 0.5,
+      "min_speech_ms": 320,
+      "min_silence_ms": 640,
+      "preferred_silence_ms": 320,
+      "partial_interval_ms": 320,
+      "adaptive_partial_enabled": true,
+      "punctuation_boundary_enabled": true,
+      "punctuation_boundary_min_seconds": 0.96,
+      "suppress_credit_hallucinations": true,
+      "context_hint": "",
+      "preferred_segment_seconds": 3.2,
+      "max_caption_seconds": 6.0,
+      "max_window_seconds": 6.0,
+      "max_segment_seconds": 6.0,
+      "inference_queue_capacity": 4,
+      "event_queue_capacity": 16
+    },
+    "mt": {
+      "provider": "m2m100_ct2",
+      "model": "facebook/m2m100_418M",
+      "revision": "55c2e61bbf05dfb8d7abccdc3fae6fc8512fd636",
+      "model_path": "explicit_local_directory",
+      "device": "cuda",
+      "compute_type": "float16",
+      "beam_size": 1,
+      "repetition_penalty": 1.05,
+      "no_repeat_ngram_size": 3,
+      "max_input_tokens": 256,
+      "max_decoding_length": 256,
+      "cache_size": 0,
+      "queue_capacity": 4,
+      "event_queue_capacity": 16,
+      "translate_partials": true
+    },
+    "audio": {
+      "sample_rate": 16000,
+      "chunk_ms": 320,
+      "silence_dbfs": -55.0
+    },
+    "asr_runtime": {
+      "requested_device": "cuda",
+      "device": "cuda",
+      "compute_type": "float16",
+      "cuda_devices": 1,
+      "cuda_runtime_ready": true
+    },
+    "mt_runtime": {
+      "requested_device": "cuda",
+      "device": "cuda",
+      "compute_type": "float16",
+      "cuda_devices": 1,
+      "cuda_runtime_ready": true
+    },
+    "model_file_sha256": {
+      "asr": {
+        "model.bin": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+        "config.json": "b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828",
+        "tokenizer.json": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab",
+        "vocabulary.txt": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+      },
+      "mt": {
+        "model.bin": "ea707f0f1c9665d0d14802708fc124b5a910c458dfab4a6a84c5c91fa6d63ea4",
+        "config.json": "72901fbd8abd89fb5cf4a388f26fc681f5c4c58a1e1a88b30b879f107270e7ee",
+        "sentencepiece.bpe.model": "d8f7c76ed2a5e0822be39f0a4f95a55eb19c78f4593ce609e2edbc2aea4d380a",
+        "shared_vocabulary.json": "18916ac68f9ac8fbd5250ca603dcb3861aac8672924d93a8dadc82eb3147f941",
+        "special_tokens_map.json": "c1a4f86c3874d279ae1b2a05162858db5dd6c61665d84223ed886cbcff08fda6",
+        "tokenizer_config.json": "a53e6aa83da0b82565ed90c3849056307a9453843322ac5b8439ec4b9497fe48",
+        "vocab.json": "b6e77e474aeea8f441363aca7614317c06381f3eacfe10fb9856d5081d1074cc"
+      }
+    },
+    "corpus_manifest_sha256": "f39018fb8b211d38b57367270d41ddeaac3e47b158d0d3186d89c2d6db4edc91",
+    "qt": "hidden_widget_update_not_paint",
+    "model_warmup": false,
+    "models_reused_between_languages": true
+  },
+  "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+  "corpus": {
+    "dataset": "google/fleurs",
+    "license": "CC-BY-4.0",
+    "dataset_url": "https://huggingface.co/datasets/google/fleurs",
+    "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+    "manifest_sha256": "f39018fb8b211d38b57367270d41ddeaac3e47b158d0d3186d89c2d6db4edc91",
+    "selection": "first existing manifest entry per language; four directions only"
+  },
+  "model_load_ms": 12312.0,
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows"
+  },
+  "results": [
+    {
+      "source": "en",
+      "target": "zh",
+      "sample_id": "1904",
+      "audio_sha256": "33aca50159ec2e3cbcc894eb26faa916d6badb1b49fb75994973561540a7f012",
+      "audio_duration_ms": 10560.0,
+      "padding_samples": 0,
+      "silence_tail_samples": 15360,
+      "elapsed_ms": 11531.0,
+      "final_asr_segments": 2,
+      "caption_events_adopted": 14,
+      "failed_captions": 0,
+      "submission_failed": false,
+      "timed_out": false,
+      "workers_stopped": true,
+      "asr_reference_measurement": {
+        "metric": "wer",
+        "errors": 2,
+        "units": 19,
+        "error_rate": 0.10526315789473684,
+        "sample_count": 1
+      },
+      "trace": {
+        "schema_version": 1,
+        "clock": "monotonic_ns",
+        "capacity": 2048,
+        "retained_traces": 17,
+        "record_calls": 172,
+        "duplicate_stages": 0,
+        "evicted_trace_entries": 0,
+        "counter_labels_dropped": 0,
+        "counters": {},
+        "resources": {
+          "rss_samples": 38,
+          "rss_first_bytes": 672448512,
+          "rss_latest_bytes": 1098870784,
+          "rss_peak_bytes": 1098870784,
+          "rss_growth_bytes": 426422272
+        },
+        "traces": [
+          {
+            "trace_id": "76e8d606676291a38aa305e84272c5fb5af13b8bc9cd71509fb26e5daf58f2d4",
+            "revision": 1,
+            "stages": {
+              "audio_start": 1431317897000000,
+              "audio_end": 1431318217000000,
+              "asr_submitted": 1431318218000000,
+              "asr_started": 1431318218000000,
+              "asr_completed": 1431318453000000,
+              "transcript_ui_updated": 1431318468000000,
+              "mt_submitted": 1431318468000000,
+              "mt_started": 1431318468000000,
+              "mt_completed": 1431318515000000,
+              "service_adopted": 1431318515000000,
+              "ui_updated": 1431318515000000
+            }
+          },
+          {
+            "trace_id": "76e8d606676291a38aa305e84272c5fb5af13b8bc9cd71509fb26e5daf58f2d4",
+            "revision": 2,
+            "stages": {
+              "audio_start": 1431317897000000,
+              "audio_end": 1431318537000000,
+              "asr_submitted": 1431318546000000,
+              "asr_started": 1431318546000000,
+              "asr_completed": 1431318593000000,
+              "transcript_ui_updated": 1431318593000000,
+              "mt_submitted": 1431318593000000,
+              "mt_started": 1431318593000000,
+              "mt_completed": 1431318625000000,
+              "service_adopted": 1431318625000000,
+              "ui_updated": 1431318625000000
+            }
+          },
+          {
+            "trace_id": "76e8d606676291a38aa305e84272c5fb5af13b8bc9cd71509fb26e5daf58f2d4",
+            "revision": 3,
+            "stages": {
+              "audio_start": 1431317897000000,
+              "audio_end": 1431318857000000,
+              "asr_submitted": 1431318859000000,
+              "asr_started": 1431318859000000,
+              "asr_completed": 1431318906000000,
+              "transcript_ui_updated": 1431318921000000,
+              "mt_submitted": 1431318921000000,
+              "mt_started": 1431318921000000,
+              "mt_completed": 1431318937000000,
+              "service_adopted": 1431318937000000,
+              "ui_updated": 1431318937000000
+            }
+          },
+          {
+            "trace_id": "76e8d606676291a38aa305e84272c5fb5af13b8bc9cd71509fb26e5daf58f2d4",
+            "revision": 4,
+            "stages": {
+              "audio_start": 1431317897000000,
+              "audio_end": 1431319177000000,
+              "asr_submitted": 1431319187000000,
+              "asr_started": 1431319187000000,
+              "asr_completed": 1431319250000000,
+              "transcript_ui_updated": 1431319250000000,
+              "mt_submitted": 1431319250000000,
+              "mt_started": 1431319250000000,
+              "mt_completed": 1431319265000000,
+              "service_adopted": 1431319281000000,
+              "ui_updated": 1431319281000000
+            }
+          },
+          {
+            "trace_id": "76e8d606676291a38aa305e84272c5fb5af13b8bc9cd71509fb26e5daf58f2d4",
+            "revision": 5,
+            "stages": {
+              "audio_start": 1431317897000000,
+              "audio_end": 1431319497000000,
+              "asr_submitted": 1431319500000000,
+              "asr_started": 1431319500000000,
+              "asr_completed": 1431319578000000,
+              "transcript_ui_updated": 1431319593000000,
+              "mt_submitted": 1431319593000000,
+              "mt_started": 1431319593000000,
+              "mt_completed": 1431319625000000,
+              "service_adopted": 1431319625000000,
+              "ui_updated": 1431319625000000
+            }
+          },
+          {
+            "trace_id": "76e8d606676291a38aa305e84272c5fb5af13b8bc9cd71509fb26e5daf58f2d4",
+            "revision": 6,
+            "stages": {
+              "audio_start": 1431317897000000,
+              "audio_end": 1431320137000000,
+              "asr_submitted": 1431320140000000,
+              "asr_started": 1431320140000000,
+              "asr_completed": 1431320218000000,
+              "transcript_ui_updated": 1431320218000000,
+              "mt_submitted": 1431320218000000,
+              "mt_started": 1431320218000000,
+              "mt_completed": 1431320281000000,
+              "service_adopted": 1431320281000000,
+              "ui_updated": 1431320281000000
+            }
+          },
+          {
+            "trace_id": "76e8d606676291a38aa305e84272c5fb5af13b8bc9cd71509fb26e5daf58f2d4",
+            "revision": 7,
+            "stages": {
+              "audio_start": 1431317897000000,
+              "audio_end": 1431320777000000,
+              "asr_submitted": 1431320781000000,
+              "asr_started": 1431320781000000,
+              "asr_completed": 1431320875000000,
+              "transcript_ui_updated": 1431320875000000,
+              "mt_submitted": 1431320875000000,
+              "mt_started": 1431320875000000,
+              "mt_completed": 1431320937000000,
+              "service_adopted": 1431320937000000,
+              "ui_updated": 1431320937000000
+            }
+          },
+          {
+            "trace_id": "76e8d606676291a38aa305e84272c5fb5af13b8bc9cd71509fb26e5daf58f2d4",
+            "revision": 8,
+            "stages": {
+              "audio_start": 1431317897000000,
+              "audio_end": 1431321097000000,
+              "asr_submitted": 1431321109000000,
+              "asr_started": 1431321109000000,
+              "asr_completed": 1431321343000000,
+              "transcript_ui_updated": 1431321343000000,
+              "mt_submitted": 1431321343000000,
+              "mt_started": 1431321343000000,
+              "mt_completed": 1431321421000000,
+              "service_adopted": 1431321421000000,
+              "ui_updated": 1431321421000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 1,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431321737000000,
+              "asr_submitted": 1431321750000000,
+              "asr_started": 1431321750000000,
+              "asr_completed": 1431321812000000,
+              "suppressed": 1431321812000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 2,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431322057000000,
+              "asr_submitted": 1431322062000000,
+              "asr_started": 1431322062000000,
+              "asr_completed": 1431322125000000,
+              "suppressed": 1431322125000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 3,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431322377000000,
+              "asr_submitted": 1431322390000000,
+              "asr_started": 1431322390000000,
+              "asr_completed": 1431322453000000,
+              "suppressed": 1431322453000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 4,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431322697000000,
+              "asr_submitted": 1431322703000000,
+              "asr_started": 1431322703000000,
+              "asr_completed": 1431322781000000,
+              "transcript_ui_updated": 1431322781000000,
+              "mt_submitted": 1431322781000000,
+              "mt_started": 1431322781000000,
+              "mt_completed": 1431322812000000,
+              "service_adopted": 1431322812000000,
+              "ui_updated": 1431322812000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 5,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431323017000000,
+              "asr_submitted": 1431323031000000,
+              "asr_started": 1431323031000000,
+              "asr_completed": 1431323093000000,
+              "transcript_ui_updated": 1431323093000000,
+              "mt_submitted": 1431323093000000,
+              "mt_started": 1431323093000000,
+              "mt_completed": 1431323140000000,
+              "service_adopted": 1431323156000000,
+              "ui_updated": 1431323156000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 6,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431323657000000,
+              "asr_submitted": 1431323671000000,
+              "asr_started": 1431323671000000,
+              "asr_completed": 1431323750000000,
+              "transcript_ui_updated": 1431323750000000,
+              "mt_submitted": 1431323750000000,
+              "mt_started": 1431323750000000,
+              "mt_completed": 1431323812000000,
+              "service_adopted": 1431323812000000,
+              "ui_updated": 1431323812000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 7,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431324297000000,
+              "asr_submitted": 1431324312000000,
+              "asr_started": 1431324312000000,
+              "asr_completed": 1431324421000000,
+              "transcript_ui_updated": 1431324421000000,
+              "mt_submitted": 1431324421000000,
+              "mt_started": 1431324421000000,
+              "mt_completed": 1431324453000000,
+              "service_adopted": 1431324453000000,
+              "ui_updated": 1431324453000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 8,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431324937000000,
+              "asr_submitted": 1431324937000000,
+              "asr_started": 1431324937000000,
+              "asr_completed": 1431325046000000,
+              "transcript_ui_updated": 1431325046000000,
+              "mt_submitted": 1431325046000000,
+              "mt_started": 1431325046000000,
+              "mt_completed": 1431325109000000,
+              "service_adopted": 1431325109000000,
+              "ui_updated": 1431325109000000
+            }
+          },
+          {
+            "trace_id": "ac9f1eee06bfba8cf9a18d5cd154e225b31b959baf675cc743a2a3fd5c7954b6",
+            "revision": 9,
+            "stages": {
+              "audio_start": 1431321417000000,
+              "audio_end": 1431325897000000,
+              "asr_submitted": 1431325906000000,
+              "asr_started": 1431325906000000,
+              "asr_completed": 1431326031000000,
+              "transcript_ui_updated": 1431326031000000,
+              "mt_submitted": 1431326031000000,
+              "mt_started": 1431326031000000,
+              "mt_completed": 1431326109000000,
+              "service_adopted": 1431326109000000,
+              "ui_updated": 1431326109000000
+            }
+          }
+        ],
+        "latencies": {
+          "segment_start_to_asr_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "asr_completed",
+            "total_retained": 17,
+            "measured": 17,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 1676.0,
+            "p95_ms": 4614.0,
+            "max_ms": 4614.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_mt_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "mt_completed",
+            "total_retained": 17,
+            "measured": 14,
+            "missing_start": 0,
+            "missing_end": 3,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 1728.0,
+            "p95_ms": 4692.0,
+            "max_ms": 4692.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_service_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "service_adopted",
+            "total_retained": 17,
+            "measured": 14,
+            "missing_start": 0,
+            "missing_end": 3,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 1739.0,
+            "p95_ms": 4692.0,
+            "max_ms": 4692.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_ui_update_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "ui_updated",
+            "total_retained": 17,
+            "measured": 14,
+            "missing_start": 0,
+            "missing_end": 3,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 1739.0,
+            "p95_ms": 4692.0,
+            "max_ms": 4692.0,
+            "percentile_method": "nearest_rank"
+          },
+          "audio_end_to_ui_update_ms": {
+            "start_stage": "audio_end",
+            "end_stage": "ui_updated",
+            "total_retained": 17,
+            "measured": 14,
+            "missing_start": 0,
+            "missing_end": 3,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 144.0,
+            "p95_ms": 324.0,
+            "max_ms": 324.0,
+            "percentile_method": "nearest_rank"
+          },
+          "asr_queue_ms": {
+            "start_stage": "asr_submitted",
+            "end_stage": "asr_started",
+            "total_retained": 17,
+            "measured": 17,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          },
+          "asr_inference_ms": {
+            "start_stage": "asr_started",
+            "end_stage": "asr_completed",
+            "total_retained": 17,
+            "measured": 17,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 78.0,
+            "p95_ms": 235.0,
+            "max_ms": 235.0,
+            "percentile_method": "nearest_rank"
+          },
+          "mt_queue_ms": {
+            "start_stage": "mt_submitted",
+            "end_stage": "mt_started",
+            "total_retained": 17,
+            "measured": 14,
+            "missing_start": 3,
+            "missing_end": 3,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          },
+          "mt_inference_ms": {
+            "start_stage": "mt_started",
+            "end_stage": "mt_completed",
+            "total_retained": 17,
+            "measured": 14,
+            "missing_start": 3,
+            "missing_end": 3,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 47.0,
+            "p95_ms": 78.0,
+            "max_ms": 78.0,
+            "percentile_method": "nearest_rank"
+          },
+          "service_to_ui_update_ms": {
+            "start_stage": "service_adopted",
+            "end_stage": "ui_updated",
+            "total_retained": 17,
+            "measured": 14,
+            "missing_start": 3,
+            "missing_end": 3,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 3,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          }
+        },
+        "outcomes": {
+          "asr_completed": 17,
+          "asr_started": 17,
+          "asr_submitted": 17,
+          "audio_end": 17,
+          "audio_start": 17,
+          "cancelled": 0,
+          "failed": 0,
+          "mt_completed": 14,
+          "mt_started": 14,
+          "mt_submitted": 14,
+          "rejected": 0,
+          "service_adopted": 14,
+          "suppressed": 3,
+          "transcript_ui_updated": 14,
+          "ui_updated": 14,
+          "asr_unresolved": 0,
+          "mt_unresolved": 0,
+          "translation_not_adopted": 0,
+          "ui_not_acknowledged": 0
+        },
+        "scope_notes": [
+          "Latency and outcome denominators cover retained segment/revision entries only.",
+          "Evicted entries may reappear without earlier stages; no lifetime coverage claim.",
+          "Missing UI acknowledgement is not audio loss or proof that no pixels appeared.",
+          "ui_updated is a widget-update acknowledgement, not a paint/display timestamp.",
+          "RSS peak is the maximum explicit sample, not a continuously monitored maximum."
+        ],
+        "pipeline": {
+          "engine_counts": {
+            "asr_final_requests_added": 2,
+            "asr_final_submit_rejections": 0,
+            "asr_final_requests_aborted": 0,
+            "asr_final_outputs_rejected": 0,
+            "asr_final_events_aborted": 0,
+            "asr_stale_results_dropped": 0,
+            "asr_history_errors": 0,
+            "mt_final_requests_added": 2,
+            "mt_final_submit_rejections": 0,
+            "mt_final_requests_aborted": 0,
+            "mt_final_outputs_rejected": 0,
+            "mt_final_events_aborted": 0,
+            "mt_stale_results_dropped": 0,
+            "mt_history_errors": 0
+          },
+          "pending_finals": 0,
+          "service_finals_aborted": 0,
+          "overloaded": false
+        }
+      }
+    },
+    {
+      "source": "zh",
+      "target": "en",
+      "sample_id": "1906",
+      "audio_sha256": "a72c0b59fdba80850552af7991de07f9f4940846d2d70f0890eeb153c40f164b",
+      "audio_duration_ms": 10380.0,
+      "padding_samples": 2880,
+      "silence_tail_samples": 15360,
+      "elapsed_ms": 11532.0,
+      "final_asr_segments": 2,
+      "caption_events_adopted": 13,
+      "failed_captions": 0,
+      "submission_failed": false,
+      "timed_out": false,
+      "workers_stopped": true,
+      "asr_reference_measurement": {
+        "metric": "cer",
+        "errors": 4,
+        "units": 23,
+        "error_rate": 0.17391304347826086,
+        "sample_count": 1
+      },
+      "trace": {
+        "schema_version": 1,
+        "clock": "monotonic_ns",
+        "capacity": 2048,
+        "retained_traces": 14,
+        "record_calls": 149,
+        "duplicate_stages": 0,
+        "evicted_trace_entries": 0,
+        "counter_labels_dropped": 0,
+        "counters": {},
+        "resources": {
+          "rss_samples": 38,
+          "rss_first_bytes": 1098891264,
+          "rss_latest_bytes": 1104515072,
+          "rss_peak_bytes": 1104642048,
+          "rss_growth_bytes": 5623808
+        },
+        "traces": [
+          {
+            "trace_id": "f7b83cf2d1dce4ab9dcbe555ef28dabcb90c6b373f5df4850026f225b9e7d2be",
+            "revision": 1,
+            "stages": {
+              "audio_start": 1431330388000000,
+              "audio_end": 1431330708000000,
+              "asr_submitted": 1431330718000000,
+              "asr_started": 1431330718000000,
+              "asr_completed": 1431330796000000,
+              "suppressed": 1431330796000000
+            }
+          },
+          {
+            "trace_id": "f7b83cf2d1dce4ab9dcbe555ef28dabcb90c6b373f5df4850026f225b9e7d2be",
+            "revision": 2,
+            "stages": {
+              "audio_start": 1431330388000000,
+              "audio_end": 1431331028000000,
+              "asr_submitted": 1431331031000000,
+              "asr_started": 1431331031000000,
+              "asr_completed": 1431331093000000,
+              "transcript_ui_updated": 1431331093000000,
+              "mt_submitted": 1431331093000000,
+              "mt_started": 1431331093000000,
+              "mt_completed": 1431331125000000,
+              "service_adopted": 1431331125000000,
+              "ui_updated": 1431331125000000
+            }
+          },
+          {
+            "trace_id": "f7b83cf2d1dce4ab9dcbe555ef28dabcb90c6b373f5df4850026f225b9e7d2be",
+            "revision": 3,
+            "stages": {
+              "audio_start": 1431330388000000,
+              "audio_end": 1431331348000000,
+              "asr_submitted": 1431331359000000,
+              "asr_started": 1431331359000000,
+              "asr_completed": 1431331437000000,
+              "transcript_ui_updated": 1431331437000000,
+              "mt_submitted": 1431331437000000,
+              "mt_started": 1431331437000000,
+              "mt_completed": 1431331484000000,
+              "service_adopted": 1431331484000000,
+              "ui_updated": 1431331484000000
+            }
+          },
+          {
+            "trace_id": "f7b83cf2d1dce4ab9dcbe555ef28dabcb90c6b373f5df4850026f225b9e7d2be",
+            "revision": 4,
+            "stages": {
+              "audio_start": 1431330388000000,
+              "audio_end": 1431331668000000,
+              "asr_submitted": 1431331671000000,
+              "asr_started": 1431331671000000,
+              "asr_completed": 1431331750000000,
+              "transcript_ui_updated": 1431331750000000,
+              "mt_submitted": 1431331750000000,
+              "mt_started": 1431331750000000,
+              "mt_completed": 1431331796000000,
+              "service_adopted": 1431331796000000,
+              "ui_updated": 1431331796000000
+            }
+          },
+          {
+            "trace_id": "f7b83cf2d1dce4ab9dcbe555ef28dabcb90c6b373f5df4850026f225b9e7d2be",
+            "revision": 5,
+            "stages": {
+              "audio_start": 1431330388000000,
+              "audio_end": 1431331988000000,
+              "asr_submitted": 1431332000000000,
+              "asr_started": 1431332000000000,
+              "asr_completed": 1431332109000000,
+              "transcript_ui_updated": 1431332109000000,
+              "mt_submitted": 1431332109000000,
+              "mt_started": 1431332109000000,
+              "mt_completed": 1431332171000000,
+              "service_adopted": 1431332187000000,
+              "ui_updated": 1431332187000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 1,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431332628000000,
+              "asr_submitted": 1431332640000000,
+              "asr_started": 1431332640000000,
+              "asr_completed": 1431332703000000,
+              "transcript_ui_updated": 1431332703000000,
+              "mt_submitted": 1431332703000000,
+              "mt_started": 1431332703000000,
+              "mt_completed": 1431332734000000,
+              "service_adopted": 1431332734000000,
+              "ui_updated": 1431332734000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 2,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431332948000000,
+              "asr_submitted": 1431332953000000,
+              "asr_started": 1431332953000000,
+              "asr_completed": 1431333015000000,
+              "transcript_ui_updated": 1431333015000000,
+              "mt_submitted": 1431333015000000,
+              "mt_started": 1431333015000000,
+              "mt_completed": 1431333062000000,
+              "service_adopted": 1431333062000000,
+              "ui_updated": 1431333062000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 3,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431333268000000,
+              "asr_submitted": 1431333281000000,
+              "asr_started": 1431333281000000,
+              "asr_completed": 1431333359000000,
+              "transcript_ui_updated": 1431333359000000,
+              "mt_submitted": 1431333359000000,
+              "mt_started": 1431333359000000,
+              "mt_completed": 1431333406000000,
+              "service_adopted": 1431333406000000,
+              "ui_updated": 1431333406000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 4,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431333588000000,
+              "asr_submitted": 1431333593000000,
+              "asr_started": 1431333593000000,
+              "asr_completed": 1431333703000000,
+              "transcript_ui_updated": 1431333703000000,
+              "mt_submitted": 1431333703000000,
+              "mt_started": 1431333703000000,
+              "mt_completed": 1431333750000000,
+              "service_adopted": 1431333750000000,
+              "ui_updated": 1431333750000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 5,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431333908000000,
+              "asr_submitted": 1431333921000000,
+              "asr_started": 1431333921000000,
+              "asr_completed": 1431334015000000,
+              "transcript_ui_updated": 1431334015000000,
+              "mt_submitted": 1431334015000000,
+              "mt_started": 1431334015000000,
+              "mt_completed": 1431334078000000,
+              "service_adopted": 1431334078000000,
+              "ui_updated": 1431334078000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 6,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431334548000000,
+              "asr_submitted": 1431334562000000,
+              "asr_started": 1431334562000000,
+              "asr_completed": 1431334671000000,
+              "transcript_ui_updated": 1431334671000000,
+              "mt_submitted": 1431334671000000,
+              "mt_started": 1431334671000000,
+              "mt_completed": 1431334718000000,
+              "service_adopted": 1431334718000000,
+              "ui_updated": 1431334718000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 7,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431335188000000,
+              "asr_submitted": 1431335203000000,
+              "asr_started": 1431335203000000,
+              "asr_completed": 1431335328000000,
+              "transcript_ui_updated": 1431335328000000,
+              "mt_submitted": 1431335328000000,
+              "mt_started": 1431335328000000,
+              "mt_completed": 1431335406000000,
+              "service_adopted": 1431335406000000,
+              "ui_updated": 1431335406000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 8,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431335828000000,
+              "asr_submitted": 1431335828000000,
+              "asr_started": 1431335828000000,
+              "asr_completed": 1431335968000000,
+              "transcript_ui_updated": 1431335968000000,
+              "mt_submitted": 1431335968000000,
+              "mt_started": 1431335968000000,
+              "mt_completed": 1431336031000000,
+              "service_adopted": 1431336031000000,
+              "ui_updated": 1431336031000000
+            }
+          },
+          {
+            "trace_id": "e615a978c192c19499267d8d7df6a48b14711364ebc8c10d35273fbb455bab3f",
+            "revision": 9,
+            "stages": {
+              "audio_start": 1431332308000000,
+              "audio_end": 1431336148000000,
+              "asr_submitted": 1431336156000000,
+              "asr_started": 1431336156000000,
+              "asr_completed": 1431336312000000,
+              "transcript_ui_updated": 1431336312000000,
+              "mt_submitted": 1431336312000000,
+              "mt_started": 1431336312000000,
+              "mt_completed": 1431336406000000,
+              "service_adopted": 1431336406000000,
+              "ui_updated": 1431336406000000
+            }
+          }
+        ],
+        "latencies": {
+          "segment_start_to_asr_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "asr_completed",
+            "total_retained": 14,
+            "measured": 14,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 1362.0,
+            "p95_ms": 4004.0,
+            "max_ms": 4004.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_mt_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "mt_completed",
+            "total_retained": 14,
+            "measured": 13,
+            "missing_start": 0,
+            "missing_end": 1,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 1442.0,
+            "p95_ms": 4098.0,
+            "max_ms": 4098.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_service_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "service_adopted",
+            "total_retained": 14,
+            "measured": 13,
+            "missing_start": 0,
+            "missing_end": 1,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 1442.0,
+            "p95_ms": 4098.0,
+            "max_ms": 4098.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_ui_update_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "ui_updated",
+            "total_retained": 14,
+            "measured": 13,
+            "missing_start": 0,
+            "missing_end": 1,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 1442.0,
+            "p95_ms": 4098.0,
+            "max_ms": 4098.0,
+            "percentile_method": "nearest_rank"
+          },
+          "audio_end_to_ui_update_ms": {
+            "start_stage": "audio_end",
+            "end_stage": "ui_updated",
+            "total_retained": 14,
+            "measured": 13,
+            "missing_start": 0,
+            "missing_end": 1,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 162.0,
+            "p95_ms": 258.0,
+            "max_ms": 258.0,
+            "percentile_method": "nearest_rank"
+          },
+          "asr_queue_ms": {
+            "start_stage": "asr_submitted",
+            "end_stage": "asr_started",
+            "total_retained": 14,
+            "measured": 14,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          },
+          "asr_inference_ms": {
+            "start_stage": "asr_started",
+            "end_stage": "asr_completed",
+            "total_retained": 14,
+            "measured": 14,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 79.0,
+            "p95_ms": 156.0,
+            "max_ms": 156.0,
+            "percentile_method": "nearest_rank"
+          },
+          "mt_queue_ms": {
+            "start_stage": "mt_submitted",
+            "end_stage": "mt_started",
+            "total_retained": 14,
+            "measured": 13,
+            "missing_start": 1,
+            "missing_end": 1,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          },
+          "mt_inference_ms": {
+            "start_stage": "mt_started",
+            "end_stage": "mt_completed",
+            "total_retained": 14,
+            "measured": 13,
+            "missing_start": 1,
+            "missing_end": 1,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 47.0,
+            "p95_ms": 94.0,
+            "max_ms": 94.0,
+            "percentile_method": "nearest_rank"
+          },
+          "service_to_ui_update_ms": {
+            "start_stage": "service_adopted",
+            "end_stage": "ui_updated",
+            "total_retained": 14,
+            "measured": 13,
+            "missing_start": 1,
+            "missing_end": 1,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 1,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          }
+        },
+        "outcomes": {
+          "asr_completed": 14,
+          "asr_started": 14,
+          "asr_submitted": 14,
+          "audio_end": 14,
+          "audio_start": 14,
+          "cancelled": 0,
+          "failed": 0,
+          "mt_completed": 13,
+          "mt_started": 13,
+          "mt_submitted": 13,
+          "rejected": 0,
+          "service_adopted": 13,
+          "suppressed": 1,
+          "transcript_ui_updated": 13,
+          "ui_updated": 13,
+          "asr_unresolved": 0,
+          "mt_unresolved": 0,
+          "translation_not_adopted": 0,
+          "ui_not_acknowledged": 0
+        },
+        "scope_notes": [
+          "Latency and outcome denominators cover retained segment/revision entries only.",
+          "Evicted entries may reappear without earlier stages; no lifetime coverage claim.",
+          "Missing UI acknowledgement is not audio loss or proof that no pixels appeared.",
+          "ui_updated is a widget-update acknowledgement, not a paint/display timestamp.",
+          "RSS peak is the maximum explicit sample, not a continuously monitored maximum."
+        ],
+        "pipeline": {
+          "engine_counts": {
+            "asr_final_requests_added": 2,
+            "asr_final_submit_rejections": 0,
+            "asr_final_requests_aborted": 0,
+            "asr_final_outputs_rejected": 0,
+            "asr_final_events_aborted": 0,
+            "asr_stale_results_dropped": 0,
+            "asr_history_errors": 0,
+            "mt_final_requests_added": 2,
+            "mt_final_submit_rejections": 0,
+            "mt_final_requests_aborted": 0,
+            "mt_final_outputs_rejected": 0,
+            "mt_final_events_aborted": 0,
+            "mt_stale_results_dropped": 0,
+            "mt_history_errors": 0
+          },
+          "pending_finals": 0,
+          "service_finals_aborted": 0,
+          "overloaded": false
+        }
+      }
+    },
+    {
+      "source": "ja",
+      "target": "ko",
+      "sample_id": "1828",
+      "audio_sha256": "bd1b9533cfa176b8c2a71ecb4821a02bc86fa368d096373efe8d8dceafb35634",
+      "audio_duration_ms": 10440.0,
+      "padding_samples": 1920,
+      "silence_tail_samples": 15360,
+      "elapsed_ms": 11531.0,
+      "final_asr_segments": 2,
+      "caption_events_adopted": 15,
+      "failed_captions": 0,
+      "submission_failed": false,
+      "timed_out": false,
+      "workers_stopped": true,
+      "asr_reference_measurement": {
+        "metric": "cer",
+        "errors": 7,
+        "units": 45,
+        "error_rate": 0.15555555555555556,
+        "sample_count": 1
+      },
+      "trace": {
+        "schema_version": 1,
+        "clock": "monotonic_ns",
+        "capacity": 2048,
+        "retained_traces": 21,
+        "record_calls": 201,
+        "duplicate_stages": 0,
+        "evicted_trace_entries": 0,
+        "counter_labels_dropped": 0,
+        "counters": {},
+        "resources": {
+          "rss_samples": 38,
+          "rss_first_bytes": 1104556032,
+          "rss_latest_bytes": 1105793024,
+          "rss_peak_bytes": 1105924096,
+          "rss_growth_bytes": 1236992
+        },
+        "traces": [
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 1,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431340320000000,
+              "asr_submitted": 1431340328000000,
+              "asr_started": 1431340328000000,
+              "asr_completed": 1431340390000000,
+              "suppressed": 1431340390000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 2,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431340640000000,
+              "asr_submitted": 1431340640000000,
+              "asr_started": 1431340640000000,
+              "asr_completed": 1431340718000000,
+              "suppressed": 1431340718000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 3,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431340960000000,
+              "asr_submitted": 1431340968000000,
+              "asr_started": 1431340968000000,
+              "asr_completed": 1431341031000000,
+              "suppressed": 1431341031000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 4,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431341280000000,
+              "asr_submitted": 1431341281000000,
+              "asr_started": 1431341281000000,
+              "asr_completed": 1431341343000000,
+              "suppressed": 1431341343000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 5,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431341600000000,
+              "asr_submitted": 1431341609000000,
+              "asr_started": 1431341609000000,
+              "asr_completed": 1431341671000000,
+              "suppressed": 1431341671000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 6,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431342240000000,
+              "asr_submitted": 1431342250000000,
+              "asr_started": 1431342250000000,
+              "asr_completed": 1431342312000000,
+              "transcript_ui_updated": 1431342312000000,
+              "mt_submitted": 1431342312000000,
+              "mt_started": 1431342312000000,
+              "mt_completed": 1431342328000000,
+              "service_adopted": 1431342328000000,
+              "ui_updated": 1431342328000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 7,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431342880000000,
+              "asr_submitted": 1431342890000000,
+              "asr_started": 1431342890000000,
+              "asr_completed": 1431342968000000,
+              "transcript_ui_updated": 1431342968000000,
+              "mt_submitted": 1431342968000000,
+              "mt_started": 1431342968000000,
+              "mt_completed": 1431342984000000,
+              "service_adopted": 1431343000000000,
+              "ui_updated": 1431343000000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 8,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431343520000000,
+              "asr_submitted": 1431343531000000,
+              "asr_started": 1431343531000000,
+              "asr_completed": 1431343625000000,
+              "transcript_ui_updated": 1431343625000000,
+              "mt_submitted": 1431343625000000,
+              "mt_started": 1431343625000000,
+              "mt_completed": 1431343671000000,
+              "service_adopted": 1431343671000000,
+              "ui_updated": 1431343671000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 9,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431344480000000,
+              "asr_submitted": 1431344484000000,
+              "asr_started": 1431344484000000,
+              "asr_completed": 1431344625000000,
+              "transcript_ui_updated": 1431344625000000,
+              "mt_submitted": 1431344625000000,
+              "mt_started": 1431344625000000,
+              "mt_completed": 1431344687000000,
+              "service_adopted": 1431344687000000,
+              "ui_updated": 1431344687000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 10,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431345440000000,
+              "asr_submitted": 1431345453000000,
+              "asr_started": 1431345453000000,
+              "asr_completed": 1431345609000000,
+              "transcript_ui_updated": 1431345609000000,
+              "mt_submitted": 1431345609000000,
+              "mt_started": 1431345609000000,
+              "mt_completed": 1431345687000000,
+              "service_adopted": 1431345687000000,
+              "ui_updated": 1431345687000000
+            }
+          },
+          {
+            "trace_id": "35122d1e5f6d49ae7fb1d3f3b458a22c32d7d898e1743d1daf2abb3f21323737",
+            "revision": 11,
+            "stages": {
+              "audio_start": 1431340000000000,
+              "audio_end": 1431346080000000,
+              "asr_submitted": 1431346093000000,
+              "asr_started": 1431346093000000,
+              "asr_completed": 1431346265000000,
+              "transcript_ui_updated": 1431346265000000,
+              "mt_submitted": 1431346265000000,
+              "mt_started": 1431346265000000,
+              "mt_completed": 1431346343000000,
+              "service_adopted": 1431346343000000,
+              "ui_updated": 1431346343000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 1,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431346400000000,
+              "asr_submitted": 1431346406000000,
+              "asr_started": 1431346406000000,
+              "asr_completed": 1431346484000000,
+              "suppressed": 1431346484000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 2,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431346720000000,
+              "asr_submitted": 1431346734000000,
+              "asr_started": 1431346734000000,
+              "asr_completed": 1431346812000000,
+              "transcript_ui_updated": 1431346812000000,
+              "mt_submitted": 1431346812000000,
+              "mt_started": 1431346812000000,
+              "mt_completed": 1431346859000000,
+              "service_adopted": 1431346859000000,
+              "ui_updated": 1431346859000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 3,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431347040000000,
+              "asr_submitted": 1431347046000000,
+              "asr_started": 1431347046000000,
+              "asr_completed": 1431347140000000,
+              "transcript_ui_updated": 1431347140000000,
+              "mt_submitted": 1431347140000000,
+              "mt_started": 1431347140000000,
+              "mt_completed": 1431347171000000,
+              "service_adopted": 1431347171000000,
+              "ui_updated": 1431347171000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 4,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431347360000000,
+              "asr_submitted": 1431347375000000,
+              "asr_started": 1431347375000000,
+              "asr_completed": 1431347500000000,
+              "transcript_ui_updated": 1431347500000000,
+              "mt_submitted": 1431347500000000,
+              "mt_started": 1431347500000000,
+              "mt_completed": 1431347562000000,
+              "service_adopted": 1431347562000000,
+              "ui_updated": 1431347562000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 5,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431347680000000,
+              "asr_submitted": 1431347687000000,
+              "asr_started": 1431347687000000,
+              "asr_completed": 1431347812000000,
+              "transcript_ui_updated": 1431347812000000,
+              "mt_submitted": 1431347812000000,
+              "mt_started": 1431347812000000,
+              "mt_completed": 1431347890000000,
+              "service_adopted": 1431347890000000,
+              "ui_updated": 1431347890000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 6,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431348320000000,
+              "asr_submitted": 1431348328000000,
+              "asr_started": 1431348328000000,
+              "asr_completed": 1431348468000000,
+              "transcript_ui_updated": 1431348468000000,
+              "mt_submitted": 1431348468000000,
+              "mt_started": 1431348468000000,
+              "mt_completed": 1431348500000000,
+              "service_adopted": 1431348500000000,
+              "ui_updated": 1431348500000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 7,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431348960000000,
+              "asr_submitted": 1431348968000000,
+              "asr_started": 1431348968000000,
+              "asr_completed": 1431349109000000,
+              "transcript_ui_updated": 1431349109000000,
+              "mt_submitted": 1431349109000000,
+              "mt_started": 1431349109000000,
+              "mt_completed": 1431349140000000,
+              "service_adopted": 1431349140000000,
+              "ui_updated": 1431349140000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 8,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431349600000000,
+              "asr_submitted": 1431349609000000,
+              "asr_started": 1431349609000000,
+              "asr_completed": 1431349750000000,
+              "transcript_ui_updated": 1431349750000000,
+              "mt_submitted": 1431349750000000,
+              "mt_started": 1431349750000000,
+              "mt_completed": 1431349781000000,
+              "service_adopted": 1431349781000000,
+              "ui_updated": 1431349781000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 9,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431350560000000,
+              "asr_submitted": 1431350562000000,
+              "asr_started": 1431350562000000,
+              "asr_completed": 1431350718000000,
+              "transcript_ui_updated": 1431350718000000,
+              "mt_submitted": 1431350718000000,
+              "mt_started": 1431350718000000,
+              "mt_completed": 1431350750000000,
+              "service_adopted": 1431350750000000,
+              "ui_updated": 1431350750000000
+            }
+          },
+          {
+            "trace_id": "71229fa72be6ef56d7190dc95c57a9ef0ede2a755d569bf19e3604762f563bf4",
+            "revision": 10,
+            "stages": {
+              "audio_start": 1431346080000000,
+              "audio_end": 1431350880000000,
+              "asr_submitted": 1431350890000000,
+              "asr_started": 1431350890000000,
+              "asr_completed": 1431351031000000,
+              "transcript_ui_updated": 1431351046000000,
+              "mt_submitted": 1431351046000000,
+              "mt_started": 1431351046000000,
+              "mt_completed": 1431351125000000,
+              "service_adopted": 1431351125000000,
+              "ui_updated": 1431351125000000
+            }
+          }
+        ],
+        "latencies": {
+          "segment_start_to_asr_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "asr_completed",
+            "total_retained": 21,
+            "measured": 21,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 2312.0,
+            "p95_ms": 5609.0,
+            "max_ms": 6265.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_mt_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "mt_completed",
+            "total_retained": 21,
+            "measured": 15,
+            "missing_start": 0,
+            "missing_end": 6,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 3060.0,
+            "p95_ms": 6343.0,
+            "max_ms": 6343.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_service_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "service_adopted",
+            "total_retained": 21,
+            "measured": 15,
+            "missing_start": 0,
+            "missing_end": 6,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 3060.0,
+            "p95_ms": 6343.0,
+            "max_ms": 6343.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_ui_update_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "ui_updated",
+            "total_retained": 21,
+            "measured": 15,
+            "missing_start": 0,
+            "missing_end": 6,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 3060.0,
+            "p95_ms": 6343.0,
+            "max_ms": 6343.0,
+            "percentile_method": "nearest_rank"
+          },
+          "audio_end_to_ui_update_ms": {
+            "start_stage": "audio_end",
+            "end_stage": "ui_updated",
+            "total_retained": 21,
+            "measured": 15,
+            "missing_start": 0,
+            "missing_end": 6,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 181.0,
+            "p95_ms": 263.0,
+            "max_ms": 263.0,
+            "percentile_method": "nearest_rank"
+          },
+          "asr_queue_ms": {
+            "start_stage": "asr_submitted",
+            "end_stage": "asr_started",
+            "total_retained": 21,
+            "measured": 21,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          },
+          "asr_inference_ms": {
+            "start_stage": "asr_started",
+            "end_stage": "asr_completed",
+            "total_retained": 21,
+            "measured": 21,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 94.0,
+            "p95_ms": 156.0,
+            "max_ms": 172.0,
+            "percentile_method": "nearest_rank"
+          },
+          "mt_queue_ms": {
+            "start_stage": "mt_submitted",
+            "end_stage": "mt_started",
+            "total_retained": 21,
+            "measured": 15,
+            "missing_start": 6,
+            "missing_end": 6,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          },
+          "mt_inference_ms": {
+            "start_stage": "mt_started",
+            "end_stage": "mt_completed",
+            "total_retained": 21,
+            "measured": 15,
+            "missing_start": 6,
+            "missing_end": 6,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 46.0,
+            "p95_ms": 79.0,
+            "max_ms": 79.0,
+            "percentile_method": "nearest_rank"
+          },
+          "service_to_ui_update_ms": {
+            "start_stage": "service_adopted",
+            "end_stage": "ui_updated",
+            "total_retained": 21,
+            "measured": 15,
+            "missing_start": 6,
+            "missing_end": 6,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 6,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          }
+        },
+        "outcomes": {
+          "asr_completed": 21,
+          "asr_started": 21,
+          "asr_submitted": 21,
+          "audio_end": 21,
+          "audio_start": 21,
+          "cancelled": 0,
+          "failed": 0,
+          "mt_completed": 15,
+          "mt_started": 15,
+          "mt_submitted": 15,
+          "rejected": 0,
+          "service_adopted": 15,
+          "suppressed": 6,
+          "transcript_ui_updated": 15,
+          "ui_updated": 15,
+          "asr_unresolved": 0,
+          "mt_unresolved": 0,
+          "translation_not_adopted": 0,
+          "ui_not_acknowledged": 0
+        },
+        "scope_notes": [
+          "Latency and outcome denominators cover retained segment/revision entries only.",
+          "Evicted entries may reappear without earlier stages; no lifetime coverage claim.",
+          "Missing UI acknowledgement is not audio loss or proof that no pixels appeared.",
+          "ui_updated is a widget-update acknowledgement, not a paint/display timestamp.",
+          "RSS peak is the maximum explicit sample, not a continuously monitored maximum."
+        ],
+        "pipeline": {
+          "engine_counts": {
+            "asr_final_requests_added": 2,
+            "asr_final_submit_rejections": 0,
+            "asr_final_requests_aborted": 0,
+            "asr_final_outputs_rejected": 0,
+            "asr_final_events_aborted": 0,
+            "asr_stale_results_dropped": 0,
+            "asr_history_errors": 0,
+            "mt_final_requests_added": 2,
+            "mt_final_submit_rejections": 0,
+            "mt_final_requests_aborted": 0,
+            "mt_final_outputs_rejected": 0,
+            "mt_final_events_aborted": 0,
+            "mt_stale_results_dropped": 0,
+            "mt_history_errors": 0
+          },
+          "pending_finals": 0,
+          "service_finals_aborted": 0,
+          "overloaded": false
+        }
+      }
+    },
+    {
+      "source": "ko",
+      "target": "ja",
+      "sample_id": "1883",
+      "audio_sha256": "e6bc095e55046de927d7c937f036f96ebb506570648ad9ae7c6576febfc4746a",
+      "audio_duration_ms": 12480.0,
+      "padding_samples": 0,
+      "silence_tail_samples": 15360,
+      "elapsed_ms": 13453.0,
+      "final_asr_segments": 2,
+      "caption_events_adopted": 18,
+      "failed_captions": 0,
+      "submission_failed": false,
+      "timed_out": false,
+      "workers_stopped": true,
+      "asr_reference_measurement": {
+        "metric": "wer",
+        "errors": 5,
+        "units": 14,
+        "error_rate": 0.35714285714285715,
+        "sample_count": 1
+      },
+      "trace": {
+        "schema_version": 1,
+        "clock": "monotonic_ns",
+        "capacity": 2048,
+        "retained_traces": 20,
+        "record_calls": 210,
+        "duplicate_stages": 0,
+        "evicted_trace_entries": 0,
+        "counter_labels_dropped": 0,
+        "counters": {},
+        "resources": {
+          "rss_samples": 44,
+          "rss_first_bytes": 1105793024,
+          "rss_latest_bytes": 1106759680,
+          "rss_peak_bytes": 1106939904,
+          "rss_growth_bytes": 966656
+        },
+        "traces": [
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 1,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431352811000000,
+              "asr_submitted": 1431352812000000,
+              "asr_started": 1431352812000000,
+              "asr_completed": 1431352875000000,
+              "suppressed": 1431352875000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 2,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431353131000000,
+              "asr_submitted": 1431353140000000,
+              "asr_started": 1431353140000000,
+              "asr_completed": 1431353203000000,
+              "suppressed": 1431353203000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 3,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431353451000000,
+              "asr_submitted": 1431353453000000,
+              "asr_started": 1431353453000000,
+              "asr_completed": 1431353515000000,
+              "transcript_ui_updated": 1431353515000000,
+              "mt_submitted": 1431353515000000,
+              "mt_started": 1431353515000000,
+              "mt_completed": 1431353562000000,
+              "service_adopted": 1431353562000000,
+              "ui_updated": 1431353562000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 4,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431353771000000,
+              "asr_submitted": 1431353781000000,
+              "asr_started": 1431353781000000,
+              "asr_completed": 1431353875000000,
+              "transcript_ui_updated": 1431353875000000,
+              "mt_submitted": 1431353875000000,
+              "mt_started": 1431353875000000,
+              "mt_completed": 1431353921000000,
+              "service_adopted": 1431353921000000,
+              "ui_updated": 1431353921000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 5,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431354091000000,
+              "asr_submitted": 1431354093000000,
+              "asr_started": 1431354093000000,
+              "asr_completed": 1431354203000000,
+              "transcript_ui_updated": 1431354203000000,
+              "mt_submitted": 1431354203000000,
+              "mt_started": 1431354203000000,
+              "mt_completed": 1431354250000000,
+              "service_adopted": 1431354250000000,
+              "ui_updated": 1431354250000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 6,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431354731000000,
+              "asr_submitted": 1431354734000000,
+              "asr_started": 1431354734000000,
+              "asr_completed": 1431354843000000,
+              "transcript_ui_updated": 1431354843000000,
+              "mt_submitted": 1431354843000000,
+              "mt_started": 1431354843000000,
+              "mt_completed": 1431354921000000,
+              "service_adopted": 1431354921000000,
+              "ui_updated": 1431354921000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 7,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431355371000000,
+              "asr_submitted": 1431355375000000,
+              "asr_started": 1431355375000000,
+              "asr_completed": 1431355500000000,
+              "transcript_ui_updated": 1431355500000000,
+              "mt_submitted": 1431355500000000,
+              "mt_started": 1431355500000000,
+              "mt_completed": 1431355578000000,
+              "service_adopted": 1431355578000000,
+              "ui_updated": 1431355578000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 8,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431356011000000,
+              "asr_submitted": 1431356015000000,
+              "asr_started": 1431356015000000,
+              "asr_completed": 1431356171000000,
+              "transcript_ui_updated": 1431356171000000,
+              "mt_submitted": 1431356171000000,
+              "mt_started": 1431356171000000,
+              "mt_completed": 1431356265000000,
+              "service_adopted": 1431356265000000,
+              "ui_updated": 1431356265000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 9,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431356971000000,
+              "asr_submitted": 1431356984000000,
+              "asr_started": 1431356984000000,
+              "asr_completed": 1431357140000000,
+              "transcript_ui_updated": 1431357140000000,
+              "mt_submitted": 1431357140000000,
+              "mt_started": 1431357140000000,
+              "mt_completed": 1431357234000000,
+              "service_adopted": 1431357234000000,
+              "ui_updated": 1431357234000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 10,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431357931000000,
+              "asr_submitted": 1431357937000000,
+              "asr_started": 1431357937000000,
+              "asr_completed": 1431358109000000,
+              "transcript_ui_updated": 1431358125000000,
+              "mt_submitted": 1431358125000000,
+              "mt_started": 1431358125000000,
+              "mt_completed": 1431358234000000,
+              "service_adopted": 1431358234000000,
+              "ui_updated": 1431358234000000
+            }
+          },
+          {
+            "trace_id": "321a806bd40ee3d1bc9fc01fb4d54e1c043541e22550f67a220d2050c1d4160b",
+            "revision": 11,
+            "stages": {
+              "audio_start": 1431352491000000,
+              "audio_end": 1431358251000000,
+              "asr_submitted": 1431358265000000,
+              "asr_started": 1431358265000000,
+              "asr_completed": 1431358453000000,
+              "transcript_ui_updated": 1431358453000000,
+              "mt_submitted": 1431358453000000,
+              "mt_started": 1431358453000000,
+              "mt_completed": 1431358562000000,
+              "service_adopted": 1431358562000000,
+              "ui_updated": 1431358562000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 1,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431358571000000,
+              "asr_submitted": 1431358578000000,
+              "asr_started": 1431358578000000,
+              "asr_completed": 1431358640000000,
+              "transcript_ui_updated": 1431358640000000,
+              "mt_submitted": 1431358640000000,
+              "mt_started": 1431358640000000,
+              "mt_completed": 1431358656000000,
+              "service_adopted": 1431358656000000,
+              "ui_updated": 1431358656000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 2,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431358891000000,
+              "asr_submitted": 1431358906000000,
+              "asr_started": 1431358906000000,
+              "asr_completed": 1431358968000000,
+              "transcript_ui_updated": 1431358984000000,
+              "mt_submitted": 1431358984000000,
+              "mt_started": 1431358984000000,
+              "mt_completed": 1431359000000000,
+              "service_adopted": 1431359000000000,
+              "ui_updated": 1431359000000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 3,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431359211000000,
+              "asr_submitted": 1431359218000000,
+              "asr_started": 1431359218000000,
+              "asr_completed": 1431359296000000,
+              "transcript_ui_updated": 1431359312000000,
+              "mt_submitted": 1431359312000000,
+              "mt_started": 1431359312000000,
+              "mt_completed": 1431359359000000,
+              "service_adopted": 1431359359000000,
+              "ui_updated": 1431359359000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 4,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431359531000000,
+              "asr_submitted": 1431359531000000,
+              "asr_started": 1431359531000000,
+              "asr_completed": 1431359609000000,
+              "transcript_ui_updated": 1431359609000000,
+              "mt_submitted": 1431359609000000,
+              "mt_started": 1431359609000000,
+              "mt_completed": 1431359656000000,
+              "service_adopted": 1431359656000000,
+              "ui_updated": 1431359656000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 5,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431359851000000,
+              "asr_submitted": 1431359859000000,
+              "asr_started": 1431359859000000,
+              "asr_completed": 1431359953000000,
+              "transcript_ui_updated": 1431359953000000,
+              "mt_submitted": 1431359953000000,
+              "mt_started": 1431359953000000,
+              "mt_completed": 1431359984000000,
+              "service_adopted": 1431360000000000,
+              "ui_updated": 1431360000000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 6,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431360491000000,
+              "asr_submitted": 1431360500000000,
+              "asr_started": 1431360500000000,
+              "asr_completed": 1431360609000000,
+              "transcript_ui_updated": 1431360609000000,
+              "mt_submitted": 1431360609000000,
+              "mt_started": 1431360609000000,
+              "mt_completed": 1431360656000000,
+              "service_adopted": 1431360656000000,
+              "ui_updated": 1431360656000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 7,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431361131000000,
+              "asr_submitted": 1431361140000000,
+              "asr_started": 1431361140000000,
+              "asr_completed": 1431361265000000,
+              "transcript_ui_updated": 1431361265000000,
+              "mt_submitted": 1431361265000000,
+              "mt_started": 1431361265000000,
+              "mt_completed": 1431361328000000,
+              "service_adopted": 1431361328000000,
+              "ui_updated": 1431361328000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 8,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431361771000000,
+              "asr_submitted": 1431361781000000,
+              "asr_started": 1431361781000000,
+              "asr_completed": 1431361921000000,
+              "transcript_ui_updated": 1431361921000000,
+              "mt_submitted": 1431361921000000,
+              "mt_started": 1431361921000000,
+              "mt_completed": 1431362000000000,
+              "service_adopted": 1431362000000000,
+              "ui_updated": 1431362000000000
+            }
+          },
+          {
+            "trace_id": "d0d8195750f8c7be1f6e64cec9a1522af830de2ceccdfcf5d64679cfbc584c2a",
+            "revision": 9,
+            "stages": {
+              "audio_start": 1431358251000000,
+              "audio_end": 1431362091000000,
+              "asr_submitted": 1431362093000000,
+              "asr_started": 1431362093000000,
+              "asr_completed": 1431362218000000,
+              "transcript_ui_updated": 1431362234000000,
+              "mt_submitted": 1431362234000000,
+              "mt_started": 1431362234000000,
+              "mt_completed": 1431362296000000,
+              "service_adopted": 1431362296000000,
+              "ui_updated": 1431362296000000
+            }
+          }
+        ],
+        "latencies": {
+          "segment_start_to_asr_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "asr_completed",
+            "total_retained": 20,
+            "measured": 20,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 1712.0,
+            "p95_ms": 5618.0,
+            "max_ms": 5962.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_mt_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "mt_completed",
+            "total_retained": 20,
+            "measured": 18,
+            "missing_start": 0,
+            "missing_end": 2,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 2405.0,
+            "p95_ms": 6071.0,
+            "max_ms": 6071.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_service_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "service_adopted",
+            "total_retained": 20,
+            "measured": 18,
+            "missing_start": 0,
+            "missing_end": 2,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 2405.0,
+            "p95_ms": 6071.0,
+            "max_ms": 6071.0,
+            "percentile_method": "nearest_rank"
+          },
+          "segment_start_to_ui_update_ms": {
+            "start_stage": "audio_start",
+            "end_stage": "ui_updated",
+            "total_retained": 20,
+            "measured": 18,
+            "missing_start": 0,
+            "missing_end": 2,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 2405.0,
+            "p95_ms": 6071.0,
+            "max_ms": 6071.0,
+            "percentile_method": "nearest_rank"
+          },
+          "audio_end_to_ui_update_ms": {
+            "start_stage": "audio_end",
+            "end_stage": "ui_updated",
+            "total_retained": 20,
+            "measured": 18,
+            "missing_start": 0,
+            "missing_end": 2,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 165.0,
+            "p95_ms": 311.0,
+            "max_ms": 311.0,
+            "percentile_method": "nearest_rank"
+          },
+          "asr_queue_ms": {
+            "start_stage": "asr_submitted",
+            "end_stage": "asr_started",
+            "total_retained": 20,
+            "measured": 20,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          },
+          "asr_inference_ms": {
+            "start_stage": "asr_started",
+            "end_stage": "asr_completed",
+            "total_retained": 20,
+            "measured": 20,
+            "missing_start": 0,
+            "missing_end": 0,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 109.0,
+            "p95_ms": 172.0,
+            "max_ms": 188.0,
+            "percentile_method": "nearest_rank"
+          },
+          "mt_queue_ms": {
+            "start_stage": "mt_submitted",
+            "end_stage": "mt_started",
+            "total_retained": 20,
+            "measured": 18,
+            "missing_start": 2,
+            "missing_end": 2,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          },
+          "mt_inference_ms": {
+            "start_stage": "mt_started",
+            "end_stage": "mt_completed",
+            "total_retained": 20,
+            "measured": 18,
+            "missing_start": 2,
+            "missing_end": 2,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 47.0,
+            "p95_ms": 109.0,
+            "max_ms": 109.0,
+            "percentile_method": "nearest_rank"
+          },
+          "service_to_ui_update_ms": {
+            "start_stage": "service_adopted",
+            "end_stage": "ui_updated",
+            "total_retained": 20,
+            "measured": 18,
+            "missing_start": 2,
+            "missing_end": 2,
+            "invalid_order": 0,
+            "failed": 0,
+            "cancelled": 0,
+            "rejected": 0,
+            "suppressed": 2,
+            "p50_ms": 0.0,
+            "p95_ms": 0.0,
+            "max_ms": 0.0,
+            "percentile_method": "nearest_rank"
+          }
+        },
+        "outcomes": {
+          "asr_completed": 20,
+          "asr_started": 20,
+          "asr_submitted": 20,
+          "audio_end": 20,
+          "audio_start": 20,
+          "cancelled": 0,
+          "failed": 0,
+          "mt_completed": 18,
+          "mt_started": 18,
+          "mt_submitted": 18,
+          "rejected": 0,
+          "service_adopted": 18,
+          "suppressed": 2,
+          "transcript_ui_updated": 18,
+          "ui_updated": 18,
+          "asr_unresolved": 0,
+          "mt_unresolved": 0,
+          "translation_not_adopted": 0,
+          "ui_not_acknowledged": 0
+        },
+        "scope_notes": [
+          "Latency and outcome denominators cover retained segment/revision entries only.",
+          "Evicted entries may reappear without earlier stages; no lifetime coverage claim.",
+          "Missing UI acknowledgement is not audio loss or proof that no pixels appeared.",
+          "ui_updated is a widget-update acknowledgement, not a paint/display timestamp.",
+          "RSS peak is the maximum explicit sample, not a continuously monitored maximum."
+        ],
+        "pipeline": {
+          "engine_counts": {
+            "asr_final_requests_added": 2,
+            "asr_final_submit_rejections": 0,
+            "asr_final_requests_aborted": 0,
+            "asr_final_outputs_rejected": 0,
+            "asr_final_events_aborted": 0,
+            "asr_stale_results_dropped": 0,
+            "asr_history_errors": 0,
+            "mt_final_requests_added": 2,
+            "mt_final_submit_rejections": 0,
+            "mt_final_requests_aborted": 0,
+            "mt_final_outputs_rejected": 0,
+            "mt_final_events_aborted": 0,
+            "mt_stale_results_dropped": 0,
+            "mt_history_errors": 0
+          },
+          "pending_finals": 0,
+          "service_finals_aborted": 0,
+          "overloaded": false
+        }
+      }
+    }
+  ],
+  "gates": {
+    "functional": {
+      "status": "pass",
+      "checks": [
+        {
+          "category": "functional",
+          "name": "en_finals_observed",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "en_no_submission_failure",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "en_no_caption_errors",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "en_within_watchdog",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "en_workers_stopped",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "en_window_complete",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "en_no_failed_traces",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "en_no_overload",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "en_no_invalid_timestamp_pairs",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_finals_observed",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_no_submission_failure",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_no_caption_errors",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_within_watchdog",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_workers_stopped",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_window_complete",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_no_failed_traces",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_no_overload",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "zh_no_invalid_timestamp_pairs",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_finals_observed",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_no_submission_failure",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_no_caption_errors",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_within_watchdog",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_workers_stopped",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_window_complete",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_no_failed_traces",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_no_overload",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ja_no_invalid_timestamp_pairs",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_finals_observed",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_no_submission_failure",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_no_caption_errors",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_within_watchdog",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_workers_stopped",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_window_complete",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_no_failed_traces",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_no_overload",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "ko_no_invalid_timestamp_pairs",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        }
+      ],
+      "reason": "evaluated_supplied_checks_only"
+    },
+    "performance": {
+      "status": "not_evaluated",
+      "checks": [
+        {
+          "category": "performance",
+          "name": "en_segment_start_to_asr_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 4614.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 17,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_segment_start_to_mt_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 4692.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_segment_start_to_service_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 4692.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_segment_start_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 4692.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_audio_end_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 324.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_asr_queue_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 17,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_asr_inference_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 235.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 17,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_mt_queue_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_mt_inference_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 78.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "en_service_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_segment_start_to_asr_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 4004.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_segment_start_to_mt_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 4098.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 13,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_segment_start_to_service_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 4098.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 13,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_segment_start_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 4098.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 13,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_audio_end_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 258.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 13,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_asr_queue_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_asr_inference_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 156.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 14,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_mt_queue_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 13,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_mt_inference_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 94.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 13,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "zh_service_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 13,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_segment_start_to_asr_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 5609.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 21,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_segment_start_to_mt_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 6343.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 15,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_segment_start_to_service_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 6343.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 15,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_segment_start_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 6343.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 15,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_audio_end_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 263.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 15,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_asr_queue_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 21,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_asr_inference_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 156.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 21,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_mt_queue_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 15,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_mt_inference_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 79.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 15,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ja_service_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 15,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_segment_start_to_asr_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 5618.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 20,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_segment_start_to_mt_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 6071.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 18,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_segment_start_to_service_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 6071.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 18,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_segment_start_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 6071.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 18,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_audio_end_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 311.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 18,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_asr_queue_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 20,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_asr_inference_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 172.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 20,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_mt_queue_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 18,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_mt_inference_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 109.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 18,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "ko_service_to_ui_update_ms",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 18,
+          "status": "not_evaluated"
+        }
+      ],
+      "reason": "no_approved_threshold"
+    },
+    "quality": {
+      "status": "not_evaluated",
+      "checks": [
+        {
+          "category": "quality",
+          "name": "en_reference_error_rate",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.10526315789473684,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "quality",
+          "name": "zh_reference_error_rate",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.17391304347826086,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "quality",
+          "name": "ja_reference_error_rate",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.15555555555555556,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "quality",
+          "name": "ko_reference_error_rate",
+          "configuration_id": "7f8cb180252f81ae4b0fc76c06c7a6cecf7ec4cce2de850ff8b8a1dcf6a53e66",
+          "value": 0.35714285714285715,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "not_evaluated"
+        }
+      ],
+      "reason": "no_approved_threshold"
+    }
+  },
+  "limitations": [
+    "New current-configuration baseline, not a before/after improvement claim.",
+    "One public sample per language; four routes, not all twelve directions.",
+    "ASR references measured separately; no MT semantic or human quality review.",
+    "No approved performance/quality thresholds; those gates remain not_evaluated.",
+    "1x file injection bypasses physical capture/audio routing and recording.",
+    "Hidden Qt widget updates are not measured physical display or paint events.",
+    "No model warmup; first fixture includes cold inference; models reused thereafter.",
+    "Short corpus and sampled RSS do not prove sustained or peak-resource performance."
+  ]
+}

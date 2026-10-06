@@ -4,6 +4,18 @@
 
 Source version remains **0.3.3**; the latest public release is **v0.3.2**. This maintenance work does not create a new version, tag, or GitHub Release.
 
+- Updated the problem-linked roadmap: 0.3.3 reliability/measurement, followed by candidate 0.3.4 realtime readability, 0.3.5 offline resource/workbench, and 0.4.0 language expansion stages. Only the 0.3.3 scope is confirmed.
+- Made ASR/MT final admission nonblocking, output waits deadline-bound, and service retries bounded; drain downstream before upstream admission to avoid full-final queue cycles.
+- Isolated realtime audio submission from recording consumption. Sustained overload visibly pauses subtitles, counts rejected/cancelled work, and leaves explicit recording running; recovery waits for old native calls and creates fresh worker queues.
+- Added two-phase shutdown with a shared total deadline, retained ownership after timeout, restart/removal guards, and rejection of late Qt/LLM deliveries across stop or overload recovery.
+- Kept translation running after history-write OS errors, with a separate failure counter and visible warning rather than killing the worker or duplicating captions.
+- Added bounded payload-free pipeline traces, distinct source/translation widget acknowledgements, synthetic and existing-local-model replay tools, and independent functional/performance/quality evidence states. Widget updates are not paint measurements; absent approved thresholds or human quality evidence remain not evaluated.
+
+- Added concise project-level agent rules, historical requirement/decision context, a current handoff checkpoint, a known-issue ledger, and a 17-requirement verification map to support recovery across sessions and context compaction.
+- Backfilled historical user needs, task-specific API/release authorization boundaries, 12 open risk/gap records and 7 historical problem records; registration does not constitute new functional fixes.
+- Connected traceability and evidence checks to the developer/contributor guides, PR template and issue forms; documented parent-directory rule-loading limits and the absence of an automatic requirement-coverage CI gate.
+- Qualified queue-capacity vs waiting bounds, recording/ASR overload coupling, model/API vs audio-to-screen timings, and historical quality-gate/sample limitations without rewriting dated benchmark reports.
+
 - Added a unified requirement/status baseline and a developer guide with module ownership, directory navigation, targeted tests, and explicit build/release boundaries.
 - Corrected both READMEs to link to the actual public v0.3.2 assets and distinguish unreleased features from downloadable functionality.
 - Updated architecture and roadmap descriptions for partial translation, existing punctuation endpointing, explicit recording/import persistence, and the limits of historical performance evidence.

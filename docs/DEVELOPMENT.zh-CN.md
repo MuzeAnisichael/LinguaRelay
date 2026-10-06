@@ -1,6 +1,42 @@
 # 开发指引与目录导航
 
-先读[统一需求与状态](REQUIREMENTS.zh-CN.md)，再按[架构](ARCHITECTURE.md)定位模块。最新公开版为 v0.3.2，源码版本 0.3.3 尚未发布；日常提交、测试、CI 产物与正式发版是不同操作。本轮整理不改版本号、不创建标签或发行包。
+先读[项目入口规则](../AGENTS.md)、[当前交接](HANDOFF.zh-CN.md)和[统一需求与状态](REQUIREMENTS.zh-CN.md)，再按[架构](ARCHITECTURE.md)定位模块。最新公开版按仓库记录为 v0.3.2，源码版本 0.3.3 尚未发布；日常提交、测试、CI 产物与正式发版是不同操作。当次范围与验证记录以交接页为检查点，不从旧任务文字推导授权。
+
+## 防上下文偏移的工作协议
+
+### 从正确入口恢复
+
+从 `LinguaRelay` 仓库根目录启动会话。若会话工作目录为父目录 `D:\SOME PROJECT`，必须显式读子目录的 `AGENTS.md`；Codex 沿仓库根到当前目录读取规则，不自动读取未进入的子目录规则。文件不是永久记忆或强制执行器，新会话/上下文压缩后仍需按入口重新核实。
+
+大型或模糊任务先讨论，每次聚焦一个关键问题；总结已确认需求、设计、范围与假设后再实现。简单明确的小任务无需形式化长讨论。当次用户指示优先；历史用户需求保留但有冲突时先解释并确认，不让候选方案自动升级为承诺。
+
+### 一类事实一个主要落点
+
+| 文件 | 主要责任 | 不应该代替 |
+|---|---|---|
+| [AGENTS.md](../AGENTS.md) | 简短工作规则、恢复入口和产品不变量 | 完整需求历史、测试日志 |
+| [PROJECT-CONTEXT](PROJECT-CONTEXT.zh-CN.md) | 对话需求/决策沿革与历史授权边界 | 当前实现状态和永久授权 |
+| [REQUIREMENTS](REQUIREMENTS.zh-CN.md) | 稳定需求 ID、当前能力与范围 | 问题细节、性能认证 |
+| [KNOWN-ISSUES](KNOWN-ISSUES.zh-CN.md) | K-/H- 问题、证据级别、关闭条件 | GitHub Issue 自动创建或本轮修复 |
+| [VERIFICATION](VERIFICATION.zh-CN.md) | 需求→测试→报告→缺口及验收口径 | 声称所有列出的测试刚刚运行 |
+| [ADR](decisions/) / [ARCHITECTURE](ARCHITECTURE.md) | 为什么这样设计、当前数据流/边界 | 下一步授权 |
+| [ROADMAP](ROADMAP.zh-CN.md) | 已落地阶段与候选顺序 | 固定发版日期或自动实施许可 |
+| [HANDOFF](HANDOFF.zh-CN.md) | 最新检查点、未完成项、下一步与当次授权 | 长期全量历史 |
+| [CHANGELOG](../CHANGELOG.md) / [基准报告](benchmarks/README.md) | 版本历史与原配置的日期化证据 | 当前工作树新结果 |
+
+只读取本次相关的详细条目，不把所有报告和聊天全文塞进入口规则。摘要帮助恢复，但重要结论应可由需求、代码和报告重新验证。
+
+### 变更检查点
+
+1. **开始**：检查分支/提交/工作树，读入口与交接；关联已有 R-/K-/H- ID。新需求或新问题先登记，并注明用户确认、建议、静态风险或复现证据。
+2. **确认**：复杂变更说明影响范围、设计与验收，等待必要的用户选择；已确认范围内继续执行，不重复打断。扩大数据采集、收费或分发范围需新的明确授权。
+3. **实施**：按模块拆小步；子任务约定文件所有权，回传 ID、结果和未验证项。代码整理不能删除历史要求或用户产物。
+4. **验证**：按下表选层级；记录日期、代码/工作树、实际命令、模型/硬件/语料、结果及未运行项。只修复代码但没有复现/回归证据的条目仍保持开放。
+5. **收尾/中断**：同步需求状态、台账、验证索引；关键取舍写 ADR，发布变化写 CHANGELOG；更新交接页。复查差异与相对链接，明确本地修改、推送和发布的区别。
+
+当前由文档和 PR 评审人工执行，现有 CI 并不自动检查需求 ID 与测试覆盖，也不能保证绝对无 Context Drift。后续可另行确认自动校验方案；本轮不新增自动化脚本/工作流。
+
+入口简短、历史和状态外置的做法参考 [Codex 项目规则加载说明](https://learn.chatgpt.com/docs/agent-configuration/agents-md)及[长期任务的持久化上下文建议](https://developers.openai.com/blog/run-long-horizon-tasks-with-codex)。只采用其工作方式，不修改用户全局配置。
 
 ## 目录索引
 
@@ -30,7 +66,7 @@
 
 离线控制器协调工作台的处理选项、单个任务与实时服务切换；`OfflineProcessor` 只负责媒体到字幕的处理。任务运行时释放实时模型以避免同时占用两套模型资源。取消采用 `threading.Event` 协作检查，不强杀正在执行的原生调用；线程结束并按先前暂停意图恢复实时服务后才解锁 UI。录音片段恢复、任务取消、推理断点续跑是三个不同概念；最后一项尚未实现。
 
-Qt 窗口只直接处理界面状态和用户操作。高频音频/推理队列有界；状态与进度可通过 Qt 信号传递，并不是所有线程通信都经过队列。导出和媒体转换的行为及失败边界应独立测试，不能由“模型推理不在 UI 线程”推导出所有操作都不会阻塞。
+Qt 负责界面状态与用户操作。main 将录制路由与实时提交分线程，final admission 默认非阻塞、输出和服务重试有限时；持续过载明确暂停字幕、记录未完成项。停止采用共同期限，原生调用超时保留所有权，见 **K-001** 和 [ADR 0003](decisions/0003-bounded-waits-and-recording-isolation.md)。磁盘/设备故障及真实长测仍开放。通知回调需轻量，不在共享状态锁内调用；导出和媒体转换仍须独立测试。
 
 ## 开发环境与入口
 
@@ -47,11 +83,11 @@ python -m venv .venv
 
 ## 按改动规模选择验证
 
-先运行最接近修改点的测试，跨模块修改再扩展；合并前运行完整静态检查和逻辑回归。不要为一次文档改动重建安装器，也不要用几个单测代替发行物验证。
+先运行最接近修改点的测试，跨模块修改再扩展；应用源码、配置结构或跨模块行为修改合并前运行完整静态检查和逻辑回归。纯文档按对应层级验证。不要为一次文档改动重建安装器，也不要用几个单测代替发行物验证。
 
 | 改动范围 | 优先验证 | 何时扩大 |
 |---|---|---|
-| 文档、目录链接、状态说明 | 核对相对链接、当前源码/报告证据，`git diff --check` | 修改命令或配置示例时验证解析/入口 |
+| 文档、目录链接、状态说明 | 核对相对链接/标题锚点、ID 唯一性与映射、引用测试文件、模板结构、当前源码/报告证据，`git diff --check` | 修改命令或配置示例时验证解析/入口；不将文档校验写成源码全测 |
 | 单个领域模块 | 对应 `tests/test_<module>.py`，受影响文件的 Ruff | 接口/事件/配置变化时运行调用方测试 |
 | 捕获/录制生命周期 | 音频、录制、服务状态相关测试 | 并发/队列改动加停止、重连、模型失败场景；真实设备变化另做明确授权的设备测试 |
 | 后期处理/工作台 | `test_offline_processor.py`、`test_offline_media.py`、`test_offline_recording.py`、`test_offline_project.py`、`test_offline_tasks.py`、`test_offline_workbench.py` | 时间轴/导出变化加 `test_offline_export.py`；UI 控制器变化加服务切换和关闭窗口回归 |
@@ -65,7 +101,7 @@ python -m venv .venv
 .\.venv\Scripts\python -m pytest tests/test_offline_processor.py tests/test_offline_export.py
 ```
 
-提交前完整回归：
+应用源码/配置结构修改提交前完整回归（纯文档改动不需要重复执行此组）：
 
 ```powershell
 .\.venv\Scripts\python -m ruff check .
@@ -76,6 +112,22 @@ git diff --check
 ```
 
 普通回归不要访问真实 LLM 服务。真实 API 基准必须先确认提供商、模型、脱敏样本和费用上限，密钥只从用户指定的环境变量读取，报告不能泄露密钥。性能数字只引用实际运行报告；旧报告应继续带原日期和配置，参见[基准索引](benchmarks/README.md)。
+
+## 可靠性回放（0.3.3 源码）
+
+合成音频和假模型用于验证队列/停止/报告功能，不提供真实速度或翻译质量结论；加 `--qt-ui` 才确认实际 widget 更新，仍不是像素绘制。输出文件必须是新路径，工具拒绝覆盖已有报告。
+
+```powershell
+.\.venv\Scripts\python scripts/run_reliability_replay.py --segments 8 --qt-ui --output data/reliability-new.json
+```
+
+真实模型回放只使用显式传入的已有本地目录，不自动下载权重。manifest 必须符合工具的公开 FLEURS 许可/来源与时长检查；使用授权的固定样本，不上传私人媒体。模型目录、精度、输入哈希与阶段统计进入报告，字幕正文不进入报告。
+
+```powershell
+.\.venv\Scripts\python scripts/run_local_pipeline_replay.py --manifest data/fleurs-m2/manifest.json --asr-directory models/local-whisper --mt-directory models/local-m2m100 --device cuda --compute-type float16 --output data/local-pipeline-new.json
+```
+
+上面的目录是占位示例，必须替换为本机已有模型；无模型时只跑合成工具。四语四方向小样本、1×注入、隐藏 Qt 窗口和单次模型加载不能冒充 12 方向质量、真实捕获到上屏或冷/热态对照。指标定义与验收边界见[验证索引](VERIFICATION.zh-CN.md)和[基准索引](benchmarks/README.md)。
 
 ## 构建与发布边界
 

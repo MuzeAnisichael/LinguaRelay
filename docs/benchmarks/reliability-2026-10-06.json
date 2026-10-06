@@ -1,0 +1,919 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-06T03:33:27.654181+00:00",
+  "source": {
+    "version": "0.3.3",
+    "base_revision": "af920a5d100247f8913f46f5e6bed5034ec316d5",
+    "worktree_dirty": true,
+    "implementation_sha256": "d9ee86acf7a549f2f3bcef732a47813a109d87eb3a00e4fbc37ce54c567693e9",
+    "implementation_files": 66,
+    "fingerprint_scope": "src/**/*.py and the three replay scripts; excludes docs/tests/media"
+  },
+  "scope": "synthetic_pipeline_replay",
+  "configuration": {
+    "mode": "synthetic_pipeline_replay",
+    "source_language": "en",
+    "target_language": "zh",
+    "segments": 8,
+    "chunk_ms": 80,
+    "speech_chunks_per_segment": 2,
+    "silence_chunks_per_segment": 1,
+    "sample_rate": 16000,
+    "asr_model": "synthetic_test_double",
+    "mt_model": "synthetic_test_double",
+    "llm": "off",
+    "history": false,
+    "adaptive_partial": false,
+    "punctuation_boundary": false,
+    "qt_widget_updates": true,
+    "trace_capacity": 512,
+    "asr_request_capacity": 4,
+    "asr_event_capacity": 16,
+    "mt_request_capacity": 4,
+    "mt_event_capacity": 16
+  },
+  "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+  "runtime": {
+    "python": "3.11.7",
+    "platform": "Windows"
+  },
+  "elapsed_ms": 2485.0,
+  "inputs": {
+    "chunks_submitted": 24,
+    "samples_submitted": 30720,
+    "expected_final_segments": 8
+  },
+  "results": {
+    "final_segments": 8,
+    "duplicate_finals": 0,
+    "caption_events": 24,
+    "failed_captions": 0,
+    "missing_final_segments": 0
+  },
+  "trace": {
+    "schema_version": 1,
+    "clock": "monotonic_ns",
+    "capacity": 512,
+    "retained_traces": 24,
+    "record_calls": 264,
+    "duplicate_stages": 0,
+    "evicted_trace_entries": 0,
+    "counter_labels_dropped": 0,
+    "counters": {},
+    "resources": {
+      "rss_samples": 26,
+      "rss_first_bytes": 53825536,
+      "rss_latest_bytes": 75550720,
+      "rss_peak_bytes": 75567104,
+      "rss_growth_bytes": 21725184
+    },
+    "traces": [
+      {
+        "trace_id": "33d5091c31a808975bf09864794eb9f99e8d3caf5583fb5b786fbdfc5360c2d5",
+        "revision": 1,
+        "stages": {
+          "audio_start": 1431312546000000,
+          "audio_end": 1431312626000000,
+          "asr_submitted": 1431312640000000,
+          "asr_started": 1431312640000000,
+          "asr_completed": 1431312640000000,
+          "transcript_ui_updated": 1431312640000000,
+          "mt_submitted": 1431312640000000,
+          "mt_started": 1431312640000000,
+          "mt_completed": 1431312640000000,
+          "service_adopted": 1431312640000000,
+          "ui_updated": 1431312640000000
+        }
+      },
+      {
+        "trace_id": "33d5091c31a808975bf09864794eb9f99e8d3caf5583fb5b786fbdfc5360c2d5",
+        "revision": 2,
+        "stages": {
+          "audio_start": 1431312546000000,
+          "audio_end": 1431312720000000,
+          "asr_submitted": 1431312734000000,
+          "asr_started": 1431312734000000,
+          "asr_completed": 1431312734000000,
+          "transcript_ui_updated": 1431312734000000,
+          "mt_submitted": 1431312734000000,
+          "mt_started": 1431312734000000,
+          "mt_completed": 1431312734000000,
+          "service_adopted": 1431312734000000,
+          "ui_updated": 1431312734000000
+        }
+      },
+      {
+        "trace_id": "33d5091c31a808975bf09864794eb9f99e8d3caf5583fb5b786fbdfc5360c2d5",
+        "revision": 3,
+        "stages": {
+          "audio_start": 1431312546000000,
+          "audio_end": 1431312814000000,
+          "asr_submitted": 1431312828000000,
+          "asr_started": 1431312828000000,
+          "asr_completed": 1431312828000000,
+          "transcript_ui_updated": 1431312828000000,
+          "mt_submitted": 1431312828000000,
+          "mt_started": 1431312828000000,
+          "mt_completed": 1431312828000000,
+          "service_adopted": 1431312828000000,
+          "ui_updated": 1431312828000000
+        }
+      },
+      {
+        "trace_id": "32cf585c28400bf4758324efbf64db789462eea7dd71f2e2c7b63d5d469f88b0",
+        "revision": 1,
+        "stages": {
+          "audio_start": 1431312828000000,
+          "audio_end": 1431312908000000,
+          "asr_submitted": 1431312921000000,
+          "asr_started": 1431312921000000,
+          "asr_completed": 1431312921000000,
+          "transcript_ui_updated": 1431312921000000,
+          "mt_submitted": 1431312921000000,
+          "mt_started": 1431312921000000,
+          "mt_completed": 1431312921000000,
+          "service_adopted": 1431312921000000,
+          "ui_updated": 1431312921000000
+        }
+      },
+      {
+        "trace_id": "32cf585c28400bf4758324efbf64db789462eea7dd71f2e2c7b63d5d469f88b0",
+        "revision": 2,
+        "stages": {
+          "audio_start": 1431312828000000,
+          "audio_end": 1431313001000000,
+          "asr_submitted": 1431313015000000,
+          "asr_started": 1431313015000000,
+          "asr_completed": 1431313015000000,
+          "transcript_ui_updated": 1431313015000000,
+          "mt_submitted": 1431313015000000,
+          "mt_started": 1431313015000000,
+          "mt_completed": 1431313015000000,
+          "service_adopted": 1431313015000000,
+          "ui_updated": 1431313015000000
+        }
+      },
+      {
+        "trace_id": "32cf585c28400bf4758324efbf64db789462eea7dd71f2e2c7b63d5d469f88b0",
+        "revision": 3,
+        "stages": {
+          "audio_start": 1431312828000000,
+          "audio_end": 1431313095000000,
+          "asr_submitted": 1431313109000000,
+          "asr_started": 1431313109000000,
+          "asr_completed": 1431313109000000,
+          "transcript_ui_updated": 1431313109000000,
+          "mt_submitted": 1431313109000000,
+          "mt_started": 1431313109000000,
+          "mt_completed": 1431313109000000,
+          "service_adopted": 1431313109000000,
+          "ui_updated": 1431313109000000
+        }
+      },
+      {
+        "trace_id": "88e39d6a25d4b492c204c8e2d7dca2fee171d6553196fc3b5edc85247872ed65",
+        "revision": 1,
+        "stages": {
+          "audio_start": 1431313109000000,
+          "audio_end": 1431313189000000,
+          "asr_submitted": 1431313203000000,
+          "asr_started": 1431313203000000,
+          "asr_completed": 1431313203000000,
+          "transcript_ui_updated": 1431313203000000,
+          "mt_submitted": 1431313203000000,
+          "mt_started": 1431313203000000,
+          "mt_completed": 1431313203000000,
+          "service_adopted": 1431313203000000,
+          "ui_updated": 1431313203000000
+        }
+      },
+      {
+        "trace_id": "88e39d6a25d4b492c204c8e2d7dca2fee171d6553196fc3b5edc85247872ed65",
+        "revision": 2,
+        "stages": {
+          "audio_start": 1431313109000000,
+          "audio_end": 1431313283000000,
+          "asr_submitted": 1431313296000000,
+          "asr_started": 1431313296000000,
+          "asr_completed": 1431313296000000,
+          "transcript_ui_updated": 1431313296000000,
+          "mt_submitted": 1431313296000000,
+          "mt_started": 1431313296000000,
+          "mt_completed": 1431313296000000,
+          "service_adopted": 1431313296000000,
+          "ui_updated": 1431313296000000
+        }
+      },
+      {
+        "trace_id": "88e39d6a25d4b492c204c8e2d7dca2fee171d6553196fc3b5edc85247872ed65",
+        "revision": 3,
+        "stages": {
+          "audio_start": 1431313109000000,
+          "audio_end": 1431313376000000,
+          "asr_submitted": 1431313390000000,
+          "asr_started": 1431313390000000,
+          "asr_completed": 1431313390000000,
+          "transcript_ui_updated": 1431313390000000,
+          "mt_submitted": 1431313390000000,
+          "mt_started": 1431313390000000,
+          "mt_completed": 1431313390000000,
+          "service_adopted": 1431313390000000,
+          "ui_updated": 1431313390000000
+        }
+      },
+      {
+        "trace_id": "b74b47194e7e4e85d18655b98654d8543654e060518b1aa8928457f34d46c4a2",
+        "revision": 1,
+        "stages": {
+          "audio_start": 1431313390000000,
+          "audio_end": 1431313470000000,
+          "asr_submitted": 1431313484000000,
+          "asr_started": 1431313484000000,
+          "asr_completed": 1431313484000000,
+          "transcript_ui_updated": 1431313484000000,
+          "mt_submitted": 1431313484000000,
+          "mt_started": 1431313484000000,
+          "mt_completed": 1431313484000000,
+          "service_adopted": 1431313484000000,
+          "ui_updated": 1431313484000000
+        }
+      },
+      {
+        "trace_id": "b74b47194e7e4e85d18655b98654d8543654e060518b1aa8928457f34d46c4a2",
+        "revision": 2,
+        "stages": {
+          "audio_start": 1431313390000000,
+          "audio_end": 1431313564000000,
+          "asr_submitted": 1431313578000000,
+          "asr_started": 1431313578000000,
+          "asr_completed": 1431313578000000,
+          "transcript_ui_updated": 1431313578000000,
+          "mt_submitted": 1431313578000000,
+          "mt_started": 1431313578000000,
+          "mt_completed": 1431313578000000,
+          "service_adopted": 1431313578000000,
+          "ui_updated": 1431313578000000
+        }
+      },
+      {
+        "trace_id": "b74b47194e7e4e85d18655b98654d8543654e060518b1aa8928457f34d46c4a2",
+        "revision": 3,
+        "stages": {
+          "audio_start": 1431313390000000,
+          "audio_end": 1431313658000000,
+          "asr_submitted": 1431313671000000,
+          "asr_started": 1431313671000000,
+          "asr_completed": 1431313671000000,
+          "transcript_ui_updated": 1431313671000000,
+          "mt_submitted": 1431313671000000,
+          "mt_started": 1431313671000000,
+          "mt_completed": 1431313671000000,
+          "service_adopted": 1431313671000000,
+          "ui_updated": 1431313671000000
+        }
+      },
+      {
+        "trace_id": "f0f8130f5c91c12cd10196b99612e5b7842803a869bb4abded3c1207c05e30c1",
+        "revision": 1,
+        "stages": {
+          "audio_start": 1431313671000000,
+          "audio_end": 1431313751000000,
+          "asr_submitted": 1431313765000000,
+          "asr_started": 1431313765000000,
+          "asr_completed": 1431313765000000,
+          "transcript_ui_updated": 1431313765000000,
+          "mt_submitted": 1431313765000000,
+          "mt_started": 1431313765000000,
+          "mt_completed": 1431313765000000,
+          "service_adopted": 1431313765000000,
+          "ui_updated": 1431313765000000
+        }
+      },
+      {
+        "trace_id": "f0f8130f5c91c12cd10196b99612e5b7842803a869bb4abded3c1207c05e30c1",
+        "revision": 2,
+        "stages": {
+          "audio_start": 1431313671000000,
+          "audio_end": 1431313845000000,
+          "asr_submitted": 1431313859000000,
+          "asr_started": 1431313859000000,
+          "asr_completed": 1431313859000000,
+          "transcript_ui_updated": 1431313859000000,
+          "mt_submitted": 1431313859000000,
+          "mt_started": 1431313859000000,
+          "mt_completed": 1431313859000000,
+          "service_adopted": 1431313859000000,
+          "ui_updated": 1431313859000000
+        }
+      },
+      {
+        "trace_id": "f0f8130f5c91c12cd10196b99612e5b7842803a869bb4abded3c1207c05e30c1",
+        "revision": 3,
+        "stages": {
+          "audio_start": 1431313671000000,
+          "audio_end": 1431313939000000,
+          "asr_submitted": 1431313953000000,
+          "asr_started": 1431313953000000,
+          "asr_completed": 1431313953000000,
+          "transcript_ui_updated": 1431313953000000,
+          "mt_submitted": 1431313953000000,
+          "mt_started": 1431313953000000,
+          "mt_completed": 1431313953000000,
+          "service_adopted": 1431313953000000,
+          "ui_updated": 1431313953000000
+        }
+      },
+      {
+        "trace_id": "ed3a21b5d0f432452c15ac5e611a083b8c60e47c17d910875db3e0ad56a16d55",
+        "revision": 1,
+        "stages": {
+          "audio_start": 1431313953000000,
+          "audio_end": 1431314033000000,
+          "asr_submitted": 1431314046000000,
+          "asr_started": 1431314046000000,
+          "asr_completed": 1431314046000000,
+          "transcript_ui_updated": 1431314046000000,
+          "mt_submitted": 1431314046000000,
+          "mt_started": 1431314046000000,
+          "mt_completed": 1431314046000000,
+          "service_adopted": 1431314046000000,
+          "ui_updated": 1431314046000000
+        }
+      },
+      {
+        "trace_id": "ed3a21b5d0f432452c15ac5e611a083b8c60e47c17d910875db3e0ad56a16d55",
+        "revision": 2,
+        "stages": {
+          "audio_start": 1431313953000000,
+          "audio_end": 1431314126000000,
+          "asr_submitted": 1431314140000000,
+          "asr_started": 1431314140000000,
+          "asr_completed": 1431314140000000,
+          "transcript_ui_updated": 1431314140000000,
+          "mt_submitted": 1431314140000000,
+          "mt_started": 1431314140000000,
+          "mt_completed": 1431314140000000,
+          "service_adopted": 1431314140000000,
+          "ui_updated": 1431314140000000
+        }
+      },
+      {
+        "trace_id": "ed3a21b5d0f432452c15ac5e611a083b8c60e47c17d910875db3e0ad56a16d55",
+        "revision": 3,
+        "stages": {
+          "audio_start": 1431313953000000,
+          "audio_end": 1431314220000000,
+          "asr_submitted": 1431314234000000,
+          "asr_started": 1431314234000000,
+          "asr_completed": 1431314234000000,
+          "transcript_ui_updated": 1431314234000000,
+          "mt_submitted": 1431314234000000,
+          "mt_started": 1431314234000000,
+          "mt_completed": 1431314234000000,
+          "service_adopted": 1431314234000000,
+          "ui_updated": 1431314234000000
+        }
+      },
+      {
+        "trace_id": "168698f347cce7dedd6e4a371f1287795ce7669259d9109fa3c755e06574037b",
+        "revision": 1,
+        "stages": {
+          "audio_start": 1431314234000000,
+          "audio_end": 1431314314000000,
+          "asr_submitted": 1431314328000000,
+          "asr_started": 1431314328000000,
+          "asr_completed": 1431314328000000,
+          "transcript_ui_updated": 1431314328000000,
+          "mt_submitted": 1431314328000000,
+          "mt_started": 1431314328000000,
+          "mt_completed": 1431314328000000,
+          "service_adopted": 1431314328000000,
+          "ui_updated": 1431314328000000
+        }
+      },
+      {
+        "trace_id": "168698f347cce7dedd6e4a371f1287795ce7669259d9109fa3c755e06574037b",
+        "revision": 2,
+        "stages": {
+          "audio_start": 1431314234000000,
+          "audio_end": 1431314408000000,
+          "asr_submitted": 1431314421000000,
+          "asr_started": 1431314421000000,
+          "asr_completed": 1431314421000000,
+          "transcript_ui_updated": 1431314421000000,
+          "mt_submitted": 1431314421000000,
+          "mt_started": 1431314421000000,
+          "mt_completed": 1431314421000000,
+          "service_adopted": 1431314421000000,
+          "ui_updated": 1431314421000000
+        }
+      },
+      {
+        "trace_id": "168698f347cce7dedd6e4a371f1287795ce7669259d9109fa3c755e06574037b",
+        "revision": 3,
+        "stages": {
+          "audio_start": 1431314234000000,
+          "audio_end": 1431314501000000,
+          "asr_submitted": 1431314515000000,
+          "asr_started": 1431314515000000,
+          "asr_completed": 1431314515000000,
+          "transcript_ui_updated": 1431314515000000,
+          "mt_submitted": 1431314515000000,
+          "mt_started": 1431314515000000,
+          "mt_completed": 1431314515000000,
+          "service_adopted": 1431314515000000,
+          "ui_updated": 1431314515000000
+        }
+      },
+      {
+        "trace_id": "70b7f00a65e0ceb276959f95ad9fe7bb6e22ce9628df6a14cd225fe8be0cae9d",
+        "revision": 1,
+        "stages": {
+          "audio_start": 1431314515000000,
+          "audio_end": 1431314595000000,
+          "asr_submitted": 1431314609000000,
+          "asr_started": 1431314609000000,
+          "asr_completed": 1431314609000000,
+          "transcript_ui_updated": 1431314609000000,
+          "mt_submitted": 1431314609000000,
+          "mt_started": 1431314609000000,
+          "mt_completed": 1431314609000000,
+          "service_adopted": 1431314609000000,
+          "ui_updated": 1431314609000000
+        }
+      },
+      {
+        "trace_id": "70b7f00a65e0ceb276959f95ad9fe7bb6e22ce9628df6a14cd225fe8be0cae9d",
+        "revision": 2,
+        "stages": {
+          "audio_start": 1431314515000000,
+          "audio_end": 1431314689000000,
+          "asr_submitted": 1431314703000000,
+          "asr_started": 1431314703000000,
+          "asr_completed": 1431314703000000,
+          "transcript_ui_updated": 1431314703000000,
+          "mt_submitted": 1431314703000000,
+          "mt_started": 1431314703000000,
+          "mt_completed": 1431314703000000,
+          "service_adopted": 1431314703000000,
+          "ui_updated": 1431314703000000
+        }
+      },
+      {
+        "trace_id": "70b7f00a65e0ceb276959f95ad9fe7bb6e22ce9628df6a14cd225fe8be0cae9d",
+        "revision": 3,
+        "stages": {
+          "audio_start": 1431314515000000,
+          "audio_end": 1431314783000000,
+          "asr_submitted": 1431314796000000,
+          "asr_started": 1431314796000000,
+          "asr_completed": 1431314796000000,
+          "transcript_ui_updated": 1431314796000000,
+          "mt_submitted": 1431314796000000,
+          "mt_started": 1431314796000000,
+          "mt_completed": 1431314796000000,
+          "service_adopted": 1431314796000000,
+          "ui_updated": 1431314796000000
+        }
+      }
+    ],
+    "latencies": {
+      "segment_start_to_asr_ms": {
+        "start_stage": "audio_start",
+        "end_stage": "asr_completed",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 187.0,
+        "p95_ms": 282.0,
+        "max_ms": 282.0,
+        "percentile_method": "nearest_rank"
+      },
+      "segment_start_to_mt_ms": {
+        "start_stage": "audio_start",
+        "end_stage": "mt_completed",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 187.0,
+        "p95_ms": 282.0,
+        "max_ms": 282.0,
+        "percentile_method": "nearest_rank"
+      },
+      "segment_start_to_service_ms": {
+        "start_stage": "audio_start",
+        "end_stage": "service_adopted",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 187.0,
+        "p95_ms": 282.0,
+        "max_ms": 282.0,
+        "percentile_method": "nearest_rank"
+      },
+      "segment_start_to_ui_update_ms": {
+        "start_stage": "audio_start",
+        "end_stage": "ui_updated",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 187.0,
+        "p95_ms": 282.0,
+        "max_ms": 282.0,
+        "percentile_method": "nearest_rank"
+      },
+      "audio_end_to_ui_update_ms": {
+        "start_stage": "audio_end",
+        "end_stage": "ui_updated",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 14.0,
+        "p95_ms": 14.0,
+        "max_ms": 14.0,
+        "percentile_method": "nearest_rank"
+      },
+      "asr_queue_ms": {
+        "start_stage": "asr_submitted",
+        "end_stage": "asr_started",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 0.0,
+        "p95_ms": 0.0,
+        "max_ms": 0.0,
+        "percentile_method": "nearest_rank"
+      },
+      "asr_inference_ms": {
+        "start_stage": "asr_started",
+        "end_stage": "asr_completed",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 0.0,
+        "p95_ms": 0.0,
+        "max_ms": 0.0,
+        "percentile_method": "nearest_rank"
+      },
+      "mt_queue_ms": {
+        "start_stage": "mt_submitted",
+        "end_stage": "mt_started",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 0.0,
+        "p95_ms": 0.0,
+        "max_ms": 0.0,
+        "percentile_method": "nearest_rank"
+      },
+      "mt_inference_ms": {
+        "start_stage": "mt_started",
+        "end_stage": "mt_completed",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 0.0,
+        "p95_ms": 0.0,
+        "max_ms": 0.0,
+        "percentile_method": "nearest_rank"
+      },
+      "service_to_ui_update_ms": {
+        "start_stage": "service_adopted",
+        "end_stage": "ui_updated",
+        "total_retained": 24,
+        "measured": 24,
+        "missing_start": 0,
+        "missing_end": 0,
+        "invalid_order": 0,
+        "failed": 0,
+        "cancelled": 0,
+        "rejected": 0,
+        "suppressed": 0,
+        "p50_ms": 0.0,
+        "p95_ms": 0.0,
+        "max_ms": 0.0,
+        "percentile_method": "nearest_rank"
+      }
+    },
+    "outcomes": {
+      "asr_completed": 24,
+      "asr_started": 24,
+      "asr_submitted": 24,
+      "audio_end": 24,
+      "audio_start": 24,
+      "cancelled": 0,
+      "failed": 0,
+      "mt_completed": 24,
+      "mt_started": 24,
+      "mt_submitted": 24,
+      "rejected": 0,
+      "service_adopted": 24,
+      "suppressed": 0,
+      "transcript_ui_updated": 24,
+      "ui_updated": 24,
+      "asr_unresolved": 0,
+      "mt_unresolved": 0,
+      "translation_not_adopted": 0,
+      "ui_not_acknowledged": 0
+    },
+    "scope_notes": [
+      "Latency and outcome denominators cover retained segment/revision entries only.",
+      "Evicted entries may reappear without earlier stages; no lifetime coverage claim.",
+      "Missing UI acknowledgement is not audio loss or proof that no pixels appeared.",
+      "ui_updated is a widget-update acknowledgement, not a paint/display timestamp.",
+      "RSS peak is the maximum explicit sample, not a continuously monitored maximum."
+    ],
+    "pipeline": {
+      "engine_counts": {
+        "asr_final_requests_added": 8,
+        "asr_final_submit_rejections": 0,
+        "asr_final_requests_aborted": 0,
+        "asr_final_outputs_rejected": 0,
+        "asr_final_events_aborted": 0,
+        "asr_stale_results_dropped": 0,
+        "asr_history_errors": 0,
+        "mt_final_requests_added": 8,
+        "mt_final_submit_rejections": 0,
+        "mt_final_requests_aborted": 0,
+        "mt_final_outputs_rejected": 0,
+        "mt_final_events_aborted": 0,
+        "mt_stale_results_dropped": 0,
+        "mt_history_errors": 0
+      },
+      "pending_finals": 0,
+      "service_finals_aborted": 0,
+      "overloaded": false
+    }
+  },
+  "gates": {
+    "functional": {
+      "status": "pass",
+      "checks": [
+        {
+          "category": "functional",
+          "name": "final_segments_complete",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "final_segments_unique",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "no_caption_errors",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "completed_before_watchdog",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "workers_stopped",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "trace_window_complete",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "no_inference_errors",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "no_translation_errors",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        },
+        {
+          "category": "functional",
+          "name": "no_invalid_timestamp_pairs",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": true,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 1,
+          "status": "pass"
+        }
+      ],
+      "reason": "evaluated_supplied_checks_only"
+    },
+    "performance": {
+      "status": "not_evaluated",
+      "checks": [
+        {
+          "category": "performance",
+          "name": "segment_start_to_asr_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 282.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "segment_start_to_mt_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 282.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "segment_start_to_service_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 282.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "segment_start_to_ui_update_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 282.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "audio_end_to_ui_update_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 14.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "asr_queue_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "asr_inference_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "mt_queue_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "mt_inference_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        },
+        {
+          "category": "performance",
+          "name": "service_to_ui_update_ms",
+          "configuration_id": "c7ce4d10a552497b639b66ae5f89a7319a493250b224b287dc364d16b2e98167",
+          "value": 0.0,
+          "limit": null,
+          "direction": "max",
+          "sample_count": 24,
+          "status": "not_evaluated"
+        }
+      ],
+      "reason": "no_approved_threshold"
+    },
+    "quality": {
+      "status": "not_evaluated",
+      "checks": [],
+      "reason": "no_evidence"
+    }
+  },
+  "limitations": [
+    "Real worker queues and service pump; synthetic audio and model doubles only.",
+    "No physical capture, recording, user models/configuration/history, or API calls.",
+    "Synthetic pacing/segment settings are explicit, not the normal model benchmark.",
+    "No accuracy evidence or approved performance thresholds; neither gate can pass.",
+    "Optional hidden Qt widget updates do not prove painted or visible captions.",
+    "Missing widget acknowledgement is not evidence of audio/recording loss."
+  ]
+}

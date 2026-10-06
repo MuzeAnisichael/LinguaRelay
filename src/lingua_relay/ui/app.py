@@ -142,9 +142,9 @@ class DesktopController(OfflineTasksMixin):
         self.overlay.workbench_requested.connect(self.show_workbench)
         self.overlay.settings_requested.connect(self.show_settings)
         self.overlay.hide_requested.connect(self.toggle_overlay)
-        self.bridge.caption.connect(self.overlay.publish)
-        self.bridge.transcript.connect(self.overlay.publish_transcript)
-        self.bridge.status.connect(self.overlay.set_status)
+        self.bridge.caption.connect(self._publish_caption)
+        self.bridge.transcript.connect(self._publish_transcript)
+        self.bridge.status.connect(self._publish_status)
         self.bridge.recording.connect(self._update_recording_state)
         self.bridge.update.connect(self._on_update)
         self.bridge.update_error.connect(self._on_update_error)
@@ -168,6 +168,21 @@ class DesktopController(OfflineTasksMixin):
         self.hotkey = _GlobalHotkey(self.settings.overlay.toggle_shortcut)
         self.hotkey.activated.connect(self.toggle_overlay)
         self.app.aboutToQuit.connect(self.shutdown)
+
+    def _publish_caption(self, event) -> None:
+        # A queued Qt signal may outlive pause/stop/recovery. Check again on the UI thread.
+        if self.service.accepts_delivery(event):
+            self.overlay.publish(event)
+            self.service.acknowledge_ui(event)
+
+    def _publish_status(self, state: str, message: str) -> None:
+        if state == self.service.snapshot().state:
+            self.overlay.set_status(state, message)
+
+    def _publish_transcript(self, event, target: str) -> None:
+        if self.service.accepts_delivery(event):
+            self.overlay.publish_transcript(event, target)
+            self.service.acknowledge_ui(event)
 
     def run(self) -> None:
         self.app.setQuitOnLastWindowClosed(False)
@@ -588,9 +603,15 @@ class DesktopController(OfflineTasksMixin):
         if state in {"error", "stopped"}:
             self.service.start()
             self.pause_action.setText("暂停")
-        elif state == "paused":
+        elif state in {"paused", "overloaded"}:
             self.service.resume()
-            self.pause_action.setText("暂停")
+            self.pause_action.setText("继续" if self.service.paused else "暂停")
+        elif state == "stop_timeout":
+            try:
+                self.service.stop(timeout=0.1)
+                self.service.start()
+            except (TimeoutError, RuntimeError) as error:
+                QMessageBox.warning(None, "仍在收尾", str(error))
         else:
             self.service.pause()
             self.pause_action.setText("继续")
@@ -840,9 +861,11 @@ class DesktopController(OfflineTasksMixin):
         self.app.quit()
 
     def _update_status_action(self, state: str, message: str) -> None:
+        if state != self.service.snapshot().state:
+            return
         self.status_action.setText(f"状态：{message}")
         self.tray.setToolTip(f"LinguaRelay · {message}")
-        paused = state == "paused"
+        paused = state in {"paused", "overloaded", "stop_timeout"}
         self.overlay.set_paused(paused)
         if paused:
             self.pause_action.setText("继续")

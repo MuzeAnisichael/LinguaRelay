@@ -105,9 +105,10 @@ def test_service_publishes_transcript_before_submitting_translation() -> None:
         def __init__(self) -> None:
             self.submitted: list[tuple[AsrEvent, str]] = []
 
-        def submit(self, submitted: AsrEvent, *, target: str) -> None:
+        def submit(self, submitted: AsrEvent, *, target: str, timeout: float = 0) -> bool:
             assert transcripts == [(event, "zh")]
             self.submitted.append((submitted, target))
+            return True
 
     service._asr = AsrQueue()  # type: ignore[assignment]
     translation = TranslationQueue()

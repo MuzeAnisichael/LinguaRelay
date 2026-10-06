@@ -36,7 +36,8 @@ body:
     id: environment
     attributes:
       label: Version, profile, and hardware
-      placeholder: v0.1.5, Small, Core i7, 16 GB RAM, CPU INT8
+      description: Give the exact release or source commit SHA if known, ASR/MT models, compute type and relevant hardware; the same source version may span different snapshots.
+      placeholder: v0.3.2, Small, M2M100-418M, Core i7, 16 GB RAM, CPU INT8
     validations:
       required: true
 
@@ -57,8 +58,15 @@ body:
     id: measurements
     attributes:
       label: Measurements and test conditions
-      description: Include latency percentiles, duration, audio type, background noise, thermals, or task-manager readings when relevant.
+      description: Include source (system/process/microphone/import), duration, noise and percentiles when relevant. Specify whether timing is audio-to-visible-caption, model-only, API response, or offline processing. Separate actual results from estimates.
       placeholder: First visible caption approximately 1.1 s; backlog started after 18 min...
+
+  - type: input
+    id: tracking
+    attributes:
+      label: Related requirement or ledger ID (optional)
+      description: Add R-... or K-.../H-... if known; no ID is required to report a new problem.
+      placeholder: R-QUALITY-01 / K-002
 
   - type: textarea
     id: notes

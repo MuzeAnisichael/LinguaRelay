@@ -202,6 +202,8 @@ class CaptionOverlay(QWidget):
             "paused": "#f2c66d",
             "stopped": "#b8c1d1",
             "stopping": "#f2c66d",
+            "overloaded": "#f2c66d",
+            "stop_timeout": "#ff7d8b",
             "loading": "#f2c66d",
             "processing": "#70b7ff",
             "warning": "#f2c66d",
@@ -211,6 +213,9 @@ class CaptionOverlay(QWidget):
         }
         self.status.setStyleSheet(f"color: {colors.get(state, '#b8c1d1')};")
         self.status.setText(f"LINGUARELAY · {message}")
+        if state in {"overloaded", "stop_timeout"}:
+            self.set_paused(True)
+            self._retention_timer.stop()
         if self._last_event is None:
             if state == "loading":
                 self.translation.setText(message)

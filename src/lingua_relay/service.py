@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import math
 import queue
 import threading
+import time
+from collections import deque
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -20,6 +24,7 @@ from lingua_relay.events import CaptionEvent, ProcessingScope
 from lingua_relay.history import JsonlHistory
 from lingua_relay.mt import M2M100Translator, StreamingTranslationEngine
 from lingua_relay.offline.recording import RecordingSession
+from lingua_relay.telemetry import TraceCollector
 from lingua_relay.translation import build_m2m100_registry
 
 
@@ -36,6 +41,9 @@ class ServiceSnapshot:
     correction_error: str | None
     recording_state: str
     recording_project_id: str | None
+    overloaded: bool = False
+    pending_finals: int = 0
+    finals_aborted: int = 0
 
 
 class RealtimeCaptionService:
@@ -52,6 +60,7 @@ class RealtimeCaptionService:
         on_recording: Callable[[str, str, str | None], None] | None = None,
         model_root: str | Path = "models",
         resource_dir: str | Path = ".",
+        trace: TraceCollector | None = None,
     ) -> None:
         self.settings = settings
         self.on_caption = on_caption
@@ -61,6 +70,7 @@ class RealtimeCaptionService:
         self.on_recording = on_recording or (lambda _state, _message, _project_id: None)
         self.model_root = Path(model_root)
         self.resource_dir = Path(resource_dir)
+        self.trace = trace if trace is not None else TraceCollector()
         self._source = settings.app.source_language
         self._target = settings.app.target_language
         self._device = _audio_selector(settings.audio)
@@ -78,23 +88,49 @@ class RealtimeCaptionService:
         self._correction: AsynchronousRevisionEngine | None = None
         self._displayed_segment_id: str | None = None
         self._displayed_revision = 0
+        self._overloaded = False
+        self._resume_requested = threading.Event()
+        self._stop_deadline: float | None = None
+        self._shutdown_error: str | None = None
+        self._pending_finals: deque[tuple[AsrEvent, str, float]] = deque()
+        self._pending_lock = threading.RLock()
+        self._pending_capacity = settings.translation.queue_capacity
+        self._pending_timeout = 1.0
+        self._finals_aborted = 0
+        self._retired_counts: dict[str, int] = {}
+        self._history_errors_reported = 0
         self._audio = AudioCaptureRuntime(
             settings.audio,
             resource_dir=self.resource_dir,
             on_chunk=self._submit_audio,
             on_message=self._notify,
             on_recording=self.on_recording,
+            on_overload=self._handle_overload,
         )
 
     def start(self, *, paused: bool = False) -> None:
+        service_alive = self._thread is not None and self._thread.is_alive()
+        if (self._stop.is_set() and service_alive) or (
+            (self._stop.is_set() or not service_alive) and self._workers_alive()
+        ):
+            raise RuntimeError("旧推理尚未结束，暂不能重新启动；请稍后重试")
         if self._thread is not None and self._thread.is_alive():
             if paused:
                 self.pause()
             else:
                 self.resume()
             return
-        self._stop.clear()
         self._audio.prepare()
+        self._retire_engines()
+        self._asr = self._mt = self._correction = None
+        self._stop.clear()
+        self._stop_deadline = None
+        self._shutdown_error = None
+        self._overloaded = False
+        self._resume_requested.clear()
+        self._cancel_pending()
+        self._displayed_segment_id = None
+        self._displayed_revision = 0
         if paused:
             self._paused.set()
         else:
@@ -106,7 +142,10 @@ class RealtimeCaptionService:
         self._paused.set()
         self._audio.set_realtime_enabled(False)
         if self._asr is not None:
-            self._asr.flush()
+            try:
+                self._asr.flush(timeout=0)
+            except (TimeoutError, RuntimeError):
+                self._handle_overload("完整句队列繁忙，实时字幕已暂停；录制继续")
         if self._state in {"ready", "running", "paused"}:
             self._set_state("paused", "已暂停")
 
@@ -115,9 +154,18 @@ class RealtimeCaptionService:
         return self._paused.is_set()
 
     def resume(self) -> None:
+        if self._overloaded:
+            self._resume_requested.set()
+            self._notify("准备恢复字幕；需等待旧推理结束，录制不受影响")
+            return
+        try:
+            if self._state in {"ready", "running", "paused"}:
+                self._audio.set_realtime_enabled(True)
+        except RuntimeError:
+            self._notify("旧字幕提交尚未结束，请稍后重试；录制继续")
+            return
         self._paused.clear()
         if self._state in {"ready", "running", "paused"}:
-            self._audio.set_realtime_enabled(True)
             self._set_state("running", self._audio_status_message())
 
     def set_route(self, source: str, target: str) -> None:
@@ -128,7 +176,10 @@ class RealtimeCaptionService:
             self._source = source
             self._target = target
         if source_changed and self._asr is not None:
-            self._asr.flush()
+            try:
+                self._asr.flush(timeout=0)
+            except (TimeoutError, RuntimeError):
+                self._handle_overload("切换语言时完整句队列繁忙，字幕已暂停；录制继续")
         self._notify("语言已切换，仍使用手动源语言")
 
     def set_correction_mode(self, mode: str) -> None:
@@ -160,21 +211,48 @@ class RealtimeCaptionService:
         self._notify(self._audio_status_message(prefix="音频源已切换："))
 
     def stop(self, timeout: float = 40.0) -> None:
+        if not math.isfinite(timeout) or timeout < 0:
+            raise ValueError("timeout must be finite and non-negative")
+        deadline = time.monotonic() + timeout
+        previous_shutdown_error = self._shutdown_error
+        self._stop_deadline = deadline
         self._stop.set()
         if self._correction is not None:
             self._correction.set_enabled(False)
-        self._audio.stop()
+        self._set_state("stopping", "正在停止；录制与字幕正在收尾…")
+        audio_error: TimeoutError | None = None
+        try:
+            self._audio.stop(timeout=max(0, deadline - time.monotonic()))
+        except TimeoutError as error:
+            audio_error = error
         thread = self._thread
         if thread is not None:
-            thread.join(timeout)
+            thread.join(max(0, deadline - time.monotonic()))
             if thread.is_alive():
+                for worker in (self._asr, self._mt):
+                    if worker is not None:
+                        worker.abort()
+                self._set_state("stop_timeout", "停止超时，旧调用仍在收尾；暂不能释放模型")
                 raise TimeoutError("caption service did not stop in time")
+        if audio_error is not None or self._workers_alive():
+            self._set_state("stop_timeout", "停止超时，旧调用仍在收尾；暂不能释放模型")
+            raise TimeoutError("pipeline workers are still stopping") from audio_error
+        if self._shutdown_error is not None:
+            if previous_shutdown_error != self._shutdown_error:
+                raise RuntimeError(self._shutdown_error)
+            # A subsequent explicit retry has now confirmed audio and models stopped.
+            self._last_error = self._shutdown_error
+            self._shutdown_error = None
+            self.trace.increment("shutdown_error_recoveries")
+            self._set_state("stopped", "已停止；先前收尾错误已保留在诊断中")
         self._thread = None
+        if self._state != "error":
+            self._set_state("stopped", "已停止")
 
     def release_resources(self) -> None:
         """Release model owners after the worker has stopped for model removal."""
         thread = self._thread
-        if thread is not None and thread.is_alive():
+        if (thread is not None and thread.is_alive()) or self._workers_alive():
             raise RuntimeError("caption service must stop before releasing model resources")
         self._audio.release_resources()
         self._asr = None
@@ -196,6 +274,9 @@ class RealtimeCaptionService:
                 self._correction_error,
                 recording_state,
                 recording_project_id,
+                self._overloaded,
+                len(self._pending_finals),
+                self._finals_aborted,
             )
 
     def start_recording(self, session: RecordingSession) -> None:
@@ -229,9 +310,12 @@ class RealtimeCaptionService:
                 if self.settings.app.history_enabled
                 else None
             )
-            self._asr = StreamingAsrEngine(recognizer, self.settings.asr)
+            self._asr = StreamingAsrEngine(recognizer, self.settings.asr, trace=self.trace)
             self._mt = StreamingTranslationEngine(
-                build_m2m100_registry(translator), translation_settings, history=history
+                build_m2m100_registry(translator),
+                translation_settings,
+                history=history,
+                trace=self.trace,
             )
             self._prepare_correction(history)
             self._asr.start()
@@ -244,9 +328,9 @@ class RealtimeCaptionService:
                 self._audio.set_realtime_enabled(True)
                 self._set_state("running", self._audio_status_message())
             while not self._stop.is_set():
-                self._pump_asr()
-                self._pump_captions()
-                self._pump_revisions()
+                self.pump_once()
+                if self._resume_requested.is_set():
+                    self._try_resume_overload()
                 self._stop.wait(0.01)
         except Exception as error:
             with self._lock:
@@ -254,7 +338,9 @@ class RealtimeCaptionService:
             self._set_state("error", self._last_error)
         finally:
             self._shutdown_workers()
-            if self._state != "error":
+            if self._workers_alive():
+                self._set_state("stop_timeout", "旧推理尚未结束；模型资源暂未释放")
+            elif self._state != "error":
                 self._set_state("stopped", "已停止")
 
     def _prepare_correction(self, history: JsonlHistory | None) -> None:
@@ -290,11 +376,110 @@ class RealtimeCaptionService:
             and not self._stop.is_set()
             and self._audio.accepts_realtime_chunk(chunk)
         ):
-            asr.submit_chunk(chunk, language=source)
+            try:
+                asr.submit_chunk(chunk, language=source, timeout=0)
+            except (TimeoutError, RuntimeError):
+                self._handle_overload("语音识别完整句队列过载，字幕已暂停；录制继续")
+
+    def telemetry_snapshot(self) -> dict:
+        result = self.trace.snapshot()
+        counts = dict(self._retired_counts)
+        for name, worker in (("asr", self._asr), ("mt", self._mt)):
+            if worker is not None:
+                snapshot = worker.snapshot()
+                for field in (
+                    "final_requests_added",
+                    "final_submit_rejections",
+                    "final_requests_aborted",
+                    "final_outputs_rejected",
+                    "final_events_aborted",
+                    "stale_results_dropped",
+                    "history_errors",
+                ):
+                    key = f"{name}_{field}"
+                    counts[key] = counts.get(key, 0) + getattr(snapshot, field, 0)
+        result["pipeline"] = {
+            "engine_counts": counts,
+            "pending_finals": len(self._pending_finals),
+            "service_finals_aborted": self._finals_aborted,
+            "overloaded": self._overloaded,
+        }
+        return result
+
+    def acknowledge_ui(self, event: CaptionEvent | AsrEvent) -> None:
+        """The widgets were updated, not proof that pixels have been painted."""
+        stage = "transcript_ui_updated" if isinstance(event, AsrEvent) else "ui_updated"
+        self.trace.record(event.segment_id, event.revision, stage)
+
+    def accepts_delivery(self, event: CaptionEvent | AsrEvent) -> bool:
+        revision = getattr(event, "parent_revision", None)
+        if revision is None:
+            revision = event.revision
+        with self._lock:
+            return (
+                not self._stop.is_set()
+                and not self._overloaded
+                and self._displayed_segment_id == event.segment_id
+                and revision >= self._displayed_revision
+            )
+
+    def pump_once(self) -> None:
+        """Drain downstream first; never wait on MT admission while owning its consumer."""
+        for worker in (self._asr, self._mt):
+            if worker is not None and worker.snapshot().overloaded:
+                self._handle_overload("字幕输出或完整句队列持续过载，已暂停；录制继续")
+        if self._mt is not None:
+            self._pump_captions()
+            errors = getattr(self._mt.snapshot(), "history_errors", 0)
+            if errors > self._history_errors_reported:
+                self._history_errors_reported = errors
+                self._notify("历史记录保存失败，请检查磁盘空间和目录权限；实时翻译继续")
+        self._pump_revisions()
+        if not self._overloaded and self._asr is not None and self._mt is not None:
+            self._pump_pending()
+            self._pump_asr()
+        for worker in (self._asr, self._mt):
+            if worker is not None and worker.snapshot().overloaded:
+                self._handle_overload("字幕输出或完整句队列持续过载，已暂停；录制继续")
+
+    def _pump_pending(self) -> None:
+        assert self._mt is not None
+        with self._pending_lock:
+            for _ in range(self._pending_capacity):
+                if not self._pending_finals:
+                    break
+                event, target, deadline = self._pending_finals[0]
+                accepted = self._submit_translation(event, target)
+                if accepted:
+                    self._pending_finals.popleft()
+                elif accepted is None or not self._pending_finals or self._overloaded:
+                    break
+                elif time.monotonic() >= deadline:
+                    self._handle_overload("完整句等待翻译超时，字幕已暂停；录制继续")
+                    break
+                else:
+                    break
+
+    def _submit_translation(self, event: AsrEvent, target: str) -> bool | None:
+        """False is retryable congestion; None is permanent cancellation."""
+        assert self._mt is not None
+        try:
+            return self._mt.submit(event, target=target, timeout=0)
+        except (TimeoutError, RuntimeError):
+            self.trace.record(event.segment_id, event.revision, "cancelled")
+            if self._stop.is_set():
+                self._cancel_pending()
+                if self._asr is not None:
+                    self._asr.abort()
+            else:
+                self._handle_overload("翻译引擎已停止接收，字幕已暂停；录制继续")
+            return None
 
     def _pump_asr(self) -> None:
         assert self._asr is not None and self._mt is not None
-        while True:
+        for _ in range(8):
+            if self._overloaded or len(self._pending_finals) >= self._pending_capacity:
+                return
             try:
                 event = self._asr.get_event(timeout=0)
             except queue.Empty:
@@ -303,29 +488,61 @@ class RealtimeCaptionService:
                 target = self._target
                 self._displayed_segment_id = event.segment_id
                 self._displayed_revision = event.revision
-            self.on_transcript(event, target)
-            self._mt.submit(event, target=target)
+            if not self._stop.is_set():
+                self.on_transcript(event, target)
+            # A pending final must not be overtaken by a newer final.
+            with self._pending_lock:
+                if self._overloaded:
+                    self._finals_aborted += int(event.state == "final")
+                    self.trace.record(event.segment_id, event.revision, "cancelled")
+                    return
+                accepted = (
+                    False if self._pending_finals else self._submit_translation(event, target)
+                )
+                if accepted is None:
+                    self._finals_aborted += int(event.state == "final")
+                    return
+                if not accepted and event.state == "final":
+                    self._pending_finals.append(
+                        (event, target, time.monotonic() + self._pending_timeout)
+                    )
+                elif not accepted:
+                    self.trace.increment("mt_partial_admission_rejections")
 
     def _pump_captions(self) -> None:
         assert self._mt is not None
-        while True:
+        for _ in range(8):
             try:
                 event = self._mt.get_event(timeout=0)
             except queue.Empty:
                 return
+            if self._overloaded or self._stop.is_set():
+                self.trace.increment("caption_delivery_suppressed")
+                continue
             with self._lock:
                 is_current_segment = self._displayed_segment_id in {None, event.segment_id}
                 is_current_revision = event.revision >= self._displayed_revision
                 if is_current_segment and is_current_revision:
                     self._displayed_segment_id = event.segment_id
                     self._displayed_revision = event.revision
-            if is_current_segment and is_current_revision:
+            if (
+                is_current_segment
+                and is_current_revision
+                and not self._stop.is_set()
+                and not self._overloaded
+            ):
+                self.trace.record(event.segment_id, event.revision, "service_adopted")
                 self.on_caption(event)
+            else:
+                self.trace.increment("caption_delivery_suppressed")
             correction = self._correction
             with self._lock:
                 mode = self._correction_mode
-            if correction is not None and (
-                mode == "live" or (mode == "asynchronous" and event.state == "final")
+            if (
+                correction is not None
+                and not self._stop.is_set()
+                and not self._overloaded
+                and (mode == "live" or (mode == "asynchronous" and event.state == "final"))
             ):
                 correction.submit(event)
 
@@ -333,16 +550,16 @@ class RealtimeCaptionService:
         correction = self._correction
         if correction is None:
             return
-        while True:
+        for _ in range(8):
             try:
                 event = correction.get_event(timeout=0)
             except queue.Empty:
                 return
+            if self._overloaded or self._stop.is_set():
+                self.trace.increment("revision_delivery_suppressed")
+                continue
             with self._lock:
-                is_current_segment = self._displayed_segment_id in {
-                    None,
-                    event.segment_id,
-                }
+                is_current_segment = self._displayed_segment_id == event.segment_id
                 mode = self._correction_mode
                 # LLM revision N+1 still refers to ASR/MT revision N. Compare its
                 # parent, so a delayed revision cannot overwrite newer source text.
@@ -353,22 +570,157 @@ class RealtimeCaptionService:
                 if is_current_segment and is_current_revision and mode != "off":
                     self._displayed_segment_id = event.segment_id
                     self._displayed_revision = source_revision
-            if is_current_segment and is_current_revision and mode != "off":
+            if (
+                is_current_segment
+                and is_current_revision
+                and mode != "off"
+                and not self._stop.is_set()
+                and not self._overloaded
+            ):
+                self.trace.record(event.segment_id, event.revision, "service_adopted")
                 self.on_caption(event)
 
     def _shutdown_workers(self) -> None:
         # A failed ASR/MT load must not terminate an independently started recording.
-        self._audio.set_realtime_enabled(False)
+        deadline = self._stop_deadline or (time.monotonic() + 40.0)
+        errors: list[str] = []
+        try:
+            self._audio.set_realtime_enabled(False)
+        except Exception as error:
+            errors.append(f"audio: {type(error).__name__}")
         if self._asr is not None:
-            self._asr.stop()
-            if self._mt is not None:
-                self._pump_asr()
+            try:
+                # Even a full final queue must not prevent downstream drain/join.
+                with suppress(TimeoutError):
+                    self._asr.request_stop()
+                while time.monotonic() < deadline:
+                    if self._mt is not None:
+                        self.pump_once()
+                    snapshot = self._asr.snapshot()
+                    if (
+                        not self._asr.worker_alive
+                        and snapshot.event_queue_depth == 0
+                        and not self._pending_finals
+                    ):
+                        break
+                    time.sleep(0.002)
+            except Exception as error:
+                errors.append(f"asr: {type(error).__name__}")
+                self._asr.abort()
         if self._mt is not None:
-            self._mt.stop()
-            self._pump_captions()
+            try:
+                self._mt.request_stop()
+                while time.monotonic() < deadline:
+                    self._pump_captions()
+                    if not self._mt.worker_alive and self._mt.snapshot().event_queue_depth == 0:
+                        break
+                    time.sleep(0.002)
+            except Exception as error:
+                errors.append(f"mt: {type(error).__name__}")
+                self._mt.abort()
+        for worker in (self._asr, self._mt):
+            if worker is not None:
+                if worker.worker_alive:
+                    worker.abort()
+                # Owners stay attached until native calls really return.
+                with suppress(TimeoutError):
+                    worker.finish_stop(timeout=max(0, deadline - time.monotonic()))
+        self._cancel_pending()
         if self._correction is not None:
-            self._correction.stop()
-            self._pump_revisions()
+            try:
+                self._correction.stop(timeout=max(0, deadline - time.monotonic()))
+            except TimeoutError:
+                pass  # worker_alive keeps timeout visible and prevents release.
+            except Exception as error:
+                errors.append(f"correction: {type(error).__name__}")
+        if errors:
+            self._shutdown_error = "收尾失败：" + ", ".join(errors)
+            self._last_error = self._shutdown_error
+            self._set_state("error", self._shutdown_error)
+
+    def _workers_alive(self) -> bool:
+        return any(
+            worker is not None and worker.worker_alive for worker in (self._asr, self._mt)
+        ) or (
+            self._correction is not None
+            and getattr(self._correction, "_thread", None) is not None
+            and self._correction._thread.is_alive()
+        )
+
+    def _cancel_pending(self) -> None:
+        with self._pending_lock:
+            self._finals_aborted += len(self._pending_finals)
+            while self._pending_finals:
+                event, _target, _deadline = self._pending_finals.popleft()
+                self.trace.record(event.segment_id, event.revision, "cancelled")
+
+    def _handle_overload(self, message: str) -> None:
+        with self._lock:
+            if self._overloaded or self._stop.is_set():
+                return
+            self._overloaded = True
+            self._paused.set()
+            self._displayed_segment_id = None
+            self._displayed_revision = 0
+        try:
+            self._audio.set_realtime_enabled(False)
+        except Exception as error:
+            self._last_error = f"audio pause: {type(error).__name__}"
+            self.trace.increment("overload_audio_errors")
+            message += f"；音频暂停异常（{type(error).__name__}），请停止后重试"
+        self._cancel_pending()
+        for worker in (self._asr, self._mt):
+            if worker is not None:
+                worker.abort()
+        if self._correction is not None:
+            self._correction.set_enabled(False)
+        self.trace.increment("overload_pauses")
+        self._set_state("overloaded", message)
+
+    def _try_resume_overload(self) -> None:
+        if (
+            any(worker is not None and worker.worker_alive for worker in (self._asr, self._mt))
+            or self._audio.snapshot().realtime_inflight
+        ):
+            return
+        assert self._asr is not None and self._mt is not None
+        old_asr, old_mt = self._asr, self._mt
+        self._displayed_segment_id = None
+        self._displayed_revision = 0
+        self._retire_engines()
+        self._asr = StreamingAsrEngine(old_asr.recognizer, old_asr.settings, trace=self.trace)
+        self._mt = StreamingTranslationEngine(
+            old_mt.registry, old_mt.settings, history=old_mt.history, trace=self.trace
+        )
+        self._asr.start()
+        self._mt.start()
+        if self._correction is not None:
+            self._correction.set_enabled(self._correction_mode != "off")
+        self._overloaded = False
+        self._resume_requested.clear()
+        self._paused.clear()
+        self._audio.set_realtime_enabled(True)
+        self._set_state("running", self._audio_status_message(prefix="字幕已恢复 · "))
+
+    def _retire_engines(self) -> None:
+        for name, worker in (("asr", self._asr), ("mt", self._mt)):
+            if worker is None:
+                continue
+            snapshot = worker.snapshot()
+            for field in (
+                "final_requests_added",
+                "final_submit_rejections",
+                "final_requests_aborted",
+                "final_outputs_rejected",
+                "final_events_aborted",
+                "stale_results_dropped",
+                "history_errors",
+            ):
+                key = f"{name}_{field}"
+                self._retired_counts[key] = self._retired_counts.get(key, 0) + getattr(
+                    snapshot, field, 0
+                )
+        self._history_errors_reported = 0
 
     def _set_state(self, state: str, message: str) -> None:
         with self._lock:

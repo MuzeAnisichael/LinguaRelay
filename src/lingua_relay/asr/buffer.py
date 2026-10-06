@@ -16,6 +16,8 @@ class BacklogSnapshot:
     items_added: int
     partials_replaced: int
     partials_dropped: int
+    finals_added: int = 0
+    final_submit_rejections: int = 0
 
 
 class InferenceBacklog:
@@ -32,6 +34,8 @@ class InferenceBacklog:
         self._items_added = 0
         self._partials_replaced = 0
         self._partials_dropped = 0
+        self._finals_added = 0
+        self._final_submit_rejections = 0
 
     def put_partial(self, request: InferenceRequest) -> bool:
         if request.state != "partial":
@@ -49,11 +53,14 @@ class InferenceBacklog:
             self._condition.notify()
             return True
 
-    def put_final(self, request: InferenceRequest, timeout: float | None = None) -> bool:
+    def put_final(self, request: InferenceRequest, timeout: float | None = 0.0) -> bool:
         if request.state != "final":
             raise ValueError("put_final requires a final request")
         deadline = None if timeout is None else time.monotonic() + timeout
         with self._condition:
+            if self._closed:
+                self._final_submit_rejections += 1
+                return False
             if self._partial is not None and self._partial.segment_id == request.segment_id:
                 self._partial = None
                 self._partials_replaced += 1
@@ -63,15 +70,19 @@ class InferenceBacklog:
                     self._partials_replaced += 1
                     break
                 if self._closed:
+                    self._final_submit_rejections += 1
                     return False
                 remaining = None if deadline is None else deadline - time.monotonic()
                 if remaining is not None and remaining <= 0:
+                    self._final_submit_rejections += 1
                     return False
                 self._condition.wait(remaining)
             if self._closed:
+                self._final_submit_rejections += 1
                 return False
             self._finals.append(request)
             self._items_added += 1
+            self._finals_added += 1
             self._condition.notify()
             return True
 
@@ -99,6 +110,18 @@ class InferenceBacklog:
             self._closed = True
             self._condition.notify_all()
 
+    def abort(self) -> tuple[InferenceRequest, ...]:
+        """Close and return unprocessed work for explicit cancellation accounting."""
+        with self._condition:
+            self._closed = True
+            items = tuple(self._finals)
+            if self._partial is not None:
+                items += (self._partial,)
+            self._finals.clear()
+            self._partial = None
+            self._condition.notify_all()
+            return items
+
     def snapshot(self) -> BacklogSnapshot:
         with self._condition:
             return BacklogSnapshot(
@@ -107,6 +130,8 @@ class InferenceBacklog:
                 items_added=self._items_added,
                 partials_replaced=self._partials_replaced,
                 partials_dropped=self._partials_dropped,
+                finals_added=self._finals_added,
+                final_submit_rejections=self._final_submit_rejections,
             )
 
 
@@ -122,7 +147,7 @@ class LatestEventBuffer:
         self._partials_dropped = 0
         self._closed = False
 
-    def put(self, event: AsrEvent, timeout: float | None = None) -> bool:
+    def put(self, event: AsrEvent, timeout: float | None = 0.0) -> bool:
         deadline = None if timeout is None else time.monotonic() + timeout
         with self._condition:
             if self._closed:
@@ -163,6 +188,15 @@ class LatestEventBuffer:
         with self._condition:
             self._closed = True
             self._condition.notify_all()
+
+    def abort(self) -> tuple[AsrEvent, ...]:
+        """Discard buffered output explicitly, waking a blocked producer."""
+        with self._condition:
+            self._closed = True
+            items = tuple(self._events)
+            self._events.clear()
+            self._condition.notify_all()
+            return items
 
     def snapshot(self) -> tuple[int, int, int]:
         with self._condition:

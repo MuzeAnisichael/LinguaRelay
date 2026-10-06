@@ -7,6 +7,9 @@ test selection and build boundaries are in the [developer guide](../DEVELOPMENT.
 
 | Evidence | Scope |
 |---|---|
+| [2026-10-06 reliability/local baseline](LOCAL-PIPELINE-2026-10-06.zh-CN.md) | 343 current source regressions; bounded queues/stop/recording fault cases; explicit hardware and unverified scope |
+| [Synthetic pipeline replay](reliability-2026-10-06.json) | Real worker/service/hidden-widget path, eight final segments with model doubles; functional pass, performance/quality not evaluated |
+| [Existing-model paced replay](local-pipeline-2026-10-06.json) | Small/M2M100 CUDA and one licensed FLEURS sample per source language, four routes; new configuration baseline, not before/after gains or real capture-to-paint |
 | [M1 sustained capture](m1-30min-windows.json) | 2026-08-11 host/device capture metrics |
 | [M2 ASR](m2-small-cuda-final.json) | Fixed four-language corpus, model and CUDA hardware |
 | [M3 translation](m3-m2m100-cuda-final.json) | Twelve routes and measured local MT latency/quality |

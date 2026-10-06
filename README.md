@@ -101,6 +101,13 @@ late cancel request. Only one offline task runs at a time; batch queues, inferen
 resume, and project rename/delete are not implemented. See the
 [requirement/status table](docs/REQUIREMENTS.zh-CN.md) for scope and test evidence.
 
+The 0.3.3 source reliability update also separates realtime submission from
+recording consumption. Sustained overload visibly pauses subtitles while explicit
+recording continues; resume waits for old inference calls. Final retries and queue
+waits have limits, and shutdown timeouts retain model ownership. New replay reports
+separate functional evidence from unevaluated performance/quality; widget updates
+are not physical screen-paint measurements. These changes are not in v0.3.2 assets.
+
 ## What it can do
 
 - Capture the default or a selected Windows output device, one process and its
@@ -186,6 +193,15 @@ using LinguaRelay with sensitive audio.
 Python 3.11 is recommended. See the [developer guide](docs/DEVELOPMENT.zh-CN.md)
 for module ownership, targeted tests, and the separate release environment:
 
+Start or resume work with the [project rules](AGENTS.md),
+[current handoff](docs/HANDOFF.zh-CN.md), and requirement baseline. Start Codex
+at this repository root; parent-directory sessions must explicitly read the
+project rules. Agree on substantial or unclear requirements before coding, then
+update issues and verification evidence. This is a human-maintained process,
+not an automatic guarantee against context drift. Queue capacity limits also do
+not prove bounded waiting: final backpressure and recording coupling remain
+open in [K-001](docs/KNOWN-ISSUES.zh-CN.md#k-001).
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -194,7 +210,8 @@ lingua-relay doctor
 lingua-relay app
 ```
 
-Before opening a pull request:
+For source/configuration changes, before opening a pull request (docs-only work
+uses the developer guide's document checks):
 
 ```powershell
 ruff check .
@@ -210,7 +227,10 @@ Product screenshots can be refreshed with
 
 | Document | Purpose |
 |---|---|
+| [Project rules](AGENTS.md) / [Current handoff](docs/HANDOFF.zh-CN.md) (Chinese) | Recovery entry point, task scope, evidence, unresolved work and next steps |
+| [Project context](docs/PROJECT-CONTEXT.zh-CN.md) (Chinese) | Historical user needs, decisions and task-specific authorization boundaries |
 | [Requirements and status](docs/REQUIREMENTS.zh-CN.md) (Chinese) | Requirement IDs, implementation evidence, known boundaries, and next steps |
+| [Known issues](docs/KNOWN-ISSUES.zh-CN.md) / [Verification map](docs/VERIFICATION.zh-CN.md) (Chinese) | Open risks, historical fixes, closure criteria, test coverage and evidence gaps |
 | [Developer guide](docs/DEVELOPMENT.zh-CN.md) (Chinese) | Directory map, module boundaries, setup, and proportionate testing |
 | [Architecture](docs/ARCHITECTURE.md) | Fast path, queue boundaries, desktop runtime, and revision path |
 | [Model choices](docs/MODELS.md) | Install profiles, exact revisions, licenses, and performance notes |
